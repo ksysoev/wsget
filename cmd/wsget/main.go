@@ -2,11 +2,13 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
 	"os"
 
+	"github.com/TylerBrock/colorjson"
 	"golang.org/x/net/websocket"
 )
 
@@ -47,5 +49,13 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Println(msg)
+	f := colorjson.NewFormatter()
+	f.Indent = 2
+
+	var obj any
+	json.Unmarshal([]byte(msg), &obj)
+
+	s, _ := f.Marshal(obj)
+
+	fmt.Println(string(s))
 }
