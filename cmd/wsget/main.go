@@ -25,37 +25,78 @@ func init() {
 	wsUrl = *url
 }
 
+type WSInspector struct {
+	ws       *websocket.Conn
+	messages chan string
+}
+
+func NewWSInspector(url string) (*WSInspector, error) {
+	ws, err := websocket.Dial(url, "", "http://localhost")
+
+	if err != nil {
+		return nil, err
+	}
+
+	messages := make(chan string, 100)
+
+	go func(messages chan string) {
+		for {
+			var msg string
+			err = websocket.Message.Receive(ws, &msg)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			messages <- msg
+		}
+	}(messages)
+
+	return &WSInspector{ws: ws, messages: messages}, nil
+}
+
+func (wsInsp *WSInspector) Send(msg string) error {
+	err := websocket.Message.Send(wsInsp.ws, msg)
+
+	if err != nil {
+		return err
+	}
+
+	wsInsp.messages <- msg
+
+	return nil
+}
+
+func (wsInsp *WSInspector) Close() {
+	wsInsp.ws.Close()
+}
+
 func main() {
-	ws, err := websocket.Dial(wsUrl, "", "http://localhost")
-
+	wsInsp, err := NewWSInspector(wsUrl)
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer wsInsp.Close()
 
-	defer ws.Close()
+	go func() {
+		f := colorjson.NewFormatter()
+		f.Indent = 2
+		for msg := range wsInsp.messages {
+			var obj any
+			json.Unmarshal([]byte(msg), &obj)
+			s, _ := f.Marshal(obj)
+			fmt.Println(string(s), "\n")
+		}
+		return
+	}()
 
-	reader := bufio.NewReader(os.Stdin)
-	input, _ := reader.ReadString('\n')
+	for {
+		reader := bufio.NewReader(os.Stdin)
+		input, _ := reader.ReadString('\n')
 
-	err = websocket.Message.Send(ws, input)
+		err = wsInsp.Send(input)
 
-	if err != nil {
-		log.Fatal(err)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
-
-	var msg string
-	err = websocket.Message.Receive(ws, &msg)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	f := colorjson.NewFormatter()
-	f.Indent = 2
-
-	var obj any
-	json.Unmarshal([]byte(msg), &obj)
-
-	s, _ := f.Marshal(obj)
-
-	fmt.Println(string(s))
 }
