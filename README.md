@@ -1,2 +1,2 @@
-# wget
+# wsget
 CLI client for WebSocket 
