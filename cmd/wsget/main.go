@@ -9,6 +9,7 @@ import (
 
 	"github.com/TylerBrock/colorjson"
 	"github.com/eiannone/keyboard"
+	"github.com/fatih/color"
 	"golang.org/x/net/websocket"
 )
 
@@ -34,12 +35,16 @@ func init() {
 			log.Fatal(err)
 		}
 	}
+}
 
+type Message struct {
+	Type string `json:"type"`
+	Data string `json:"data"`
 }
 
 type WSInspector struct {
 	ws       *websocket.Conn
-	messages chan string
+	messages chan Message
 }
 
 func NewWSInspector(url string) (*WSInspector, error) {
@@ -49,17 +54,17 @@ func NewWSInspector(url string) (*WSInspector, error) {
 		return nil, err
 	}
 
-	messages := make(chan string, 100)
+	messages := make(chan Message, 100)
 
-	go func(messages chan string) {
+	go func(messages chan Message) {
 		for {
 			var msg string
 			err = websocket.Message.Receive(ws, &msg)
 			if err != nil {
-				log.Fatal(err)
+				log.Fatal("Fail to read from WS connection:", err)
 			}
 
-			messages <- msg
+			messages <- Message{Type: "response", Data: msg}
 		}
 	}(messages)
 
@@ -73,7 +78,7 @@ func (wsInsp *WSInspector) Send(msg string) error {
 		return err
 	}
 
-	wsInsp.messages <- msg
+	wsInsp.messages <- Message{Type: "request", Data: msg}
 
 	return nil
 }
@@ -91,8 +96,13 @@ func main() {
 	fmt.Println("Connected")
 	defer wsInsp.Close()
 
-	f := colorjson.NewFormatter()
-	f.Indent = 2
+	reqFormater := colorjson.NewFormatter()
+	reqFormater.Indent = 2
+	reqFormater.KeyColor = color.New(color.FgGreen, color.Bold)
+
+	respFormater := colorjson.NewFormatter()
+	respFormater.Indent = 2
+	respFormater.KeyColor = color.New(color.FgHiRed, color.Bold)
 
 	if err := keyboard.Open(); err != nil {
 		panic(err)
@@ -135,13 +145,35 @@ func main() {
 			}
 
 		case msg := <-wsInsp.messages:
+			var output []byte
 			var obj any
-			json.Unmarshal([]byte(msg), &obj)
-			s, _ := f.Marshal(obj)
-			fmt.Printf("%s\n\n", string(s))
+			err = json.Unmarshal([]byte(msg.Data), &obj)
+			var formater *colorjson.Formatter
+			if err != nil {
+				// Fail to parse Json just print as a string
+				if msg.Type == "request" {
+					formater = reqFormater
+				} else {
+					formater = respFormater
+				}
+				output = []byte(formater.KeyColor.Sprintf("%s", msg.Data))
+			} else {
+				// Parse Json and print with colors
+				if msg.Type == "request" {
+					formater = reqFormater
+				} else {
+					formater = respFormater
+				}
+
+				output, err = formater.Marshal(obj)
+				if err != nil {
+					log.Fatalln("Fail to format JSON: ", err, msg)
+				}
+			}
+			fmt.Printf("%s\n\n", string(output))
 
 			if OutputFH != nil {
-				fmt.Fprintln(OutputFH, string(s))
+				fmt.Fprintln(OutputFH, string(output))
 			}
 		}
 	}
