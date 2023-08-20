@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/TylerBrock/colorjson"
 	"github.com/eiannone/keyboard"
@@ -12,9 +13,12 @@ import (
 )
 
 var wsUrl string
+var OutputFH *os.File
 
 func init() {
 	url := flag.String("u", "", "ws url")
+	outputFile := flag.String("o", "", "output file")
+
 	flag.Parse()
 
 	if url == nil || *url == "" {
@@ -22,6 +26,15 @@ func init() {
 	}
 
 	wsUrl = *url
+
+	if outputFile != nil && *outputFile != "" {
+		var err error
+		OutputFH, err = os.Create(*outputFile)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
 }
 
 type WSInspector struct {
@@ -126,6 +139,10 @@ func main() {
 			json.Unmarshal([]byte(msg), &obj)
 			s, _ := f.Marshal(obj)
 			fmt.Printf("%s\n\n", string(s))
+
+			if OutputFH != nil {
+				fmt.Fprintln(OutputFH, string(s))
+			}
 		}
 	}
 }
