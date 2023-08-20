@@ -186,28 +186,28 @@ func requestMode(keyStream <-chan keyboard.KeyEvent) (string, error) {
 			return buffer, e.Err
 		}
 
-		switch {
-		case e.Key == keyboard.KeyCtrlC, e.Key == keyboard.KeyCtrlD:
+		switch e.Key {
+		case keyboard.KeyCtrlC, keyboard.KeyCtrlD:
 			return buffer, fmt.Errorf("interrupted")
-		case e.Key == keyboard.KeyCtrlS:
+		case keyboard.KeyCtrlS:
 			if buffer == "" {
 				return buffer, fmt.Errorf("cannot send empty request")
 			}
 			return buffer, nil
-		case e.Key == keyboard.KeyEsc:
+		case keyboard.KeyEsc:
 			return "", nil
 
-		case e.Key == keyboard.KeySpace:
+		case keyboard.KeySpace:
 			fmt.Print(" ")
 			buffer += " "
 			continue
 
-		case e.Key == keyboard.KeyEnter:
+		case keyboard.KeyEnter:
 			fmt.Print("\n")
 			buffer += "\n"
 			continue
 
-		case e.Key == keyboard.KeyBackspace, e.Key == keyboard.KeyDelete, e.Key == 127:
+		case keyboard.KeyBackspace, keyboard.KeyDelete, 127:
 			if len(buffer) == 0 {
 				continue
 			}
@@ -219,10 +219,10 @@ func requestMode(keyStream <-chan keyboard.KeyEvent) (string, error) {
 			fmt.Print("\b \b")
 			buffer = buffer[:len(buffer)-1]
 			continue
-		case e.Key > 0:
-			// Ignore rest of special keys
-			continue
 		default:
+			if e.Key > 0 {
+				continue
+			}
 			fmt.Print(string(e.Rune))
 			buffer += string(e.Rune)
 		}
