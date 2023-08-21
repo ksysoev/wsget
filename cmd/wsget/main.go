@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -15,10 +16,12 @@ import (
 
 var wsUrl string
 var OutputFH *os.File
+var InputFH *os.File
 
 func init() {
 	url := flag.String("u", "", "ws url")
 	outputFile := flag.String("o", "", "output file")
+	inputFile := flag.String("i", "", "input file")
 
 	flag.Parse()
 
@@ -31,6 +34,14 @@ func init() {
 	if outputFile != nil && *outputFile != "" {
 		var err error
 		OutputFH, err = os.Create(*outputFile)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	if inputFile != nil && *inputFile != "" {
+		var err error
+		InputFH, err = os.Open(*inputFile)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -112,6 +123,18 @@ func main() {
 	keysEvents, err := keyboard.GetKeys(10)
 	if err != nil {
 		panic(err)
+	}
+
+	if InputFH != nil {
+		go func() {
+			scanner := bufio.NewScanner(InputFH)
+			for scanner.Scan() {
+				err = wsInsp.Send(scanner.Text())
+				if err != nil {
+					fmt.Println("Fail to send request:", err)
+				}
+			}
+		}()
 	}
 
 	fmt.Println("Connection Mode: Press ESC to enter Request mode")
