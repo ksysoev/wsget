@@ -8,10 +8,11 @@ import (
 	"log"
 	"os"
 
+	"github.com/ksysoev/wsget/pkg/ws"
+
 	"github.com/TylerBrock/colorjson"
 	"github.com/eiannone/keyboard"
 	"github.com/fatih/color"
-	"golang.org/x/net/websocket"
 )
 
 var wsUrl string
@@ -48,59 +49,9 @@ func init() {
 	}
 }
 
-type Message struct {
-	Type string `json:"type"`
-	Data string `json:"data"`
-}
-
-type WSInspector struct {
-	ws       *websocket.Conn
-	messages chan Message
-}
-
-func NewWSInspector(url string) (*WSInspector, error) {
-	ws, err := websocket.Dial(url, "", "http://localhost")
-
-	if err != nil {
-		return nil, err
-	}
-
-	messages := make(chan Message, 100)
-
-	go func(messages chan Message) {
-		for {
-			var msg string
-			err = websocket.Message.Receive(ws, &msg)
-			if err != nil {
-				log.Fatal("Fail to read from WS connection:", err)
-			}
-
-			messages <- Message{Type: "response", Data: msg}
-		}
-	}(messages)
-
-	return &WSInspector{ws: ws, messages: messages}, nil
-}
-
-func (wsInsp *WSInspector) Send(msg string) error {
-	err := websocket.Message.Send(wsInsp.ws, msg)
-
-	if err != nil {
-		return err
-	}
-
-	wsInsp.messages <- Message{Type: "request", Data: msg}
-
-	return nil
-}
-
-func (wsInsp *WSInspector) Close() {
-	wsInsp.ws.Close()
-}
-
 func main() {
 	fmt.Println("Connecting to", wsUrl, "...")
-	wsInsp, err := NewWSInspector(wsUrl)
+	wsInsp, err := ws.NewWS(wsUrl)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -167,14 +118,14 @@ func main() {
 				fmt.Println("Connection Mode: Press ESC to enter Request mode")
 			}
 
-		case msg := <-wsInsp.messages:
+		case msg := <-wsInsp.Messages:
 			var output []byte
 			var obj any
 			err = json.Unmarshal([]byte(msg.Data), &obj)
 			var formater *colorjson.Formatter
 			if err != nil {
 				// Fail to parse Json just print as a string
-				if msg.Type == "request" {
+				if msg.Type == ws.Request {
 					formater = reqFormater
 				} else {
 					formater = respFormater
@@ -182,7 +133,7 @@ func main() {
 				output = []byte(formater.KeyColor.Sprintf("%s", msg.Data))
 			} else {
 				// Parse Json and print with colors
-				if msg.Type == "request" {
+				if msg.Type == ws.Request {
 					formater = reqFormater
 				} else {
 					formater = respFormater
