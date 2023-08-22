@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/fatih/color"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestTextFormater_FormatRequest(t *testing.T) {
@@ -14,8 +13,13 @@ func TestTextFormater_FormatRequest(t *testing.T) {
 
 	output, err := tf.FormatRequest(data)
 
-	assert.NoError(t, err)
-	assert.Equal(t, expectedOutput, output)
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+
+	if output != expectedOutput {
+		t.Errorf("Unexpected output: got %q, expected %q", output, expectedOutput)
+	}
 }
 
 func TestTextFormater_FormatResponse(t *testing.T) {
@@ -25,8 +29,13 @@ func TestTextFormater_FormatResponse(t *testing.T) {
 
 	output, err := tf.FormatResponse(data)
 
-	assert.NoError(t, err)
-	assert.Equal(t, expectedOutput, output)
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+
+	if output != expectedOutput {
+		t.Errorf("Unexpected output: got %q, expected %q", output, expectedOutput)
+	}
 }
 
 func TestTextFormater_FormatForFile(t *testing.T) {
@@ -37,6 +46,11 @@ func TestTextFormater_FormatForFile(t *testing.T) {
 
 	output, err := tf.FormatForFile(data)
 
-	assert.NoError(t, err)
-	assert.Equal(t, expectedOutput, output)
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+
+	if output != expectedOutput {
+		t.Errorf("Unexpected output: got %q, expected %q", output, expectedOutput)
+	}
 }
