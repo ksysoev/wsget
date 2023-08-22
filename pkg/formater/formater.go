@@ -36,6 +36,9 @@ func (f *Formater) FormatMessage(wsMsg ws.Message) (string, error) {
 	return f.formatJsonMessage(wsMsg.Type, obj)
 }
 
+// FormatForFile formats the given WebSocket message for a file.
+// It first tries to parse the message data as JSON, and if successful, formats it as JSON.
+// If parsing fails, it formats the message data as plain text.
 func (f *Formater) FormatForFile(wsMsg ws.Message) (string, error) {
 	wsMsgData := wsMsg.Data
 
