@@ -2,17 +2,15 @@ package main
 
 import (
 	"bufio"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
 	"os"
 
+	"github.com/ksysoev/wsget/pkg/formater"
 	"github.com/ksysoev/wsget/pkg/ws"
 
-	"github.com/TylerBrock/colorjson"
 	"github.com/eiannone/keyboard"
-	"github.com/fatih/color"
 )
 
 var wsUrl string
@@ -58,13 +56,7 @@ func main() {
 	fmt.Println("Connected")
 	defer wsInsp.Close()
 
-	reqFormater := colorjson.NewFormatter()
-	reqFormater.Indent = 2
-	reqFormater.KeyColor = color.New(color.FgGreen, color.Bold)
-
-	respFormater := colorjson.NewFormatter()
-	respFormater.Indent = 2
-	respFormater.KeyColor = color.New(color.FgHiRed, color.Bold)
+	formater := formater.NewFormatter()
 
 	if err := keyboard.Open(); err != nil {
 		panic(err)
@@ -119,35 +111,20 @@ func main() {
 			}
 
 		case msg := <-wsInsp.Messages:
-			var output []byte
-			var obj any
-			err = json.Unmarshal([]byte(msg.Data), &obj)
-			var formater *colorjson.Formatter
-			if err != nil {
-				// Fail to parse Json just print as a string
-				if msg.Type == ws.Request {
-					formater = reqFormater
-				} else {
-					formater = respFormater
-				}
-				output = []byte(formater.KeyColor.Sprintf("%s", msg.Data))
-			} else {
-				// Parse Json and print with colors
-				if msg.Type == ws.Request {
-					formater = reqFormater
-				} else {
-					formater = respFormater
-				}
 
-				output, err = formater.Marshal(obj)
-				if err != nil {
-					log.Fatalln("Fail to format JSON: ", err, msg)
-				}
+			output, err := formater.FormatMessage(msg)
+			if err != nil {
+				log.Printf("Fail to format message: %s, %s\n", err, msg.Data)
 			}
-			fmt.Printf("%s\n\n", string(output))
+
+			fmt.Printf("%s\n\n", output)
 
 			if OutputFH != nil {
-				fmt.Fprintln(OutputFH, string(output))
+				output, err := formater.FormatForFile(msg)
+				if err != nil {
+					log.Printf("Fail to format message for file: %s, %s\n", err, msg.Data)
+				}
+				fmt.Fprintln(OutputFH, output)
 			}
 		}
 	}
