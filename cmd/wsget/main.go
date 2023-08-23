@@ -7,10 +7,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/ksysoev/wsget/pkg/formater"
+	"github.com/ksysoev/wsget/pkg/cli"
 	"github.com/ksysoev/wsget/pkg/ws"
-
-	"github.com/eiannone/keyboard"
 )
 
 var wsUrl string
@@ -56,17 +54,7 @@ func main() {
 	fmt.Println("Connected")
 	defer wsInsp.Close()
 
-	formater := formater.NewFormatter()
-
-	if err := keyboard.Open(); err != nil {
-		panic(err)
-	}
-	defer keyboard.Close()
-
-	keysEvents, err := keyboard.GetKeys(10)
-	if err != nil {
-		panic(err)
-	}
+	cli := cli.NewCLI(wsInsp)
 
 	if InputFH != nil {
 		go func() {
@@ -80,104 +68,8 @@ func main() {
 		}()
 	}
 
-	fmt.Println("Connection Mode: Press ESC to enter Request mode")
-	for {
-		select {
-		case event := <-keysEvents:
-			switch event.Key {
-			case keyboard.KeyCtrlC, keyboard.KeyCtrlD:
-				return
-
-			case keyboard.KeyEsc:
-				fmt.Println("Request Mode: Type your API request and press Ctrl+S to send it. Press ESC to cancel request")
-				req, err := requestMode(keysEvents)
-
-				if err != nil {
-					if err.Error() == "interrupted" {
-						return
-					}
-
-					fmt.Println(err)
-				}
-
-				if req != "" {
-					err = wsInsp.Send(req)
-					if err != nil {
-						fmt.Println("Fail to send request:", err)
-					}
-				}
-
-				fmt.Println("Connection Mode: Press ESC to enter Request mode")
-			}
-
-		case msg := <-wsInsp.Messages:
-
-			output, err := formater.FormatMessage(msg)
-			if err != nil {
-				log.Printf("Fail to format message: %s, %s\n", err, msg.Data)
-			}
-
-			fmt.Printf("%s\n\n", output)
-
-			if OutputFH != nil {
-				output, err := formater.FormatForFile(msg)
-				if err != nil {
-					log.Printf("Fail to format message for file: %s, %s\n", err, msg.Data)
-				}
-				fmt.Fprintln(OutputFH, output)
-			}
-		}
+	err = cli.Run(OutputFH)
+	if err != nil {
+		log.Fatal(err)
 	}
-}
-
-func requestMode(keyStream <-chan keyboard.KeyEvent) (string, error) {
-	buffer := ""
-	for e := range keyStream {
-		if e.Err != nil {
-			return buffer, e.Err
-		}
-
-		switch e.Key {
-		case keyboard.KeyCtrlC, keyboard.KeyCtrlD:
-			return buffer, fmt.Errorf("interrupted")
-		case keyboard.KeyCtrlS:
-			if buffer == "" {
-				return buffer, fmt.Errorf("cannot send empty request")
-			}
-			return buffer, nil
-		case keyboard.KeyEsc:
-			return "", nil
-
-		case keyboard.KeySpace:
-			fmt.Print(" ")
-			buffer += " "
-			continue
-
-		case keyboard.KeyEnter:
-			fmt.Print("\n")
-			buffer += "\n"
-			continue
-
-		case keyboard.KeyBackspace, keyboard.KeyDelete, 127:
-			if len(buffer) == 0 {
-				continue
-			}
-
-			if buffer[len(buffer)-1] == '\n' {
-				continue
-			}
-
-			fmt.Print("\b \b")
-			buffer = buffer[:len(buffer)-1]
-			continue
-		default:
-			if e.Key > 0 {
-				continue
-			}
-			fmt.Print(string(e.Rune))
-			buffer += string(e.Rune)
-		}
-	}
-
-	return buffer, fmt.Errorf("keyboard stream was unexpectably closed")
 }
