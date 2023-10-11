@@ -17,19 +17,19 @@ type JsonFormater struct {
 func NewJsonFormater() *JsonFormater {
 	request := colorjson.NewFormatter()
 	request.Indent = 2
-	request.KeyColor = color.New(color.FgGreen, color.Bold)
-	request.StringColor = color.New(color.FgHiGreen)
-	request.BoolColor = color.New(color.FgHiMagenta)
-	request.NumberColor = color.New(color.FgHiCyan)
-	request.NullColor = color.New(color.FgHiRed)
+	request.KeyColor = color.New(color.FgMagenta)
+	request.StringColor = color.New(color.FgYellow)
+	request.BoolColor = color.New(color.FgBlue)
+	request.NumberColor = color.New(color.FgGreen)
+	request.NullColor = color.New(color.FgRed)
 
 	response := colorjson.NewFormatter()
 	response.Indent = 2
-	response.KeyColor = color.New(color.FgHiRed, color.Bold)
-	response.StringColor = color.New(color.FgHiYellow)
-	response.BoolColor = color.New(color.FgHiMagenta)
-	response.NumberColor = color.New(color.FgHiCyan)
-	response.NullColor = color.New(color.FgHiRed)
+	response.KeyColor = color.New(color.FgCyan)
+	response.StringColor = color.New(color.FgYellow)
+	response.BoolColor = color.New(color.FgBlue)
+	response.NumberColor = color.New(color.FgGreen)
+	response.NullColor = color.New(color.FgRed)
 
 	return &JsonFormater{
 		request:  request,

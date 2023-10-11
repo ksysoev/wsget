@@ -13,8 +13,8 @@ type TextFormater struct {
 // NewTextFormater creates a new instance of TextFormater
 func NewTextFormater() *TextFormater {
 	return &TextFormater{
-		request:  color.New(color.FgGreen),
-		response: color.New(color.FgHiRed),
+		request:  color.New(color.FgMagenta),
+		response: color.New(color.FgCyan),
 	}
 }
 
