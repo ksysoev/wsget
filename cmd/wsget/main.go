@@ -18,7 +18,6 @@ var InputFH *os.File
 func init() {
 	url := flag.String("u", "", "ws url")
 	outputFile := flag.String("o", "", "output file")
-	inputFile := flag.String("i", "", "input file")
 
 	flag.Parse()
 
@@ -31,14 +30,6 @@ func init() {
 	if outputFile != nil && *outputFile != "" {
 		var err error
 		OutputFH, err = os.Create(*outputFile)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-
-	if inputFile != nil && *inputFile != "" {
-		var err error
-		InputFH, err = os.Open(*inputFile)
 		if err != nil {
 			log.Fatal(err)
 		}
