@@ -16,13 +16,15 @@ var OutputFH *os.File
 var InputFH *os.File
 
 func init() {
-	url := flag.String("u", "", "ws url")
-	outputFile := flag.String("o", "", "output file")
+	url := flag.String("u", "", "Websocket url that will be used for connection. this argument is required")
+	outputFile := flag.String("o", "", "Output file for saving requests and responses")
+	showHelp := flag.Bool("h", false, "Prints this help message")
 
 	flag.Parse()
 
-	if url == nil || *url == "" {
-		log.Fatal("url is requered")
+	if (showHelp != nil && *showHelp) || (url == nil || *url == "") {
+		flag.Usage()
+		os.Exit(0)
 	}
 
 	wsUrl = *url
