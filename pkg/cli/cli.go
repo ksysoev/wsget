@@ -10,6 +10,11 @@ import (
 	"github.com/ksysoev/wsget/pkg/ws"
 )
 
+const (
+	LINE_UP    = "\033[1A"
+	LINE_CLEAR = "\x1b[2K"
+)
+
 type CLI struct {
 	formater *formater.Formater
 	history  *History
@@ -139,9 +144,7 @@ func (c *CLI) requestMode(keyStream <-chan keyboard.KeyEvent) (string, error) {
 				continue
 			}
 
-			for i := 0; i < len(buffer); i++ {
-				fmt.Print("\b \b")
-			}
+			c.clearInput(buffer)
 
 			fmt.Print(req)
 			buffer = req
@@ -155,9 +158,7 @@ func (c *CLI) requestMode(keyStream <-chan keyboard.KeyEvent) (string, error) {
 				continue
 			}
 
-			for i := 0; i < len(buffer); i++ {
-				fmt.Print("\b \b")
-			}
+			c.clearInput(buffer)
 
 			fmt.Print(req)
 			buffer = req
@@ -172,4 +173,15 @@ func (c *CLI) requestMode(keyStream <-chan keyboard.KeyEvent) (string, error) {
 	}
 
 	return buffer, fmt.Errorf("keyboard stream was unexpectably closed")
+}
+
+func (c *CLI) clearInput(buffer string) {
+	for i := 0; i < len(buffer); i++ {
+		if buffer[i] == '\n' {
+			fmt.Print(LINE_UP)
+			fmt.Print(LINE_CLEAR)
+		} else {
+			fmt.Print("\b \b")
+		}
+	}
 }
