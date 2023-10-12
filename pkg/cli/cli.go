@@ -12,12 +12,14 @@ import (
 
 type CLI struct {
 	formater *formater.Formater
+	history  *History
 	wsConn   *ws.WSConnection
 }
 
 func NewCLI(wsConn *ws.WSConnection) *CLI {
 	return &CLI{
 		formater: formater.NewFormatter(),
+		history:  NewHistory(),
 		wsConn:   wsConn,
 	}
 }
@@ -86,6 +88,9 @@ func (c *CLI) Run(outputFile *os.File) error {
 
 func (c *CLI) requestMode(keyStream <-chan keyboard.KeyEvent) (string, error) {
 	buffer := ""
+
+	historyIndex := 0
+
 	for e := range keyStream {
 		if e.Err != nil {
 			return buffer, e.Err
@@ -98,6 +103,7 @@ func (c *CLI) requestMode(keyStream <-chan keyboard.KeyEvent) (string, error) {
 			if buffer == "" {
 				return buffer, fmt.Errorf("cannot send empty request")
 			}
+			c.history.AddRequest(buffer)
 			return buffer, nil
 		case keyboard.KeyEsc:
 			return "", nil
@@ -123,6 +129,38 @@ func (c *CLI) requestMode(keyStream <-chan keyboard.KeyEvent) (string, error) {
 
 			fmt.Print("\b \b")
 			buffer = buffer[:len(buffer)-1]
+			continue
+		case keyboard.KeyArrowUp:
+			historyIndex++
+			req := c.history.GetRequst(historyIndex)
+
+			if req == "" {
+				historyIndex--
+				continue
+			}
+
+			for i := 0; i < len(buffer); i++ {
+				fmt.Print("\b \b")
+			}
+
+			fmt.Print(req)
+			buffer = req
+			continue
+		case keyboard.KeyArrowDown:
+			historyIndex--
+			req := c.history.GetRequst(historyIndex)
+
+			if req == "" {
+				historyIndex++
+				continue
+			}
+
+			for i := 0; i < len(buffer); i++ {
+				fmt.Print("\b \b")
+			}
+
+			fmt.Print(req)
+			buffer = req
 			continue
 		default:
 			if e.Key > 0 {
