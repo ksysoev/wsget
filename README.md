@@ -7,7 +7,7 @@ wsget is a command-line tool for interacting with a WebSocket server. It support
 To install wsget, you can use `go install`:
 
 ```
-go install github.com/ksysoev/wsget/cmd/wsget
+go install github.com/ksysoev/wsget/cmd/wsget@latest
 ```
 
 ## Usage

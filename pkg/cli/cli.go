@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/user"
+	"strings"
 
 	"github.com/eiannone/keyboard"
 	"github.com/ksysoev/wsget/pkg/formater"
@@ -13,6 +15,9 @@ import (
 const (
 	LINE_UP    = "\033[1A"
 	LINE_CLEAR = "\x1b[2K"
+
+	HISTORY_FILE  = ".wsget_history"
+	HISTORY_LIMIT = 100
 )
 
 type CLI struct {
@@ -22,9 +27,15 @@ type CLI struct {
 }
 
 func NewCLI(wsConn *ws.WSConnection) *CLI {
+	currentUser, err := user.Current()
+	if err != nil {
+		log.Fatal(err)
+	}
+	homeDir := currentUser.HomeDir
+
 	return &CLI{
 		formater: formater.NewFormatter(),
-		history:  NewHistory(),
+		history:  NewHistory(homeDir+"/"+HISTORY_FILE, HISTORY_LIMIT),
 		wsConn:   wsConn,
 	}
 }
@@ -34,6 +45,7 @@ func (c *CLI) Run(outputFile *os.File) error {
 		return err
 	}
 	defer keyboard.Close()
+	defer c.history.SaveToFile()
 
 	keysEvents, err := keyboard.GetKeys(10)
 	if err != nil {
@@ -108,8 +120,9 @@ func (c *CLI) requestMode(keyStream <-chan keyboard.KeyEvent) (string, error) {
 			if buffer == "" {
 				return buffer, fmt.Errorf("cannot send empty request")
 			}
-			c.history.AddRequest(buffer)
-			return buffer, nil
+			requet := strings.TrimSpace(buffer)
+			c.history.AddRequest(requet)
+			return requet, nil
 		case keyboard.KeyEsc:
 			return "", nil
 
