@@ -7,14 +7,14 @@ import (
 	"github.com/fatih/color"
 )
 
-// JsonFormater is a struct that contains two colorjson formatters for request and response.
-type JsonFormater struct {
+// JSONFormater is a struct that contains two colorjson formatters for request and response.
+type JSONFormater struct {
 	request  *colorjson.Formatter
 	response *colorjson.Formatter
 }
 
-// NewJsonFormater creates a new instance of JsonFormater and returns a pointer to it.
-func NewJsonFormater() *JsonFormater {
+// NewJSONFormater creates a new instance of JSONFormater and returns a pointer to it.
+func NewJSONFormater() *JSONFormater {
 	request := colorjson.NewFormatter()
 	request.Indent = 2
 	request.KeyColor = color.New(color.FgMagenta)
@@ -31,14 +31,14 @@ func NewJsonFormater() *JsonFormater {
 	response.NumberColor = color.New(color.FgGreen)
 	response.NullColor = color.New(color.FgRed)
 
-	return &JsonFormater{
+	return &JSONFormater{
 		request:  request,
 		response: response,
 	}
 }
 
 // FormatRequest formats the given data as a JSON string using the request formatter.
-func (jf *JsonFormater) FormatRequest(data any) (string, error) {
+func (jf *JSONFormater) FormatRequest(data any) (string, error) {
 	output, err := jf.request.Marshal(data)
 	if err != nil {
 		return "", err
@@ -48,7 +48,7 @@ func (jf *JsonFormater) FormatRequest(data any) (string, error) {
 }
 
 // FormatResponse formats the given data as a JSON string using the response formatter.
-func (jf *JsonFormater) FormatResponse(data any) (string, error) {
+func (jf *JSONFormater) FormatResponse(data any) (string, error) {
 	output, err := jf.response.Marshal(data)
 	if err != nil {
 		return "", err
@@ -58,7 +58,7 @@ func (jf *JsonFormater) FormatResponse(data any) (string, error) {
 }
 
 // FormatForFile formats the given data as a JSON string using the default json package.
-func (jf *JsonFormater) FormatForFile(data any) (string, error) {
+func (jf *JSONFormater) FormatForFile(data any) (string, error) {
 	output, err := json.Marshal(data)
 	if err != nil {
 		return "", err

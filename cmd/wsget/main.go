@@ -31,6 +31,7 @@ func init() {
 
 	if outputFile != nil && *outputFile != "" {
 		var err error
+
 		OutputFH, err = os.Create(*outputFile)
 		if err != nil {
 			log.Fatal(err)
@@ -40,10 +41,12 @@ func init() {
 
 func main() {
 	fmt.Println("Connecting to", wsURL, "...")
+
 	wsInsp, err := ws.NewWS(wsURL)
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	defer wsInsp.Close()
 
 	fmt.Println("Connected")
@@ -64,6 +67,6 @@ func main() {
 
 	err = client.Run(OutputFH)
 	if err != nil {
-		log.Fatal(err)
+		log.Println("Error:", err)
 	}
 }

@@ -10,14 +10,14 @@ import (
 // Formater is a struct that contains two formatters, one for text and one for JSON.
 type Formater struct {
 	text *TextFormater
-	json *JsonFormater
+	json *JSONFormater
 }
 
 // NewFormatter creates a new instance of Formater struct.
 func NewFormatter() *Formater {
 	return &Formater{
 		text: NewTextFormater(),
-		json: NewJsonFormater(),
+		json: NewJSONFormater(),
 	}
 }
 
@@ -27,13 +27,13 @@ func NewFormatter() *Formater {
 func (f *Formater) FormatMessage(wsMsg ws.Message) (string, error) {
 	wsMsgData := wsMsg.Data
 
-	obj, ok := f.parseJson(wsMsgData)
+	obj, ok := f.parseJSON(wsMsgData)
 
 	if !ok {
 		return f.formatTestMessage(wsMsg.Type, wsMsgData)
 	}
 
-	return f.formatJsonMessage(wsMsg.Type, obj)
+	return f.formatJSONMessage(wsMsg.Type, obj)
 }
 
 // FormatForFile formats the given WebSocket message for a file.
@@ -42,7 +42,7 @@ func (f *Formater) FormatMessage(wsMsg ws.Message) (string, error) {
 func (f *Formater) FormatForFile(wsMsg ws.Message) (string, error) {
 	wsMsgData := wsMsg.Data
 
-	obj, ok := f.parseJson(wsMsgData)
+	obj, ok := f.parseJSON(wsMsgData)
 
 	if !ok {
 		return f.text.FormatForFile(wsMsgData)
@@ -65,8 +65,8 @@ func (f *Formater) formatTestMessage(msgType ws.MessageType, data string) (strin
 	}
 }
 
-// formatJsonMessage formats the given WebSocket message data as JSON based on its type.
-func (f *Formater) formatJsonMessage(msgType ws.MessageType, data any) (string, error) {
+// formatJSONMessage formats the given WebSocket message data as JSON based on its type.
+func (f *Formater) formatJSONMessage(msgType ws.MessageType, data any) (string, error) {
 	switch msgType {
 	case ws.Request:
 		return f.json.FormatRequest(data)
@@ -79,9 +79,9 @@ func (f *Formater) formatJsonMessage(msgType ws.MessageType, data any) (string, 
 	}
 }
 
-// parseJson parses the given string as JSON and returns the parsed object.
+// parseJSON parses the given string as JSON and returns the parsed object.
 // If the string is not a valid JSON, it returns false as the second value.
-func (f *Formater) parseJson(data string) (any, bool) {
+func (f *Formater) parseJSON(data string) (any, bool) {
 	var obj any
 	err := json.Unmarshal([]byte(data), &obj)
 

@@ -7,9 +7,13 @@ import (
 	"strings"
 )
 
+const (
+	HistoryFileRigths = 0o644
+)
+
 type History struct {
-	requests []string
 	fileName string
+	requests []string
 	limit    uint
 }
 
@@ -20,13 +24,13 @@ func NewHistory(fileName string, limit uint) *History {
 		requests: make([]string, 0),
 	}
 
-	h.loadFromFile()
+	_ = h.loadFromFile()
 
 	return h
 }
 
 func (h *History) loadFromFile() error {
-	fileHandler, err := os.OpenFile(h.fileName, os.O_RDONLY|os.O_CREATE, 0644)
+	fileHandler, err := os.OpenFile(h.fileName, os.O_RDONLY|os.O_CREATE, HistoryFileRigths)
 	if err != nil {
 		log.Println("Error opening history file:", err)
 		return err
@@ -57,9 +61,8 @@ func (h *History) loadFromFile() error {
 }
 
 func (h *History) SaveToFile() error {
-	fileHandler, err := os.OpenFile(h.fileName, os.O_WRONLY|os.O_CREATE, 0644)
+	fileHandler, err := os.OpenFile(h.fileName, os.O_WRONLY|os.O_CREATE, HistoryFileRigths)
 	if err != nil {
-		log.Println("Error opening history file:", err)
 		return err
 	}
 
@@ -79,7 +82,9 @@ func (h *History) SaveToFile() error {
 		if request == "" {
 			continue
 		}
+
 		request = strings.ReplaceAll(request, "\n", "\\n")
+
 		_, err := writer.WriteString(request + "\n")
 		if err != nil {
 			return err

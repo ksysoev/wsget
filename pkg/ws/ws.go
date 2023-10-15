@@ -15,7 +15,7 @@ const (
 )
 
 const (
-	WS_MESSAGE_BUFFER_SIZE = 100
+	WSMessageBufferSize = 100
 )
 
 type Message struct {
@@ -23,23 +23,24 @@ type Message struct {
 	Type MessageType `json:"type"`
 }
 
-type WSConnection struct {
+type Connection struct {
 	ws       *websocket.Conn
 	Messages chan Message
 }
 
-func NewWS(url string) (*WSConnection, error) {
+func NewWS(url string) (*Connection, error) {
 	ws, err := websocket.Dial(url, "", "http://localhost")
 
 	if err != nil {
 		return nil, err
 	}
 
-	messages := make(chan Message, WS_MESSAGE_BUFFER_SIZE)
+	messages := make(chan Message, WSMessageBufferSize)
 
 	go func(messages chan Message) {
 		for {
 			var msg string
+
 			err = websocket.Message.Receive(ws, &msg)
 			if err != nil {
 				log.Fatal("Fail to read from WS connection:", err)
@@ -49,10 +50,10 @@ func NewWS(url string) (*WSConnection, error) {
 		}
 	}(messages)
 
-	return &WSConnection{ws: ws, Messages: messages}, nil
+	return &Connection{ws: ws, Messages: messages}, nil
 }
 
-func (wsInsp *WSConnection) Send(msg string) error {
+func (wsInsp *Connection) Send(msg string) error {
 	err := websocket.Message.Send(wsInsp.ws, msg)
 
 	if err != nil {
@@ -64,6 +65,6 @@ func (wsInsp *WSConnection) Send(msg string) error {
 	return nil
 }
 
-func (wsInsp *WSConnection) Close() {
+func (wsInsp *Connection) Close() {
 	wsInsp.ws.Close()
 }
