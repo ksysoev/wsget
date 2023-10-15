@@ -11,7 +11,7 @@ import (
 	"github.com/ksysoev/wsget/pkg/ws"
 )
 
-var wsUrl string
+var wsURL string
 var OutputFH *os.File
 var InputFH *os.File
 
@@ -27,7 +27,7 @@ func init() {
 		os.Exit(0)
 	}
 
-	wsUrl = *url
+	wsURL = *url
 
 	if outputFile != nil && *outputFile != "" {
 		var err error
@@ -39,15 +39,16 @@ func init() {
 }
 
 func main() {
-	fmt.Println("Connecting to", wsUrl, "...")
-	wsInsp, err := ws.NewWS(wsUrl)
+	fmt.Println("Connecting to", wsURL, "...")
+	wsInsp, err := ws.NewWS(wsURL)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("Connected")
 	defer wsInsp.Close()
 
-	cli := cli.NewCLI(wsInsp)
+	fmt.Println("Connected")
+
+	client := cli.NewCLI(wsInsp)
 
 	if InputFH != nil {
 		go func() {
@@ -61,7 +62,7 @@ func main() {
 		}()
 	}
 
-	err = cli.Run(OutputFH)
+	err = client.Run(OutputFH)
 	if err != nil {
 		log.Fatal(err)
 	}

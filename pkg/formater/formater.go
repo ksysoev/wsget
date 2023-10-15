@@ -58,8 +58,10 @@ func (f *Formater) formatTestMessage(msgType ws.MessageType, data string) (strin
 		return f.text.FormatRequest(data)
 	case ws.Response:
 		return f.text.FormatResponse(data)
-	default:
+	case ws.NotDefined:
 		return "", fmt.Errorf("unknown message type")
+	default:
+		panic("Unexpected message type: " + string(msgType))
 	}
 }
 
@@ -70,8 +72,10 @@ func (f *Formater) formatJsonMessage(msgType ws.MessageType, data any) (string, 
 		return f.json.FormatRequest(data)
 	case ws.Response:
 		return f.json.FormatResponse(data)
-	default:
+	case ws.NotDefined:
 		return "", fmt.Errorf("unknown message type")
+	default:
+		panic("Unexpected message type: " + string(msgType))
 	}
 }
 

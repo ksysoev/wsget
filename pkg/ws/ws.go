@@ -14,9 +14,13 @@ const (
 	Response
 )
 
+const (
+	WS_MESSAGE_BUFFER_SIZE = 100
+)
+
 type Message struct {
-	Type MessageType `json:"type"`
 	Data string      `json:"data"`
+	Type MessageType `json:"type"`
 }
 
 type WSConnection struct {
@@ -31,7 +35,7 @@ func NewWS(url string) (*WSConnection, error) {
 		return nil, err
 	}
 
-	messages := make(chan Message, 100)
+	messages := make(chan Message, WS_MESSAGE_BUFFER_SIZE)
 
 	go func(messages chan Message) {
 		for {

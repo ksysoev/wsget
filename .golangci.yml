@@ -1,4 +1,6 @@
 linters-settings:
+  exhaustive:
+    default-signifies-exhaustive: true
   errcheck:
     check-type-assertions: true
   goconst:
@@ -24,7 +26,6 @@ linters:
   enable:
     - bodyclose
     - deadcode
-    - depguard
     - dogsled
     - dupl
     - errcheck

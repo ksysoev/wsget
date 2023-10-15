@@ -8,14 +8,14 @@ import (
 )
 
 type History struct {
-	file     string
-	limit    uint
 	requests []string
+	fileName string
+	limit    uint
 }
 
-func NewHistory(file string, limit uint) *History {
+func NewHistory(fileName string, limit uint) *History {
 	h := &History{
-		file:     file,
+		fileName: fileName,
 		limit:    limit,
 		requests: make([]string, 0),
 	}
@@ -26,7 +26,7 @@ func NewHistory(file string, limit uint) *History {
 }
 
 func (h *History) loadFromFile() error {
-	fileHandler, err := os.OpenFile(h.file, os.O_RDONLY|os.O_CREATE, 0644)
+	fileHandler, err := os.OpenFile(h.fileName, os.O_RDONLY|os.O_CREATE, 0644)
 	if err != nil {
 		log.Println("Error opening history file:", err)
 		return err
@@ -57,7 +57,7 @@ func (h *History) loadFromFile() error {
 }
 
 func (h *History) SaveToFile() error {
-	fileHandler, err := os.OpenFile(h.file, os.O_WRONLY|os.O_CREATE, 0644)
+	fileHandler, err := os.OpenFile(h.fileName, os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		log.Println("Error opening history file:", err)
 		return err
