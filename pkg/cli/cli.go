@@ -142,11 +142,19 @@ func (c *CLI) requestMode(keyStream <-chan keyboard.KeyEvent) (string, error) {
 			}
 
 			if buffer[len(buffer)-1] == '\n' {
-				continue
+				buffer = buffer[:len(buffer)-1]
+				fmt.Print(LINE_UP)
+				startPrevLine := strings.LastIndex(buffer, "\n")
+				if startPrevLine == -1 {
+					startPrevLine = 0
+				} else {
+					startPrevLine++
+				}
+				fmt.Print(buffer[startPrevLine:])
+			} else {
+				fmt.Print("\b \b")
+				buffer = buffer[:len(buffer)-1]
 			}
-
-			fmt.Print("\b \b")
-			buffer = buffer[:len(buffer)-1]
 			continue
 		case keyboard.KeyArrowUp:
 			historyIndex++
