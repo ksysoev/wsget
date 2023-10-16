@@ -17,15 +17,15 @@ jobs:
         with:
           go-version: '1.21.x'
       - name: Build Linux
-        run: GOOS=linux GOARCH=amd64 go build -buildmode=exe -o ./wsget ./cmd/wsget
+        run: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -buildmode=exe -o ./wsget ./cmd/wsget
       - name: Compress Linux
         run: tar -czvf ./wsget-$(git describe --tags --abbrev=0).linux-amd64.tar.gz ./wsget ./LICENSE ./README.md
       - name: Build MacOS (Intel)
-        run: GOOS=darwin GOARCH=amd64 go build -buildmode=exe -o ./wsget ./cmd/wsget 
+        run: CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -buildmode=exe -o ./wsget ./cmd/wsget 
       - name: Compress MacOS (Intel)
         run: tar -czvf ./wsget-$(git describe --tags --abbrev=0).darwin-amd64.tar.gz ./wsget ./LICENSE ./README.md
       - name: Build MacOS (M)
-        run: GOOS=darwin GOARCH=arm64 go build -buildmode=exe -o ./wsget ./cmd/wsget
+        run: CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -buildmode=exe -o ./wsget ./cmd/wsget
       - name: Compress MacOS (M)
         run: tar -czvf ./wsget-$(git describe --tags --abbrev=0).darwin-arm64.tar.gz ./wsget ./LICENSE ./README.md
       - name: Copy build-artifacts
