@@ -19,8 +19,8 @@ func NewEditor(history *History) *Editor {
 
 func (ed *Editor) EditRequest(keyStream <-chan keyboard.KeyEvent, initBuffer string) (string, error) {
 	historyIndex := 0
-
 	runeBuffer := []rune(initBuffer)
+
 	for e := range keyStream {
 		if e.Err != nil {
 			return "", e.Err
