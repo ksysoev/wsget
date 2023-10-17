@@ -9,17 +9,19 @@ import (
 
 type Editor struct {
 	History *History
+	buffer  []rune
 }
 
 func NewEditor(history *History) *Editor {
 	return &Editor{
 		History: history,
+		buffer:  make([]rune, 0),
 	}
 }
 
 func (ed *Editor) EditRequest(keyStream <-chan keyboard.KeyEvent, initBuffer string) (string, error) {
 	historyIndex := 0
-	runeBuffer := []rune(initBuffer)
+	ed.buffer = []rune(initBuffer)
 
 	for e := range keyStream {
 		if e.Err != nil {
@@ -30,7 +32,7 @@ func (ed *Editor) EditRequest(keyStream <-chan keyboard.KeyEvent, initBuffer str
 		case keyboard.KeyCtrlC, keyboard.KeyCtrlD:
 			return "", fmt.Errorf("interrupted")
 		case keyboard.KeyCtrlS:
-			stringBuffer := string(runeBuffer)
+			stringBuffer := string(ed.buffer)
 			requet := strings.TrimSpace(stringBuffer)
 
 			if requet == "" {
@@ -46,32 +48,32 @@ func (ed *Editor) EditRequest(keyStream <-chan keyboard.KeyEvent, initBuffer str
 		case keyboard.KeySpace:
 			fmt.Print(" ")
 
-			runeBuffer = append(runeBuffer, ' ')
+			ed.buffer = append(ed.buffer, ' ')
 		case keyboard.KeyEnter:
 			fmt.Print("\n")
 
-			runeBuffer = append(runeBuffer, '\n')
+			ed.buffer = append(ed.buffer, '\n')
 		case keyboard.KeyBackspace, keyboard.KeyDelete, MacOSDeleteKey:
-			if len(runeBuffer) == 0 {
+			if len(ed.buffer) == 0 {
 				continue
 			}
 
-			if runeBuffer[len(runeBuffer)-1] == '\n' {
-				runeBuffer = runeBuffer[:len(runeBuffer)-1]
+			if ed.buffer[len(ed.buffer)-1] == '\n' {
+				ed.buffer = ed.buffer[:len(ed.buffer)-1]
 
 				fmt.Print(LineUp)
 
-				startPrevLine := LastIndexOf(runeBuffer, '\n')
+				startPrevLine := LastIndexOf(ed.buffer, '\n')
 				if startPrevLine == -1 {
 					startPrevLine = 0
 				} else {
 					startPrevLine++
 				}
 
-				fmt.Print(string(runeBuffer[startPrevLine:]))
+				fmt.Print(string(ed.buffer[startPrevLine:]))
 			} else {
 				fmt.Print("\b \b")
-				runeBuffer = runeBuffer[:len(runeBuffer)-1]
+				ed.buffer = ed.buffer[:len(ed.buffer)-1]
 			}
 		case keyboard.KeyArrowUp:
 			historyIndex++
@@ -82,10 +84,10 @@ func (ed *Editor) EditRequest(keyStream <-chan keyboard.KeyEvent, initBuffer str
 				continue
 			}
 
-			ed.clearInput(runeBuffer)
+			ed.clearInput()
 
 			fmt.Print(req)
-			runeBuffer = []rune(req)
+			ed.buffer = []rune(req)
 		case keyboard.KeyArrowDown:
 			historyIndex--
 			req := ed.History.GetRequst(historyIndex)
@@ -95,10 +97,10 @@ func (ed *Editor) EditRequest(keyStream <-chan keyboard.KeyEvent, initBuffer str
 				continue
 			}
 
-			ed.clearInput(runeBuffer)
+			ed.clearInput()
 
 			fmt.Print(req)
-			runeBuffer = []rune(req)
+			ed.buffer = []rune(req)
 		default:
 			if e.Key > 0 {
 				continue
@@ -106,16 +108,16 @@ func (ed *Editor) EditRequest(keyStream <-chan keyboard.KeyEvent, initBuffer str
 
 			fmt.Print(string(e.Rune))
 
-			runeBuffer = append(runeBuffer, e.Rune)
+			ed.buffer = append(ed.buffer, e.Rune)
 		}
 	}
 
 	return "", fmt.Errorf("keyboard stream was unexpectably closed")
 }
 
-func (ed *Editor) clearInput(runeBuffer []rune) {
-	for i := 0; i < len(runeBuffer); i++ {
-		if runeBuffer[i] == '\n' {
+func (ed *Editor) clearInput() {
+	for i := 0; i < len(ed.buffer); i++ {
+		if ed.buffer[i] == '\n' {
 			fmt.Print(LineUp)
 			fmt.Print(LineClear)
 		} else {
