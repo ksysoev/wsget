@@ -10,12 +10,14 @@ import (
 type Editor struct {
 	History *History
 	buffer  []rune
+	pos     int
 }
 
 func NewEditor(history *History) *Editor {
 	return &Editor{
 		History: history,
 		buffer:  make([]rune, 0),
+		pos:     0,
 	}
 }
 
@@ -49,32 +51,14 @@ func (ed *Editor) EditRequest(keyStream <-chan keyboard.KeyEvent, initBuffer str
 			fmt.Print(" ")
 
 			ed.buffer = append(ed.buffer, ' ')
+			ed.pos++
 		case keyboard.KeyEnter:
 			fmt.Print("\n")
 
 			ed.buffer = append(ed.buffer, '\n')
+			ed.pos++
 		case keyboard.KeyBackspace, keyboard.KeyDelete, MacOSDeleteKey:
-			if len(ed.buffer) == 0 {
-				continue
-			}
-
-			if ed.buffer[len(ed.buffer)-1] == '\n' {
-				ed.buffer = ed.buffer[:len(ed.buffer)-1]
-
-				fmt.Print(LineUp)
-
-				startPrevLine := LastIndexOf(ed.buffer, '\n')
-				if startPrevLine == -1 {
-					startPrevLine = 0
-				} else {
-					startPrevLine++
-				}
-
-				fmt.Print(string(ed.buffer[startPrevLine:]))
-			} else {
-				fmt.Print("\b \b")
-				ed.buffer = ed.buffer[:len(ed.buffer)-1]
-			}
+			ed.removeSymbol()
 		case keyboard.KeyArrowUp:
 			historyIndex++
 			req := ed.History.GetRequst(historyIndex)
@@ -88,6 +72,7 @@ func (ed *Editor) EditRequest(keyStream <-chan keyboard.KeyEvent, initBuffer str
 
 			fmt.Print(req)
 			ed.buffer = []rune(req)
+			ed.pos = len(ed.buffer) - 1
 		case keyboard.KeyArrowDown:
 			historyIndex--
 			req := ed.History.GetRequst(historyIndex)
@@ -101,6 +86,7 @@ func (ed *Editor) EditRequest(keyStream <-chan keyboard.KeyEvent, initBuffer str
 
 			fmt.Print(req)
 			ed.buffer = []rune(req)
+			ed.pos = len(ed.buffer) - 1
 		default:
 			if e.Key > 0 {
 				continue
@@ -109,6 +95,7 @@ func (ed *Editor) EditRequest(keyStream <-chan keyboard.KeyEvent, initBuffer str
 			fmt.Print(string(e.Rune))
 
 			ed.buffer = append(ed.buffer, e.Rune)
+			ed.pos++
 		}
 	}
 
@@ -123,6 +110,36 @@ func (ed *Editor) clearInput() {
 		} else {
 			fmt.Print("\b \b")
 		}
+	}
+}
+
+func (ed *Editor) removeSymbol() {
+	if ed.pos < 1 || ed.pos > len(ed.buffer) {
+		return
+	}
+
+	ed.pos--
+	symbol := ed.buffer[ed.pos]
+	buffer := ed.buffer[:ed.pos]
+	if ed.pos < (len(ed.buffer) - 1) {
+		buffer = append(buffer, ed.buffer[ed.pos+1:]...)
+	}
+	ed.buffer = buffer
+
+	if symbol == '\n' {
+
+		fmt.Print(LineUp)
+
+		startPrevLine := LastIndexOf(ed.buffer, '\n')
+		if startPrevLine == -1 {
+			startPrevLine = 0
+		} else {
+			startPrevLine++
+		}
+
+		fmt.Print(string(ed.buffer[startPrevLine:]))
+	} else {
+		fmt.Print("\b \b")
 	}
 }
 
