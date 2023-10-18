@@ -136,13 +136,14 @@ func (ed *Editor) removeSymbol() {
 	ed.pos--
 	symbol := ed.buffer[ed.pos]
 	buffer := ed.buffer[:ed.pos]
+
 	if ed.pos < (len(ed.buffer) - 1) {
 		buffer = append(buffer, ed.buffer[ed.pos+1:]...)
 	}
+
 	ed.buffer = buffer
 
 	if symbol == '\n' {
-
 		fmt.Print(LineUp)
 
 		startPrevLine := LastIndexOf(ed.buffer, ed.pos, '\n')
@@ -162,20 +163,21 @@ func (ed *Editor) InsertSymbol(symbol rune) {
 	buffer := ed.buffer[:ed.pos]
 	buffer = append(buffer, symbol)
 	endOfStr := ""
+
 	if ed.pos < len(ed.buffer) {
 		buffer = append(buffer, ed.buffer[ed.pos:]...)
-
 		moveCursor := ""
+
 		for i := ed.pos; i < len(ed.buffer); i++ {
-			if ed.buffer[i] == '\n' {
-				break
-			} else {
+			if ed.buffer[i] != '\n' {
 				endOfStr += string(ed.buffer[i])
 				moveCursor += "\b"
 			}
 		}
+
 		endOfStr += moveCursor
 	}
+
 	ed.buffer = buffer
 	ed.pos++
 
