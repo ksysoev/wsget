@@ -24,6 +24,7 @@ func NewEditor(history *History) *Editor {
 func (ed *Editor) EditRequest(keyStream <-chan keyboard.KeyEvent, initBuffer string) (string, error) {
 	historyIndex := 0
 	ed.buffer = []rune(initBuffer)
+	ed.pos = len(ed.buffer)
 
 	for e := range keyStream {
 		if e.Err != nil {
@@ -48,17 +49,34 @@ func (ed *Editor) EditRequest(keyStream <-chan keyboard.KeyEvent, initBuffer str
 			return "", nil
 
 		case keyboard.KeySpace:
-			fmt.Print(" ")
-
-			ed.buffer = append(ed.buffer, ' ')
-			ed.pos++
+			ed.InsertSymbol(' ')
 		case keyboard.KeyEnter:
-			fmt.Print("\n")
-
-			ed.buffer = append(ed.buffer, '\n')
-			ed.pos++
+			ed.InsertSymbol('\n')
 		case keyboard.KeyBackspace, keyboard.KeyDelete, MacOSDeleteKey:
 			ed.removeSymbol()
+		case keyboard.KeyArrowLeft:
+			if ed.pos > 0 {
+				ed.pos--
+				if ed.buffer[ed.pos] == '\n' {
+					fmt.Print(LineUp)
+
+					startPrevLine := LastIndexOf(ed.buffer, ed.pos-1, '\n')
+					if startPrevLine == -1 {
+						startPrevLine = 0
+					} else {
+						startPrevLine++
+					}
+
+					fmt.Print(string(ed.buffer[startPrevLine:ed.pos]))
+				} else {
+					fmt.Print("\b")
+				}
+			}
+		case keyboard.KeyArrowRight:
+			if ed.pos < len(ed.buffer) {
+				fmt.Print(string(ed.buffer[ed.pos]))
+				ed.pos++
+			}
 		case keyboard.KeyArrowUp:
 			historyIndex++
 			req := ed.History.GetRequst(historyIndex)
@@ -92,10 +110,7 @@ func (ed *Editor) EditRequest(keyStream <-chan keyboard.KeyEvent, initBuffer str
 				continue
 			}
 
-			fmt.Print(string(e.Rune))
-
-			ed.buffer = append(ed.buffer, e.Rune)
-			ed.pos++
+			ed.InsertSymbol(e.Rune)
 		}
 	}
 
@@ -130,7 +145,7 @@ func (ed *Editor) removeSymbol() {
 
 		fmt.Print(LineUp)
 
-		startPrevLine := LastIndexOf(ed.buffer, '\n')
+		startPrevLine := LastIndexOf(ed.buffer, ed.pos, '\n')
 		if startPrevLine == -1 {
 			startPrevLine = 0
 		} else {
@@ -143,8 +158,32 @@ func (ed *Editor) removeSymbol() {
 	}
 }
 
-func LastIndexOf(buffer []rune, search rune) int {
-	for i := len(buffer) - 1; i >= 0; i-- {
+func (ed *Editor) InsertSymbol(symbol rune) {
+	buffer := ed.buffer[:ed.pos]
+	buffer = append(buffer, symbol)
+	endOfStr := ""
+	if ed.pos < len(ed.buffer) {
+		buffer = append(buffer, ed.buffer[ed.pos:]...)
+
+		moveCursor := ""
+		for i := ed.pos; i < len(ed.buffer); i++ {
+			if ed.buffer[i] == '\n' {
+				break
+			} else {
+				endOfStr += string(ed.buffer[i])
+				moveCursor += "\b"
+			}
+		}
+		endOfStr += moveCursor
+	}
+	ed.buffer = buffer
+	ed.pos++
+
+	fmt.Print(string(symbol) + endOfStr)
+}
+
+func LastIndexOf(buffer []rune, pos int, search rune) int {
+	for i := pos; i >= 0; i-- {
 		if buffer[i] == search {
 			return i
 		}
