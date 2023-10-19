@@ -35,6 +35,10 @@ func (ed *Editor) EditRequest(keyStream <-chan keyboard.KeyEvent, initBuffer str
 		case keyboard.KeyCtrlC, keyboard.KeyCtrlD:
 			return "", fmt.Errorf("interrupted")
 		case keyboard.KeyCtrlS:
+			if ed.pos < len(ed.buffer) {
+				fmt.Print(string(ed.buffer[ed.pos:]))
+			}
+			fmt.Print("\n")
 			stringBuffer := string(ed.buffer)
 			requet := strings.TrimSpace(stringBuffer)
 
@@ -90,7 +94,7 @@ func (ed *Editor) EditRequest(keyStream <-chan keyboard.KeyEvent, initBuffer str
 
 			fmt.Print(req)
 			ed.buffer = []rune(req)
-			ed.pos = len(ed.buffer) - 1
+			ed.pos = len(ed.buffer)
 		case keyboard.KeyArrowDown:
 			historyIndex--
 			req := ed.History.GetRequst(historyIndex)
@@ -104,7 +108,7 @@ func (ed *Editor) EditRequest(keyStream <-chan keyboard.KeyEvent, initBuffer str
 
 			fmt.Print(req)
 			ed.buffer = []rune(req)
-			ed.pos = len(ed.buffer) - 1
+			ed.pos = len(ed.buffer)
 		default:
 			if e.Key > 0 {
 				continue
@@ -160,7 +164,8 @@ func (ed *Editor) removeSymbol() {
 }
 
 func (ed *Editor) InsertSymbol(symbol rune) {
-	buffer := ed.buffer[:ed.pos]
+	buffer := make([]rune, ed.pos, len(ed.buffer)+1)
+	copy(buffer, ed.buffer[:ed.pos])
 	buffer = append(buffer, symbol)
 	endOfStr := ""
 
@@ -180,7 +185,6 @@ func (ed *Editor) InsertSymbol(symbol rune) {
 
 	ed.buffer = buffer
 	ed.pos++
-
 	fmt.Print(string(symbol) + endOfStr)
 }
 
