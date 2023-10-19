@@ -38,7 +38,9 @@ func (ed *Editor) EditRequest(keyStream <-chan keyboard.KeyEvent, initBuffer str
 			if ed.pos < len(ed.buffer) {
 				fmt.Print(string(ed.buffer[ed.pos:]))
 			}
+
 			fmt.Print("\n")
+
 			stringBuffer := string(ed.buffer)
 			requet := strings.TrimSpace(stringBuffer)
 
@@ -187,6 +189,7 @@ func (ed *Editor) InsertSymbol(symbol rune) {
 
 	ed.buffer = buffer
 	ed.pos++
+
 	fmt.Print(string(symbol) + endOfStr)
 }
 
