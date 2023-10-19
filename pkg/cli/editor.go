@@ -177,6 +177,8 @@ func (ed *Editor) InsertSymbol(symbol rune) {
 			if ed.buffer[i] != '\n' {
 				endOfStr += string(ed.buffer[i])
 				moveCursor += "\b"
+			} else {
+				break
 			}
 		}
 
