@@ -12,6 +12,7 @@ import (
 )
 
 var wsURL string
+var insecure *bool
 var OutputFH *os.File
 var InputFH *os.File
 
@@ -19,6 +20,7 @@ func init() {
 	url := flag.String("u", "", "Websocket url that will be used for connection. this argument is required")
 	outputFile := flag.String("o", "", "Output file for saving requests and responses")
 	showHelp := flag.Bool("h", false, "Prints this help message")
+	insecure = flag.Bool("insecure", false, "Skip SSL certificate verification")
 
 	flag.Parse()
 
@@ -40,16 +42,12 @@ func init() {
 }
 
 func main() {
-	fmt.Println("Connecting to", wsURL, "...")
-
-	wsInsp, err := ws.NewWS(wsURL)
+	wsInsp, err := ws.NewWS(wsURL, ws.Options{SkipSSLVerification: *insecure})
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	defer wsInsp.Close()
-
-	fmt.Println("Connected")
 
 	client := cli.NewCLI(wsInsp)
 

@@ -1,6 +1,7 @@
 package ws
 
 import (
+	"crypto/tls"
 	"log"
 
 	"golang.org/x/net/websocket"
@@ -28,8 +29,25 @@ type Connection struct {
 	Messages chan Message
 }
 
-func NewWS(url string) (*Connection, error) {
-	ws, err := websocket.Dial(url, "", "http://localhost")
+type Options struct {
+	SkipSSLVerification bool
+}
+
+func NewWS(url string, opts Options) (*Connection, error) {
+	cfg, err := websocket.NewConfig(url, "http://localhost")
+	if err != nil {
+		return nil, err
+	}
+
+	// This option could be useful for testing and development purposes.
+	// Default value is false.
+	// #nosec G402
+	tlsConfig := &tls.Config{
+		InsecureSkipVerify: opts.SkipSSLVerification,
+	}
+	cfg.TlsConfig = tlsConfig
+
+	ws, err := websocket.DialConfig(cfg)
 
 	if err != nil {
 		return nil, err
