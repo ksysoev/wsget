@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"flag"
 	"fmt"
 	"log"
@@ -13,14 +12,15 @@ import (
 
 var wsURL string
 var insecure *bool
+var request *string
 var OutputFH *os.File
-var InputFH *os.File
 
 func init() {
 	url := flag.String("u", "", "Websocket url that will be used for connection. this argument is required")
 	outputFile := flag.String("o", "", "Output file for saving requests and responses")
 	showHelp := flag.Bool("h", false, "Prints this help message")
 	insecure = flag.Bool("insecure", false, "Skip SSL certificate verification")
+	request = flag.String("r", "", "Request that will be sent to the server")
 
 	flag.Parse()
 
@@ -51,14 +51,11 @@ func main() {
 
 	client := cli.NewCLI(wsInsp)
 
-	if InputFH != nil {
+	if *request != "" {
 		go func() {
-			scanner := bufio.NewScanner(InputFH)
-			for scanner.Scan() {
-				err = wsInsp.Send(scanner.Text())
-				if err != nil {
-					fmt.Println("Fail to send request:", err)
-				}
+			err = wsInsp.Send(*request)
+			if err != nil {
+				fmt.Println("Fail to send request:", err)
 			}
 		}()
 	}
