@@ -57,7 +57,7 @@ func (c *Content) MovePositionRight() string {
 
 	c.pos++
 
-	return string(c.text[c.pos])
+	return string(c.text[c.pos-1])
 }
 
 func (c *Content) Clear() string {
