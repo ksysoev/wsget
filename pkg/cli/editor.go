@@ -2,13 +2,13 @@ package cli
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/eiannone/keyboard"
 )
 
 type Editor struct {
 	History *History
+	content *Content
 	buffer  []rune
 	pos     int
 }
@@ -16,6 +16,7 @@ type Editor struct {
 func NewEditor(history *History) *Editor {
 	return &Editor{
 		History: history,
+		content: NewContent(),
 		buffer:  make([]rune, 0),
 		pos:     0,
 	}
@@ -23,8 +24,8 @@ func NewEditor(history *History) *Editor {
 
 func (ed *Editor) EditRequest(keyStream <-chan keyboard.KeyEvent, initBuffer string) (string, error) {
 	historyIndex := 0
-	ed.buffer = []rune(initBuffer)
-	ed.pos = len(ed.buffer)
+
+	fmt.Print(ed.content.ReplaceText(initBuffer))
 
 	for e := range keyStream {
 		if e.Err != nil {
@@ -35,54 +36,29 @@ func (ed *Editor) EditRequest(keyStream <-chan keyboard.KeyEvent, initBuffer str
 		case keyboard.KeyCtrlC, keyboard.KeyCtrlD:
 			return "", fmt.Errorf("interrupted")
 		case keyboard.KeyCtrlS:
-			if ed.pos < len(ed.buffer) {
-				fmt.Print(string(ed.buffer[ed.pos:]))
+			fmt.Print(ed.content.MoveToEnd() + "\n")
+
+			req := ed.content.ToRequest()
+			if req == "" {
+				return req, fmt.Errorf("cannot send empty request")
 			}
 
-			fmt.Print("\n")
+			ed.History.AddRequest(req)
 
-			stringBuffer := string(ed.buffer)
-			requet := strings.TrimSpace(stringBuffer)
-
-			if requet == "" {
-				return requet, fmt.Errorf("cannot send empty request")
-			}
-
-			ed.History.AddRequest(requet)
-
-			return requet, nil
+			return req, nil
 		case keyboard.KeyEsc:
 			return "", nil
 
 		case keyboard.KeySpace:
-			ed.InsertSymbol(' ')
+			fmt.Print(ed.content.InsertSymbol(' '))
 		case keyboard.KeyEnter:
-			ed.InsertSymbol('\n')
+			fmt.Print(ed.content.InsertSymbol('\n'))
 		case keyboard.KeyBackspace, keyboard.KeyDelete, MacOSDeleteKey:
-			ed.removeSymbol()
+			fmt.Print(ed.content.RemoveSymbol())
 		case keyboard.KeyArrowLeft:
-			if ed.pos > 0 {
-				ed.pos--
-				if ed.buffer[ed.pos] == '\n' {
-					fmt.Print(LineUp)
-
-					startPrevLine := LastIndexOf(ed.buffer, ed.pos-1, '\n')
-					if startPrevLine == -1 {
-						startPrevLine = 0
-					} else {
-						startPrevLine++
-					}
-
-					fmt.Print(string(ed.buffer[startPrevLine:ed.pos]))
-				} else {
-					fmt.Print("\b")
-				}
-			}
+			fmt.Print(ed.content.MovePositionLeft())
 		case keyboard.KeyArrowRight:
-			if ed.pos < len(ed.buffer) {
-				fmt.Print(string(ed.buffer[ed.pos]))
-				ed.pos++
-			}
+			fmt.Print(ed.content.MovePositionRight())
 		case keyboard.KeyArrowUp:
 			historyIndex++
 			req := ed.History.GetRequst(historyIndex)
@@ -92,11 +68,7 @@ func (ed *Editor) EditRequest(keyStream <-chan keyboard.KeyEvent, initBuffer str
 				continue
 			}
 
-			ed.clearInput()
-
-			fmt.Print(req)
-			ed.buffer = []rune(req)
-			ed.pos = len(ed.buffer)
+			fmt.Print(ed.content.ReplaceText(req))
 		case keyboard.KeyArrowDown:
 			historyIndex--
 			req := ed.History.GetRequst(historyIndex)
@@ -106,99 +78,15 @@ func (ed *Editor) EditRequest(keyStream <-chan keyboard.KeyEvent, initBuffer str
 				continue
 			}
 
-			ed.clearInput()
-
-			fmt.Print(req)
-			ed.buffer = []rune(req)
-			ed.pos = len(ed.buffer)
+			fmt.Print(ed.content.ReplaceText(req))
 		default:
 			if e.Key > 0 {
 				continue
 			}
 
-			ed.InsertSymbol(e.Rune)
+			fmt.Print(ed.content.InsertSymbol(e.Rune))
 		}
 	}
 
 	return "", fmt.Errorf("keyboard stream was unexpectably closed")
-}
-
-func (ed *Editor) clearInput() {
-	for i := 0; i < len(ed.buffer); i++ {
-		if ed.buffer[i] == '\n' {
-			fmt.Print(LineUp)
-			fmt.Print(LineClear)
-		} else {
-			fmt.Print("\b \b")
-		}
-	}
-}
-
-func (ed *Editor) removeSymbol() {
-	if ed.pos < 1 || ed.pos > len(ed.buffer) {
-		return
-	}
-
-	ed.pos--
-	symbol := ed.buffer[ed.pos]
-	buffer := ed.buffer[:ed.pos]
-
-	if ed.pos < (len(ed.buffer) - 1) {
-		buffer = append(buffer, ed.buffer[ed.pos+1:]...)
-	}
-
-	ed.buffer = buffer
-
-	if symbol == '\n' {
-		fmt.Print(LineUp)
-
-		startPrevLine := LastIndexOf(ed.buffer, ed.pos, '\n')
-		if startPrevLine == -1 {
-			startPrevLine = 0
-		} else {
-			startPrevLine++
-		}
-
-		fmt.Print(string(ed.buffer[startPrevLine:]))
-	} else {
-		fmt.Print("\b \b")
-	}
-}
-
-func (ed *Editor) InsertSymbol(symbol rune) {
-	buffer := make([]rune, ed.pos, len(ed.buffer)+1)
-	copy(buffer, ed.buffer[:ed.pos])
-	buffer = append(buffer, symbol)
-	endOfStr := ""
-
-	if ed.pos < len(ed.buffer) {
-		buffer = append(buffer, ed.buffer[ed.pos:]...)
-		moveCursor := ""
-
-		for i := ed.pos; i < len(ed.buffer); i++ {
-			if ed.buffer[i] != '\n' {
-				endOfStr += string(ed.buffer[i])
-				moveCursor += "\b"
-			} else {
-				break
-			}
-		}
-
-		endOfStr += moveCursor
-	}
-
-	ed.buffer = buffer
-	ed.pos++
-
-	fmt.Print(string(symbol) + endOfStr)
-}
-
-func LastIndexOf(buffer []rune, pos int, search rune) int {
-	for i := pos; i >= 0; i-- {
-		if buffer[i] == search {
-			return i
-		}
-	}
-
-	return -1
 }

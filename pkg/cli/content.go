@@ -1,0 +1,152 @@
+package cli
+
+import "strings"
+
+type Content struct {
+	text []rune
+	pos  int
+}
+
+func NewContent() *Content {
+	return &Content{
+		text: []rune{},
+		pos:  0,
+	}
+}
+
+func (c *Content) ReplaceText(text string) string {
+	output := c.Clear()
+	c.text = []rune(text)
+	c.pos = len(c.text)
+
+	return output + text
+}
+
+func (c *Content) String() string {
+	return string(c.text)
+}
+
+func (c *Content) ToRequest() string {
+	return strings.TrimSpace(c.String())
+}
+
+func (c *Content) MovePositionLeft() string {
+	if c.pos <= 0 {
+		return ""
+	}
+
+	c.pos--
+	if c.text[c.pos] != '\n' {
+		return "\b"
+	}
+
+	startPrevLine := lastIndexOf(c.text, c.pos-1, '\n')
+	if startPrevLine == -1 {
+		startPrevLine = 0
+	} else {
+		startPrevLine++
+	}
+
+	return LineUp + string(c.text[startPrevLine:c.pos])
+}
+
+func (c *Content) MovePositionRight() string {
+	if c.pos >= len(c.text) {
+		return ""
+	}
+
+	c.pos++
+
+	return string(c.text[c.pos])
+}
+
+func (c *Content) Clear() string {
+	output := ""
+
+	for i := 0; i < len(c.text); i++ {
+		if c.text[i] == '\n' {
+			output += LineUp + LineClear
+		} else {
+			output += "\b \b"
+		}
+	}
+
+	return output
+}
+
+func (c *Content) RemoveSymbol() string {
+	if c.pos < 1 || c.pos > len(c.text) {
+		return ""
+	}
+
+	c.pos--
+	symbol := c.text[c.pos]
+	buffer := c.text[:c.pos]
+
+	if c.pos < (len(c.text) - 1) {
+		buffer = append(buffer, c.text[c.pos+1:]...)
+	}
+
+	c.text = buffer
+	if symbol == '\n' {
+		startPrevLine := lastIndexOf(c.text, c.pos, '\n')
+		if startPrevLine == -1 {
+			startPrevLine = 0
+		} else {
+			startPrevLine++
+		}
+
+		return LineUp + string(c.text[startPrevLine:])
+	}
+
+	return "\b \b"
+}
+
+func (c *Content) InsertSymbol(symbol rune) string {
+	buffer := make([]rune, c.pos, len(c.text)+1)
+	copy(buffer, c.text[:c.pos])
+	buffer = append(buffer, symbol)
+	output := string(symbol)
+
+	if c.pos < len(c.text) {
+		buffer = append(buffer, c.text[c.pos:]...)
+		moveCursor := ""
+
+		for i := c.pos; i < len(c.text); i++ {
+			if c.text[i] != '\n' {
+				output += string(c.text[i])
+				moveCursor += "\b"
+			} else {
+				break
+			}
+		}
+
+		output += moveCursor
+	}
+
+	c.text = buffer
+	c.pos++
+
+	return output
+}
+
+func (c *Content) MoveToEnd() string {
+	if c.pos >= len(c.text) {
+		return ""
+	}
+
+	output := string(c.text[c.pos:])
+	c.pos = len(c.text)
+
+	return output
+}
+
+func lastIndexOf(buffer []rune, pos int, search rune) int {
+	for i := pos; i >= 0; i-- {
+		if buffer[i] == search {
+			return i
+		}
+	}
+
+	return -1
+}
