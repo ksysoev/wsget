@@ -106,7 +106,20 @@ func (c *Content) InsertSymbol(symbol rune) string {
 	buffer := make([]rune, c.pos, len(c.text)+1)
 	copy(buffer, c.text[:c.pos])
 	buffer = append(buffer, symbol)
-	output := string(symbol)
+	output := ""
+
+	if symbol == '\n' && c.pos < len(c.text) {
+		endOfLine := lastIndexOf(c.text, c.pos, '\n')
+		if endOfLine == -1 {
+			endOfLine = len(c.text)
+		}
+
+		for i := c.pos; i <= endOfLine; i++ {
+			output += string(' ')
+		}
+	}
+
+	output += string(symbol)
 
 	if c.pos < len(c.text) {
 		buffer = append(buffer, c.text[c.pos:]...)
