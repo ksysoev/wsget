@@ -282,13 +282,25 @@ func TestContent_RemoveSymbol(t *testing.T) {
 			contentAfter: "hello worl",
 		},
 		{
-			// This test is not really correct, but it is how it works now
-			// TODO: fix this test
-			name:         "remove newline symbol",
+			name:         "remove newline symbol in the middle of the text",
 			input:        "hello\nworld",
 			pos:          6,
-			output:       "\x1b[1Ahelloworld",
+			output:       "\x1b[1A\x1b[2K\rhelloworld\n\x1b[2K\r\x1b[1A\rhello",
 			contentAfter: "helloworld",
+		},
+		{
+			name:         "remove newline symbol at the beginning of the text",
+			input:        "\nhello\nworld",
+			pos:          1,
+			output:       "\x1b[1A\x1b[2K\rhello\n\x1b[2K\rworld\n\x1b[2K\r\x1b[1A\x1b[1A\r",
+			contentAfter: "hello\nworld",
+		},
+		{
+			name:         "remove newline symbol at the end of the text",
+			input:        "hello\nworld\n",
+			pos:          12,
+			output:       "\x1b[1A\x1b[2K\rhelloworld\n\x1b[2K\r\n\x1b[2K\r\x1b[1A\x1b[1A\rhello",
+			contentAfter: "hello\nworld",
 		},
 		{
 			name:         "remove symbol when pos is out of range",
@@ -317,7 +329,7 @@ func TestContent_RemoveSymbol(t *testing.T) {
 			}
 
 			if string(content.text) != tt.contentAfter {
-				t.Errorf("expected text to be '%s', but got '%s'", tt.contentAfter, string(content.text))
+				t.Errorf("expected text to be '%q', but got '%q'", tt.contentAfter, string(content.text))
 			}
 		})
 	}

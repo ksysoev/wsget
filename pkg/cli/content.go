@@ -1,9 +1,11 @@
 package cli
 
-import "strings"
+import (
+	"strings"
+)
 
 const (
-	LineUp    = "\033[1A"
+	LineUp    = "\x1b[1A"
 	LineClear = "\x1b[2K"
 )
 
@@ -88,6 +90,9 @@ func (c *Content) RemoveSymbol() string {
 
 	c.pos--
 	symbol := c.text[c.pos]
+
+	lines := c.GetLinesAfterPosition(c.pos)
+
 	buffer := c.text[:c.pos]
 
 	if c.pos < (len(c.text) - 1) {
@@ -95,18 +100,25 @@ func (c *Content) RemoveSymbol() string {
 	}
 
 	c.text = buffer
-	if symbol == '\n' {
-		startPrevLine := lastIndexOf(c.text, c.pos, '\n')
-		if startPrevLine == -1 {
-			startPrevLine = 0
-		} else {
-			startPrevLine++
-		}
 
-		return LineUp + string(c.text[startPrevLine:])
+	if symbol != '\n' {
+		return "\b \b"
 	}
 
-	return "\b \b"
+	output := LineUp + LineClear + "\r" + lines[0]
+
+	for i := 1; i < len(lines); i++ {
+		output += lines[i] + "\n" + LineClear + "\r"
+	}
+
+	// Move cursor back to position
+	for i := 1; i < len(lines); i++ {
+		output += LineUp
+	}
+
+	output += "\r" + lines[0]
+
+	return output
 }
 
 func (c *Content) InsertSymbol(symbol rune) string {
