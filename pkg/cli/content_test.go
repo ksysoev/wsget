@@ -3,6 +3,8 @@ package cli
 
 import (
 	"testing"
+
+	"gopkg.in/go-playground/assert.v1"
 )
 
 func TestNewContent(t *testing.T) {
@@ -136,6 +138,110 @@ func TestContent_Clear(t *testing.T) {
 			if actual != tt.expected {
 				t.Errorf("unexpected output: got %q, want %q", actual, tt.expected)
 			}
+		})
+	}
+}
+
+func TestContent_MovePositionLeft(t *testing.T) {
+	tests := []struct {
+		name        string
+		content     *Content
+		expected    string
+		expectedPos int
+	}{
+		{
+			name: "move left when position is at the beginning",
+			content: &Content{
+				text: []rune("hello"),
+				pos:  0,
+			},
+			expected:    "",
+			expectedPos: 0,
+		},
+		{
+			name: "move left when position is not at the beginning and previous character is not a newline",
+			content: &Content{
+				text: []rune("hello"),
+				pos:  3,
+			},
+			expected:    "\b",
+			expectedPos: 2,
+		},
+		{
+			name: "move left when position is not at the beginning and previous character is a newline",
+			content: &Content{
+				text: []rune("hello\nworld"),
+				pos:  6,
+			},
+			expected:    LineUp + "hello",
+			expectedPos: 5,
+		},
+		{
+			name: "move left when position is not at the beginning and previous character is a newline and there is no previous line",
+			content: &Content{
+				text: []rune("\nhello"),
+				pos:  1,
+			},
+			expected:    LineUp,
+			expectedPos: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := tt.content.MovePositionLeft()
+			assert.Equal(t, tt.expected, actual)
+			assert.Equal(t, tt.expectedPos, tt.content.pos)
+		})
+	}
+}
+
+func TestContent_MovePositionRight(t *testing.T) {
+	tests := []struct {
+		name        string
+		content     *Content
+		expected    string
+		expectedPos int
+	}{
+		{
+			name:     "empty content",
+			content:  NewContent(),
+			expected: "",
+		},
+		{
+			name: "single character",
+			content: &Content{
+				text: []rune{'a'},
+				pos:  0,
+			},
+			expected:    "a",
+			expectedPos: 1,
+		},
+		{
+			name: "multiple characters",
+			content: &Content{
+				text: []rune{'a', 'b', 'c'},
+				pos:  1,
+			},
+			expected:    "b",
+			expectedPos: 2,
+		},
+		{
+			name: "at end of content",
+			content: &Content{
+				text: []rune{'a', 'b', 'c'},
+				pos:  3,
+			},
+			expected:    "",
+			expectedPos: 3,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := tt.content.MovePositionRight()
+			assert.Equal(t, tt.expected, actual)
+			assert.Equal(t, tt.expectedPos, tt.content.pos)
 		})
 	}
 }
