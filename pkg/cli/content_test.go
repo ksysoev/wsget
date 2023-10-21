@@ -3,8 +3,6 @@ package cli
 
 import (
 	"testing"
-
-	"gopkg.in/go-playground/assert.v1"
 )
 
 func TestNewContent(t *testing.T) {
@@ -190,8 +188,12 @@ func TestContent_MovePositionLeft(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			actual := tt.content.MovePositionLeft()
-			assert.Equal(t, tt.expected, actual)
-			assert.Equal(t, tt.expectedPos, tt.content.pos)
+			if actual != tt.expected {
+				t.Errorf("expected %q, but got %q", tt.expected, actual)
+			}
+			if tt.content.pos != tt.expectedPos {
+				t.Errorf("expected position %d, but got %d", tt.expectedPos, tt.content.pos)
+			}
 		})
 	}
 }
@@ -240,8 +242,12 @@ func TestContent_MovePositionRight(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			actual := tt.content.MovePositionRight()
-			assert.Equal(t, tt.expected, actual)
-			assert.Equal(t, tt.expectedPos, tt.content.pos)
+			if actual != tt.expected {
+				t.Errorf("expected %q, but got %q", tt.expected, actual)
+			}
+			if tt.content.pos != tt.expectedPos {
+				t.Errorf("expected position %d, but got %d", tt.expectedPos, tt.content.pos)
+			}
 		})
 	}
 }
