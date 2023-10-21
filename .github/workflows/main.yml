@@ -5,15 +5,12 @@ on: [push]
 jobs:
   tests:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        go-version: ['1.21.x']
     steps:
       - uses: actions/checkout@v3
-      - name: Setup Go ${{ matrix.go-version }}
+      - name: Setup Go 1.21
         uses: actions/setup-go@v3
         with:
-          go-version: ${{ matrix.go-version }}
+          go-version: '1.21.x'
       - name: Display Go version
         run: go version
       - name: Code Lint
@@ -24,3 +21,7 @@ jobs:
         run: go build -v ./...
       - name: Test
         run: go test -coverprofile=coverage.out -covermode=atomic -v -race ./...
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v3
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
