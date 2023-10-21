@@ -161,6 +161,21 @@ func (c *Content) MoveToEnd() string {
 	return output
 }
 
+func (c *Content) GetLinesAfterPosition(pos int) []string {
+	if pos < 0 || pos > len(c.text) {
+		return []string{}
+	}
+
+	startOfLine := lastIndexOf(c.text, pos, '\t')
+	if startOfLine == -1 {
+		startOfLine = 0
+	} else {
+		startOfLine++
+	}
+
+	return strings.Split(string(c.text[startOfLine:]), "\n")
+}
+
 func lastIndexOf(buffer []rune, pos int, search rune) int {
 	for i := pos; i >= 0; i-- {
 		if buffer[i] == search {

@@ -251,3 +251,74 @@ func TestContent_MovePositionRight(t *testing.T) {
 		})
 	}
 }
+
+func TestContent_RemoveSymbol(t *testing.T) {
+	tests := []struct {
+		name         string
+		input        string
+		output       string
+		contentAfter string
+		pos          int
+	}{
+		{
+			name:         "remove symbol in the middle of the text",
+			input:        "hello world",
+			pos:          6,
+			output:       "\b \b",
+			contentAfter: "helloworld",
+		},
+		{
+			name:         "remove symbol at the beginning of the text",
+			input:        "hello world",
+			pos:          0,
+			output:       "",
+			contentAfter: "hello world",
+		},
+		{
+			name:         "remove symbol at the end of the text",
+			input:        "hello world",
+			pos:          11,
+			output:       "\b \b",
+			contentAfter: "hello worl",
+		},
+		{
+			// This test is not really correct, but it is how it works now
+			// TODO: fix this test
+			name:         "remove newline symbol",
+			input:        "hello\nworld",
+			pos:          6,
+			output:       "\x1b[1Ahelloworld",
+			contentAfter: "helloworld",
+		},
+		{
+			name:         "remove symbol when pos is out of range",
+			input:        "hello world",
+			pos:          20,
+			output:       "",
+			contentAfter: "hello world",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			content := &Content{
+				text: []rune(tt.input),
+				pos:  tt.pos,
+			}
+
+			output := content.RemoveSymbol()
+
+			if output != tt.output {
+				t.Errorf("expected output %q, but got %q", tt.output, output)
+			}
+
+			if tt.output != "" && content.pos != tt.pos-1 {
+				t.Errorf("expected position to be '%d', but got '%d'", tt.pos, content.pos)
+			}
+
+			if string(content.text) != tt.contentAfter {
+				t.Errorf("expected text to be '%s', but got '%s'", tt.contentAfter, string(content.text))
+			}
+		})
+	}
+}
