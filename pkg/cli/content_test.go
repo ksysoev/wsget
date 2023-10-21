@@ -101,3 +101,41 @@ func TestToRequest(t *testing.T) {
 		t.Errorf("ToRequest() did not return correct string, expected 'hello world', got '%s'", c.ToRequest())
 	}
 }
+
+func TestContent_Clear(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "empty content",
+			input:    "",
+			expected: "",
+		},
+		{
+			name:     "single line content",
+			input:    "hello world",
+			expected: "\x1b[2K\r",
+		},
+		{
+			name:     "multi-line content",
+			input:    "hello\nworld",
+			expected: "\x1b[2K\r\x1b[1A\x1b[2K\r",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Content{
+				text: []rune(tt.input),
+				pos:  len(tt.input),
+			}
+
+			actual := c.Clear()
+			if actual != tt.expected {
+				t.Errorf("unexpected output: got %q, want %q", actual, tt.expected)
+			}
+		})
+	}
+}
