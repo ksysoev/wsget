@@ -2,6 +2,11 @@ package cli
 
 import "strings"
 
+const (
+	LineUp    = "\033[1A"
+	LineClear = "\x1b[2K"
+)
+
 type Content struct {
 	text []rune
 	pos  int
@@ -61,13 +66,15 @@ func (c *Content) MovePositionRight() string {
 }
 
 func (c *Content) Clear() string {
-	output := ""
+	if len(c.text) == 0 {
+		return ""
+	}
+
+	output := LineClear + "\r"
 
 	for i := 0; i < len(c.text); i++ {
 		if c.text[i] == '\n' {
-			output += LineUp + LineClear
-		} else {
-			output += "\b \b"
+			output += LineUp + LineClear + "\r"
 		}
 	}
 

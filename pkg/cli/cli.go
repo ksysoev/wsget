@@ -12,9 +12,6 @@ import (
 )
 
 const (
-	LineUp    = "\033[1A"
-	LineClear = "\x1b[2K"
-
 	HistoryFilename = ".wsget_history"
 	HistoryLimit    = 100
 
