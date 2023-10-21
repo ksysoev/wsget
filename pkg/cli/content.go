@@ -91,7 +91,7 @@ func (c *Content) RemoveSymbol() string {
 	c.pos--
 	symbol := c.text[c.pos]
 
-	lines := c.GetLinesAfterPosition(c.pos)
+	startCurrentLine, lines := c.GetLinesAfterPosition(c.pos)
 
 	buffer := c.text[:c.pos]
 
@@ -101,8 +101,13 @@ func (c *Content) RemoveSymbol() string {
 
 	c.text = buffer
 
-	if symbol != '\n' {
+	if c.pos == len(c.text) && symbol != '\n' {
 		return "\b \b"
+	}
+
+	if symbol != '\n' {
+		endCurrentLine := startCurrentLine + len(lines[0])
+		return LineClear + "\r" + string(c.text[startCurrentLine:endCurrentLine-1]) + "\r" + string(c.text[startCurrentLine:c.pos])
 	}
 
 	output := LineUp + LineClear + "\r" + lines[0]
@@ -173,19 +178,19 @@ func (c *Content) MoveToEnd() string {
 	return output
 }
 
-func (c *Content) GetLinesAfterPosition(pos int) []string {
+func (c *Content) GetLinesAfterPosition(pos int) (startOfLine int, lines []string) {
 	if pos < 0 || pos > len(c.text) {
-		return []string{}
+		return 0, []string{}
 	}
 
-	startOfLine := lastIndexOf(c.text, pos, '\t')
+	startOfLine = lastIndexOf(c.text, pos, '\t')
 	if startOfLine == -1 {
 		startOfLine = 0
 	} else {
 		startOfLine++
 	}
 
-	return strings.Split(string(c.text[startOfLine:]), "\n")
+	return startOfLine, strings.Split(string(c.text[startOfLine:]), "\n")
 }
 
 func lastIndexOf(buffer []rune, pos int, search rune) int {

@@ -264,8 +264,15 @@ func TestContent_RemoveSymbol(t *testing.T) {
 			name:         "remove symbol in the middle of the text",
 			input:        "hello world",
 			pos:          6,
-			output:       "\b \b",
+			output:       "\x1b[2K\rhelloworld\rhello",
 			contentAfter: "helloworld",
+		},
+		{
+			name:         "remove symbol in the middle of the multiline text",
+			input:        "hello\nworld",
+			pos:          4,
+			output:       "\x1b[2K\rhelo\rhel",
+			contentAfter: "helo\nworld",
 		},
 		{
 			name:         "remove symbol at the beginning of the text",
