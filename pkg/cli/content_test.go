@@ -413,3 +413,53 @@ func TestContent_InsertSymbol(t *testing.T) {
 		})
 	}
 }
+
+func TestContent_MoveToEnd(t *testing.T) {
+	cases := []struct {
+		name     string
+		content  *Content
+		expected string
+	}{
+		{
+			name:     "empty content",
+			content:  &Content{},
+			expected: "",
+		},
+		{
+			name: "cursor at the end",
+			content: &Content{
+				text: []rune("hello world"),
+				pos:  11,
+			},
+			expected: "",
+		},
+		{
+			name: "cursor at the beginning",
+			content: &Content{
+				text: []rune("hello world"),
+				pos:  0,
+			},
+			expected: "hello world",
+		},
+		{
+			name: "cursor in the middle",
+			content: &Content{
+				text: []rune("hello world"),
+				pos:  6,
+			},
+			expected: "world",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := tc.content.MoveToEnd()
+			if actual != tc.expected {
+				t.Errorf("expected %q but got %q", tc.expected, actual)
+			}
+			if tc.content.pos != len(tc.content.text) {
+				t.Errorf("expected cursor to be at the end of the text")
+			}
+		})
+	}
+}
