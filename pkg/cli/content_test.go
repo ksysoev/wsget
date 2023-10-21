@@ -322,3 +322,94 @@ func TestContent_RemoveSymbol(t *testing.T) {
 		})
 	}
 }
+
+func TestContent_InsertSymbol(t *testing.T) {
+	tests := []struct {
+		name         string
+		input        string
+		output       string
+		contentAfter string
+		symbol       rune
+		pos          int
+	}{
+		{
+			name:         "insert at the end",
+			input:        "hello world",
+			symbol:       '!',
+			pos:          11,
+			output:       "!",
+			contentAfter: "hello world!",
+		},
+		{
+			// This test is not really correct, but it is how it works now
+			// TODO: fix this test
+			name:         "insert at the beginning",
+			input:        "hello world",
+			symbol:       '>',
+			pos:          0,
+			output:       ">hello world\b\b\b\b\b\b\b\b\b\b\b",
+			contentAfter: ">hello world",
+		},
+		{
+			// This test is not really correct, but it is how it works now
+			// TODO: fix this test
+			name:         "insert in the middle",
+			input:        "hello world",
+			symbol:       ',',
+			pos:          5,
+			output:       ", world\b\b\b\b\b\b",
+			contentAfter: "hello, world",
+		},
+		{
+			// This test is not really correct, but it is how it works now
+			// TODO: fix this test
+			name:         "insert newline in the middle",
+			input:        "hello\nworld",
+			symbol:       '\n',
+			pos:          4,
+			output:       "        \no\b",
+			contentAfter: "hell\no\nworld",
+		},
+		{
+			name:         "insert newline at the end",
+			input:        "hello world",
+			symbol:       '\n',
+			pos:          11,
+			output:       "\n",
+			contentAfter: "hello world\n",
+		},
+		{
+			// This test is not really correct, but it is how it works now
+			// TODO: fix this test
+			name:         "insert newline at the begginning",
+			input:        "hello\nworld",
+			symbol:       '\n',
+			pos:          0,
+			output:       "            \nhello\b\b\b\b\b",
+			contentAfter: "\nhello\nworld",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			content := &Content{
+				text: []rune(tt.input),
+				pos:  tt.pos,
+			}
+
+			output := content.InsertSymbol(tt.symbol)
+
+			if output != tt.output {
+				t.Errorf("expected output %q, but got %q", tt.output, output)
+			}
+
+			if tt.output != "" && content.pos != tt.pos+1 {
+				t.Errorf("expected position to be '%d', but got '%d'", tt.pos, content.pos)
+			}
+
+			if string(content.text) != tt.contentAfter {
+				t.Errorf("expected text to be '%s', but got '%s'", tt.contentAfter, string(content.text))
+			}
+		})
+	}
+}
