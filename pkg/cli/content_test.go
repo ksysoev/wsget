@@ -350,6 +350,7 @@ func TestContent_InsertSymbol(t *testing.T) {
 		contentAfter string
 		symbol       rune
 		pos          int
+		posAfter     int
 	}{
 		{
 			name:         "insert at the end",
@@ -358,36 +359,34 @@ func TestContent_InsertSymbol(t *testing.T) {
 			pos:          11,
 			output:       "!",
 			contentAfter: "hello world!",
+			posAfter:     12,
 		},
 		{
-			// This test is not really correct, but it is how it works now
-			// TODO: fix this test
 			name:         "insert at the beginning",
 			input:        "hello world",
 			symbol:       '>',
 			pos:          0,
-			output:       ">hello world\b\b\b\b\b\b\b\b\b\b\b",
+			output:       "\x1b[2K\r>hello world\r>",
 			contentAfter: ">hello world",
+			posAfter:     1,
 		},
 		{
-			// This test is not really correct, but it is how it works now
-			// TODO: fix this test
 			name:         "insert in the middle",
 			input:        "hello world",
 			symbol:       ',',
 			pos:          5,
-			output:       ", world\b\b\b\b\b\b",
+			output:       "\x1b[2K\rhello, world\rhello,",
 			contentAfter: "hello, world",
+			posAfter:     6,
 		},
 		{
-			// This test is not really correct, but it is how it works now
-			// TODO: fix this test
 			name:         "insert newline in the middle",
 			input:        "hello\nworld",
 			symbol:       '\n',
 			pos:          4,
-			output:       "        \no\b",
+			output:       "\x1b[2K\rhell\n\x1b[2K\ro\n\x1b[2K\rworld\x1b[1A\r",
 			contentAfter: "hell\no\nworld",
+			posAfter:     5,
 		},
 		{
 			name:         "insert newline at the end",
@@ -396,6 +395,7 @@ func TestContent_InsertSymbol(t *testing.T) {
 			pos:          11,
 			output:       "\n",
 			contentAfter: "hello world\n",
+			posAfter:     12,
 		},
 		{
 			// This test is not really correct, but it is how it works now
@@ -404,8 +404,9 @@ func TestContent_InsertSymbol(t *testing.T) {
 			input:        "hello\nworld",
 			symbol:       '\n',
 			pos:          0,
-			output:       "            \nhello\b\b\b\b\b",
+			output:       "\x1b[2K\r\n\x1b[2K\rhello\n\x1b[2K\rworld\x1b[1A\r",
 			contentAfter: "\nhello\nworld",
+			posAfter:     1,
 		},
 	}
 
@@ -427,7 +428,11 @@ func TestContent_InsertSymbol(t *testing.T) {
 			}
 
 			if string(content.text) != tt.contentAfter {
-				t.Errorf("expected text to be '%s', but got '%s'", tt.contentAfter, string(content.text))
+				t.Errorf("expected text to be '%q', but got '%q'", tt.contentAfter, string(content.text))
+			}
+
+			if content.pos != tt.posAfter {
+				t.Errorf("expected position to be '%d', but got '%d'", tt.posAfter, content.pos)
 			}
 		})
 	}
