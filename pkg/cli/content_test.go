@@ -1,4 +1,3 @@
-// BEGIN: yz9d8f7g6h5j
 package cli
 
 import (

@@ -5,8 +5,11 @@ import (
 )
 
 const (
-	LineUp    = "\x1b[1A"
-	LineClear = "\x1b[2K"
+	LineUp         = "\x1b[1A"
+	LineClear      = "\x1b[2K"
+	NewLine        = '\n'
+	ReturnCarriege = "\r"
+	Backspace      = "\b"
 )
 
 type Content struct {
@@ -43,11 +46,11 @@ func (c *Content) MovePositionLeft() string {
 	}
 
 	c.pos--
-	if c.text[c.pos] != '\n' {
-		return "\b"
+	if c.text[c.pos] != NewLine {
+		return Backspace
 	}
 
-	startPrevLine := lastIndexOf(c.text, c.pos-1, '\n')
+	startPrevLine := lastIndexOf(c.text, c.pos-1, NewLine)
 	if startPrevLine == -1 {
 		startPrevLine = 0
 	} else {
@@ -73,11 +76,11 @@ func (c *Content) Clear() string {
 	}
 
 	output := c.MoveToEnd()
-	output += LineClear + "\r"
+	output += LineClear + ReturnCarriege
 
 	for i := 0; i < len(c.text); i++ {
-		if c.text[i] == '\n' {
-			output += LineUp + LineClear + "\r"
+		if c.text[i] == NewLine {
+			output += LineUp + LineClear + ReturnCarriege
 		}
 	}
 
@@ -102,26 +105,26 @@ func (c *Content) RemoveSymbol() string {
 
 	c.text = buffer
 
-	if c.pos == len(c.text) && symbol != '\n' {
-		return "\b \b"
+	if c.pos == len(c.text) && symbol != NewLine {
+		return Backspace + " " + Backspace
 	}
 
-	if symbol != '\n' {
+	if symbol != NewLine {
 		endCurrentLine := startCurrentLine + len(lines[0])
-		return LineClear + "\r" + string(c.text[startCurrentLine:endCurrentLine-1]) + "\r" + string(c.text[startCurrentLine:c.pos])
+		return LineClear + ReturnCarriege + string(c.text[startCurrentLine:endCurrentLine-1]) + ReturnCarriege + string(c.text[startCurrentLine:c.pos])
 	}
 
-	output := LineUp + LineClear + "\r" + lines[0]
+	output := LineUp + LineClear + ReturnCarriege + lines[0]
 	moveUp := ""
 
 	for i := 1; i < len(lines); i++ {
-		output += lines[i] + "\n" + LineClear + "\r"
+		output += lines[i] + string(NewLine) + LineClear + ReturnCarriege
 		moveUp += LineUp
 	}
 
 	if moveUp != "" {
 		output += moveUp
-		output += "\r" + lines[0]
+		output += ReturnCarriege + lines[0]
 	}
 
 	return output
@@ -146,23 +149,23 @@ func (c *Content) InsertSymbol(symbol rune) string {
 	c.pos++
 	c.text = buffer
 
-	if symbol != '\n' && c.text[c.pos] == '\n' {
+	if symbol != NewLine && c.text[c.pos] == NewLine {
 		return string(symbol)
 	}
 
 	startCurrentLine, lines := c.GetLinesAfterPosition(c.pos - 1)
 
-	if symbol != '\n' {
+	if symbol != NewLine {
 		// here probably i have a room for optimization
 		endCurrentLine := startCurrentLine + len(lines[0])
-		return LineClear + "\r" + string(c.text[startCurrentLine:endCurrentLine]) + "\r" + string(c.text[startCurrentLine:c.pos])
+		return LineClear + ReturnCarriege + string(c.text[startCurrentLine:endCurrentLine]) + ReturnCarriege + string(c.text[startCurrentLine:c.pos])
 	}
 
 	output := ""
 	for i := 0; i < len(lines); i++ {
-		output += LineClear + "\r" + lines[i]
+		output += LineClear + ReturnCarriege + lines[i]
 		if i < len(lines)-1 {
-			output += "\n"
+			output += string(NewLine)
 		}
 	}
 
@@ -171,7 +174,7 @@ func (c *Content) InsertSymbol(symbol rune) string {
 		moveUp += LineUp
 	}
 
-	output += moveUp + "\r"
+	output += moveUp + ReturnCarriege
 
 	return output
 }
@@ -188,14 +191,14 @@ func (c *Content) MoveToEnd() string {
 }
 
 func (c *Content) GetLinesAfterPosition(pos int) (startOfLine int, lines []string) {
-	startOfLine = lastIndexOf(c.text, pos-1, '\n')
+	startOfLine = lastIndexOf(c.text, pos-1, NewLine)
 	if startOfLine == -1 {
 		startOfLine = 0
 	} else {
 		startOfLine++
 	}
 
-	return startOfLine, strings.Split(string(c.text[startOfLine:]), "\n")
+	return startOfLine, strings.Split(string(c.text[startOfLine:]), string(NewLine))
 }
 
 func lastIndexOf(buffer []rune, pos int, search rune) int {
