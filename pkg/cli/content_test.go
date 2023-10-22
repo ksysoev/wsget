@@ -306,7 +306,7 @@ func TestContent_RemoveSymbol(t *testing.T) {
 			name:         "remove newline symbol at the end of the text",
 			input:        "hello\nworld\n",
 			pos:          12,
-			output:       "\x1b[1A\x1b[2K\rhelloworld\n\x1b[2K\r\n\x1b[2K\r\x1b[1A\x1b[1A\rhello",
+			output:       "\x1b[1A\x1b[2K\rworld\n\x1b[2K\r\x1b[1A\rworld",
 			contentAfter: "hello\nworld",
 		},
 		{
@@ -398,8 +398,6 @@ func TestContent_InsertSymbol(t *testing.T) {
 			posAfter:     12,
 		},
 		{
-			// This test is not really correct, but it is how it works now
-			// TODO: fix this test
 			name:         "insert newline at the begginning",
 			input:        "hello\nworld",
 			symbol:       '\n',
@@ -407,6 +405,15 @@ func TestContent_InsertSymbol(t *testing.T) {
 			output:       "\x1b[2K\r\n\x1b[2K\rhello\n\x1b[2K\rworld\x1b[1A\r",
 			contentAfter: "\nhello\nworld",
 			posAfter:     1,
+		},
+		{
+			name:         "insert newline in a row",
+			input:        "h\n\nello\nworld",
+			symbol:       '\n',
+			pos:          2,
+			output:       "\x1b[2K\r\n\x1b[2K\r\n\x1b[2K\rello\n\x1b[2K\rworld\x1b[1A\x1b[1A\r",
+			contentAfter: "h\n\n\nello\nworld",
+			posAfter:     3,
 		},
 	}
 

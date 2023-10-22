@@ -112,17 +112,17 @@ func (c *Content) RemoveSymbol() string {
 	}
 
 	output := LineUp + LineClear + "\r" + lines[0]
+	moveUp := ""
 
 	for i := 1; i < len(lines); i++ {
 		output += lines[i] + "\n" + LineClear + "\r"
+		moveUp += LineUp
 	}
 
-	// Move cursor back to position
-	for i := 1; i < len(lines); i++ {
-		output += LineUp
+	if moveUp != "" {
+		output += moveUp
+		output += "\r" + lines[0]
 	}
-
-	output += "\r" + lines[0]
 
 	return output
 }
@@ -159,7 +159,6 @@ func (c *Content) InsertSymbol(symbol rune) string {
 	}
 
 	output := ""
-
 	for i := 0; i < len(lines); i++ {
 		output += LineClear + "\r" + lines[i]
 		if i < len(lines)-1 {
@@ -167,12 +166,12 @@ func (c *Content) InsertSymbol(symbol rune) string {
 		}
 	}
 
-	// Move cursor back to position
-	for i := 2; i < len(lines); i++ {
-		output += LineUp
+	moveUp := ""
+	for i := 1; i < len(lines)-1; i++ {
+		moveUp += LineUp
 	}
 
-	output += "\r"
+	output += moveUp + "\r"
 
 	return output
 }
@@ -189,11 +188,7 @@ func (c *Content) MoveToEnd() string {
 }
 
 func (c *Content) GetLinesAfterPosition(pos int) (startOfLine int, lines []string) {
-	if pos < 0 || pos > len(c.text) {
-		return 0, []string{}
-	}
-
-	startOfLine = lastIndexOf(c.text, pos, '\t')
+	startOfLine = lastIndexOf(c.text, pos-1, '\n')
 	if startOfLine == -1 {
 		startOfLine = 0
 	} else {
