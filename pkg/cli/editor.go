@@ -64,7 +64,9 @@ func (ed *Editor) EditRequest(keyStream <-chan keyboard.KeyEvent, initBuffer str
 			req := ed.History.GetRequst(historyIndex)
 
 			if req == "" {
+				fmt.Print(Bell)
 				historyIndex--
+
 				continue
 			}
 
@@ -74,7 +76,9 @@ func (ed *Editor) EditRequest(keyStream <-chan keyboard.KeyEvent, initBuffer str
 			req := ed.History.GetRequst(historyIndex)
 
 			if req == "" {
+				fmt.Print(Bell)
 				historyIndex++
+
 				continue
 			}
 

@@ -18,6 +18,8 @@ const (
 	MacOSDeleteKey = 127
 
 	KeyboardBufferSize = 10
+
+	Bell = "\a"
 )
 
 type CLI struct {
