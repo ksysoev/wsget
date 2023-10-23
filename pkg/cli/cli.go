@@ -95,7 +95,11 @@ func (c *CLI) Run(outputFile *os.File) error {
 				continue
 			}
 
-		case msg := <-c.wsConn.Messages:
+		case msg, ok := <-c.wsConn.Messages:
+			if !ok {
+				return nil
+			}
+
 			output, err := c.formater.FormatMessage(msg)
 			if err != nil {
 				log.Printf("Fail to format message: %s, %s\n", err, msg.Data)
