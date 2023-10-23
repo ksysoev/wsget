@@ -2,8 +2,8 @@ package ws
 
 import (
 	"crypto/tls"
-	"log"
 
+	"github.com/fatih/color"
 	"golang.org/x/net/websocket"
 )
 
@@ -56,12 +56,20 @@ func NewWS(url string, opts Options) (*Connection, error) {
 	messages := make(chan Message, WSMessageBufferSize)
 
 	go func(messages chan Message) {
+		defer close(messages)
+
 		for {
 			var msg string
 
 			err = websocket.Message.Receive(ws, &msg)
 			if err != nil {
-				log.Fatal("Fail to read from WS connection:", err)
+				if err.Error() == "EOF" {
+					color.New(color.FgRed).Println("Connection closed by the server")
+				} else {
+					color.New(color.FgRed).Println("Fail read from connection: ", err)
+				}
+
+				return
 			}
 
 			messages <- Message{Type: Response, Data: msg}
