@@ -23,8 +23,7 @@ func NewEditor(history *History) *Editor {
 }
 
 func (ed *Editor) EditRequest(keyStream <-chan keyboard.KeyEvent, initBuffer string) (string, error) {
-	historyIndex := 0
-
+	ed.History.ResetPosition()
 	fmt.Print(ed.content.ReplaceText(initBuffer))
 
 	for e := range keyStream {
@@ -61,25 +60,19 @@ func (ed *Editor) EditRequest(keyStream <-chan keyboard.KeyEvent, initBuffer str
 		case keyboard.KeyArrowRight:
 			fmt.Print(ed.content.MovePositionRight())
 		case keyboard.KeyArrowUp:
-			historyIndex++
-			req := ed.History.GetRequst(historyIndex)
+			req := ed.History.PrevRequst()
 
 			if req == "" {
 				fmt.Print(Bell)
-				historyIndex--
-
 				continue
 			}
 
 			fmt.Print(ed.content.ReplaceText(req))
 		case keyboard.KeyArrowDown:
-			historyIndex--
-			req := ed.History.GetRequst(historyIndex)
+			req := ed.History.NextRequst()
 
 			if req == "" {
 				fmt.Print(Bell)
-				historyIndex++
-
 				continue
 			}
 

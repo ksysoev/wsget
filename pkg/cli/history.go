@@ -15,6 +15,7 @@ type History struct {
 	fileName string
 	requests []string
 	limit    uint
+	pos      int
 }
 
 func NewHistory(fileName string, limit uint) *History {
@@ -22,6 +23,7 @@ func NewHistory(fileName string, limit uint) *History {
 		fileName: fileName,
 		limit:    limit,
 		requests: make([]string, 0),
+		pos:      0,
 	}
 
 	_ = h.loadFromFile()
@@ -56,6 +58,8 @@ func (h *History) loadFromFile() error {
 
 		h.requests = append(h.requests, line)
 	}
+
+	h.pos = len(h.requests) - 1
 
 	return nil
 }
@@ -106,16 +110,35 @@ func (h *History) AddRequest(request string) {
 	}
 
 	h.requests = append(h.requests, request)
+	h.pos = len(h.requests) - 1
 }
 
-func (h *History) GetRequst(pos int) string {
-	if pos <= 0 {
+func (h *History) PrevRequst() string {
+	if h.pos <= 0 {
 		return ""
 	}
 
-	if pos > len(h.requests) {
+	req := h.requests[h.pos]
+	h.pos--
+
+	return req
+}
+
+func (h *History) NextRequst() string {
+	if h.pos >= len(h.requests)-1 {
 		return ""
 	}
 
-	return h.requests[len(h.requests)-pos]
+	h.pos++
+	req := h.requests[h.pos]
+
+	return req
+}
+
+func (h *History) ResetPosition() {
+	if len(h.requests) == 0 {
+		return
+	}
+
+	h.pos = len(h.requests) - 1
 }
