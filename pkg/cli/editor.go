@@ -36,9 +36,10 @@ func (ed *Editor) EditRequest(keyStream <-chan keyboard.KeyEvent, initBuffer str
 		case keyboard.KeyCtrlC, keyboard.KeyCtrlD:
 			return "", fmt.Errorf("interrupted")
 		case keyboard.KeyCtrlS:
-			fmt.Print(ed.content.MoveToEnd() + "\n")
-
 			req := ed.content.ToRequest()
+
+			fmt.Print(ed.content.Clear())
+
 			if req == "" {
 				return req, fmt.Errorf("cannot send empty request")
 			}
