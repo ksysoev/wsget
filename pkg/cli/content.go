@@ -84,6 +84,9 @@ func (c *Content) Clear() string {
 		}
 	}
 
+	c.text = []rune{}
+	c.pos = 0
+
 	return output
 }
 

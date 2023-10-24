@@ -48,7 +48,8 @@ func (ed *Editor) EditRequest(keyStream <-chan keyboard.KeyEvent, initBuffer str
 			return req, nil
 		case keyboard.KeyEsc:
 			return "", nil
-
+		case keyboard.KeyCtrlU:
+			fmt.Print(ed.content.Clear())
 		case keyboard.KeySpace:
 			fmt.Print(ed.content.InsertSymbol(' '))
 		case keyboard.KeyEnter:
