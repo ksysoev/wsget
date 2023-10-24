@@ -28,6 +28,11 @@ type CLI struct {
 	editor   *Editor
 }
 
+type RunOptions struct {
+	OutputFile  *os.File
+	StartEditor bool
+}
+
 func NewCLI(wsConn *ws.Connection) *CLI {
 	currentUser, err := user.Current()
 	if err != nil {
@@ -45,7 +50,7 @@ func NewCLI(wsConn *ws.Connection) *CLI {
 	}
 }
 
-func (c *CLI) Run(outputFile *os.File) error {
+func (c *CLI) Run(opts RunOptions) error {
 	if err := keyboard.Open(); err != nil {
 		return err
 	}
@@ -62,7 +67,13 @@ func (c *CLI) Run(outputFile *os.File) error {
 		return err
 	}
 
-	fmt.Println("Connection Mode: Press ESC to enter Request mode")
+	if opts.StartEditor {
+		if err := c.RequestMod(keysEvents); err != nil {
+			return err
+		}
+	} else {
+		fmt.Println("Connection Mode: Press ESC to enter Request mode")
+	}
 
 	for {
 		select {
@@ -72,25 +83,10 @@ func (c *CLI) Run(outputFile *os.File) error {
 				return nil
 
 			case keyboard.KeyEsc:
-				fmt.Println("Request Mode: Type your API request and press Ctrl+S to send it. Press ESC to cancel request")
-
-				req, err := c.editor.EditRequest(keysEvents, "")
-				if err != nil {
-					if err.Error() == "interrupted" {
-						return nil
-					}
-
-					fmt.Println(err)
+				if err := c.RequestMod(keysEvents); err != nil {
+					return err
 				}
 
-				if req != "" {
-					err = c.wsConn.Send(req)
-					if err != nil {
-						fmt.Println("Fail to send request:", err)
-					}
-				}
-
-				fmt.Println("Connection Mode: Press ESC to enter Request mode")
 			default:
 				continue
 			}
@@ -107,14 +103,38 @@ func (c *CLI) Run(outputFile *os.File) error {
 
 			fmt.Printf("%s\n\n", output)
 
-			if outputFile != nil {
+			if opts.OutputFile != nil {
 				output, err := c.formater.FormatForFile(msg)
 				if err != nil {
 					log.Printf("Fail to format message for file: %s, %s\n", err, msg.Data)
 				}
 
-				fmt.Fprintln(outputFile, output)
+				fmt.Fprintln(opts.OutputFile, output)
 			}
 		}
 	}
+}
+
+func (c *CLI) RequestMod(keysEvents <-chan keyboard.KeyEvent) error {
+	fmt.Println("Request Mode: Type your API request and press Ctrl+S to send it. Press ESC to cancel request")
+
+	req, err := c.editor.EditRequest(keysEvents, "")
+	if err != nil {
+		if err.Error() == "interrupted" {
+			return nil
+		}
+
+		fmt.Println(err)
+	}
+
+	if req != "" {
+		err = c.wsConn.Send(req)
+		if err != nil {
+			fmt.Println("Fail to send request:", err)
+		}
+	}
+
+	fmt.Println("Connection Mode: Press ESC to enter Request mode")
+
+	return nil
 }

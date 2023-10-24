@@ -50,8 +50,11 @@ func main() {
 	defer wsInsp.Close()
 
 	client := cli.NewCLI(wsInsp)
+	StartEditor := true
 
 	if *request != "" {
+		StartEditor = false
+
 		go func() {
 			err = wsInsp.Send(*request)
 			if err != nil {
@@ -60,7 +63,7 @@ func main() {
 		}()
 	}
 
-	err = client.Run(OutputFH)
+	err = client.Run(cli.RunOptions{OutputFile: OutputFH, StartEditor: StartEditor})
 	if err != nil {
 		log.Println("Error:", err)
 	}
