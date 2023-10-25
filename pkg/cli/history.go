@@ -42,6 +42,8 @@ func (h *History) loadFromFile() error {
 
 	reader := bufio.NewReader(fileHandler)
 
+	h.requests = make([]string, 0)
+
 	for {
 		line, err := reader.ReadString('\n')
 		if err != nil {
@@ -110,7 +112,7 @@ func (h *History) AddRequest(request string) {
 	}
 
 	h.requests = append(h.requests, request)
-	h.pos = len(h.requests) - 1
+	h.pos = len(h.requests)
 }
 
 func (h *History) PrevRequst() string {
@@ -118,8 +120,8 @@ func (h *History) PrevRequst() string {
 		return ""
 	}
 
-	req := h.requests[h.pos]
 	h.pos--
+	req := h.requests[h.pos]
 
 	return req
 }
@@ -140,5 +142,5 @@ func (h *History) ResetPosition() {
 		return
 	}
 
-	h.pos = len(h.requests) - 1
+	h.pos = len(h.requests)
 }
