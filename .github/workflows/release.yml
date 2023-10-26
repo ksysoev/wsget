@@ -19,15 +19,15 @@ jobs:
       - name: Build Linux
         run: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -buildmode=exe -o ./wsget ./cmd/wsget
       - name: Compress Linux
-        run: tar -czvf ./wsget-$(git describe --tags --abbrev=0).linux-amd64.tar.gz ./wsget ./LICENSE ./README.md
+        run: tar -czvf ./wsget-linux-amd64.tar.gz ./wsget ./LICENSE ./README.md
       - name: Build MacOS (Intel)
         run: CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -buildmode=exe -o ./wsget ./cmd/wsget 
       - name: Compress MacOS (Intel)
-        run: tar -czvf ./wsget-$(git describe --tags --abbrev=0).darwin-amd64.tar.gz ./wsget ./LICENSE ./README.md
+        run: tar -czvf ./wsget-darwin-amd64.tar.gz ./wsget ./LICENSE ./README.md
       - name: Build MacOS (M)
         run: CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -buildmode=exe -o ./wsget ./cmd/wsget
       - name: Compress MacOS (M)
-        run: tar -czvf ./wsget-$(git describe --tags --abbrev=0).darwin-arm64.tar.gz ./wsget ./LICENSE ./README.md
+        run: tar -czvf ./wsget-darwin-arm64.tar.gz ./wsget ./LICENSE ./README.md
       - name: Copy build-artifacts
         uses: skx/github-action-publish-binaries@master
         env:
