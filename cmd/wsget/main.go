@@ -49,7 +49,9 @@ func main() {
 
 	defer wsInsp.Close()
 
-	client := cli.NewCLI(wsInsp)
+	input := cli.NewKeyboard()
+
+	client := cli.NewCLI(wsInsp, input)
 	StartEditor := true
 
 	if *request != "" {

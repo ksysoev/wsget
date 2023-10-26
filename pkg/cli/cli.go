@@ -17,8 +17,6 @@ const (
 
 	MacOSDeleteKey = 127
 
-	KeyboardBufferSize = 10
-
 	Bell = "\a"
 )
 
@@ -26,6 +24,7 @@ type CLI struct {
 	formater *formater.Formater
 	wsConn   *ws.Connection
 	editor   *Editor
+	input    Inputer
 }
 
 type RunOptions struct {
@@ -33,7 +32,12 @@ type RunOptions struct {
 	StartEditor bool
 }
 
-func NewCLI(wsConn *ws.Connection) *CLI {
+type Inputer interface {
+	GetKeys() (<-chan keyboard.KeyEvent, error)
+	Close()
+}
+
+func NewCLI(wsConn *ws.Connection, input Inputer) *CLI {
 	currentUser, err := user.Current()
 	if err != nil {
 		log.Fatal(err)
@@ -47,14 +51,11 @@ func NewCLI(wsConn *ws.Connection) *CLI {
 		formater: formater.NewFormatter(),
 		editor:   NewEditor(history),
 		wsConn:   wsConn,
+		input:    input,
 	}
 }
 
 func (c *CLI) Run(opts RunOptions) error {
-	if err := keyboard.Open(); err != nil {
-		return err
-	}
-	defer keyboard.Close()
 	defer func() {
 		err := c.editor.History.SaveToFile()
 		if err != nil {
@@ -62,10 +63,11 @@ func (c *CLI) Run(opts RunOptions) error {
 		}
 	}()
 
-	keysEvents, err := keyboard.GetKeys(KeyboardBufferSize)
+	keysEvents, err := c.input.GetKeys()
 	if err != nil {
 		return err
 	}
+	defer c.input.Close()
 
 	if opts.StartEditor {
 		if err := c.RequestMod(keysEvents); err != nil {

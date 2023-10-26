@@ -5,9 +5,18 @@ import (
 	"testing"
 	"time"
 
+	"github.com/eiannone/keyboard"
 	"github.com/ksysoev/wsget/pkg/ws"
 	"golang.org/x/net/websocket"
 )
+
+type mockInput struct{}
+
+func (m *mockInput) GetKeys() (<-chan keyboard.KeyEvent, error) {
+	return make(chan keyboard.KeyEvent), nil
+}
+
+func (m *mockInput) Close() {}
 
 func TestNewCLI(t *testing.T) {
 	server := httptest.NewServer(websocket.Handler(func(ws *websocket.Conn) {
@@ -25,7 +34,7 @@ func TestNewCLI(t *testing.T) {
 		t.Fatalf("Unexpected error: %v", err)
 	}
 
-	cli := NewCLI(wsConn)
+	cli := NewCLI(wsConn, &mockInput{})
 
 	if cli.formater == nil {
 		t.Error("Expected non-nil formater")
