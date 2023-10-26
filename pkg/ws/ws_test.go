@@ -12,7 +12,7 @@ func TestNewWS(t *testing.T) {
 	server := httptest.NewServer(websocket.Handler(func(ws *websocket.Conn) {
 		var msg string
 		_ = websocket.Message.Receive(ws, &msg) // wait for request
-		ws.Write([]byte(msg))
+		_, _ = ws.Write([]byte(msg))
 		time.Sleep(time.Second) // to keep the connection open
 	}))
 	defer server.Close()
@@ -21,14 +21,16 @@ func TestNewWS(t *testing.T) {
 	ws, err := NewWS(url, Options{})
 
 	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
+		t.Fatalf("Unexpected error: %v", err)
 	}
 
 	if ws == nil {
-		t.Errorf("Expected ws connection, but got nil")
+		t.Fatalf("Expected ws connection, but got nil")
 	}
 
-	ws.Send("Hello, world!")
+	if err = ws.Send("Hello, world!"); err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
 
 	select {
 	case msg := <-ws.Messages:
