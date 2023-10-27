@@ -2,6 +2,7 @@ package cli
 
 import (
 	"net/http/httptest"
+	"os"
 	"testing"
 	"time"
 
@@ -34,7 +35,8 @@ func TestNewCLI(t *testing.T) {
 		t.Fatalf("Unexpected error: %v", err)
 	}
 
-	cli := NewCLI(wsConn, &mockInput{})
+	output := os.Stdout
+	cli := NewCLI(wsConn, &mockInput{}, output)
 
 	if cli.formater == nil {
 		t.Error("Expected non-nil formater")

@@ -51,7 +51,7 @@ func main() {
 
 	input := cli.NewKeyboard()
 
-	client := cli.NewCLI(wsInsp, input)
+	client := cli.NewCLI(wsInsp, input, os.Stdout)
 	StartEditor := true
 
 	if *request != "" {

@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/user"
@@ -25,6 +26,7 @@ type CLI struct {
 	wsConn   *ws.Connection
 	editor   *Editor
 	input    Inputer
+	output   io.Writer
 }
 
 type RunOptions struct {
@@ -37,7 +39,7 @@ type Inputer interface {
 	Close()
 }
 
-func NewCLI(wsConn *ws.Connection, input Inputer) *CLI {
+func NewCLI(wsConn *ws.Connection, input Inputer, output io.Writer) *CLI {
 	currentUser, err := user.Current()
 	if err != nil {
 		log.Fatal(err)
@@ -49,9 +51,10 @@ func NewCLI(wsConn *ws.Connection, input Inputer) *CLI {
 
 	return &CLI{
 		formater: formater.NewFormatter(),
-		editor:   NewEditor(history),
+		editor:   NewEditor(output, history),
 		wsConn:   wsConn,
 		input:    input,
+		output:   output,
 	}
 }
 
@@ -59,7 +62,7 @@ func (c *CLI) Run(opts RunOptions) error {
 	defer func() {
 		err := c.editor.History.SaveToFile()
 		if err != nil {
-			fmt.Println("Fail to save history:", err)
+			fmt.Fprintln(c.output, "Fail to save history:", err)
 		}
 	}()
 
@@ -74,7 +77,7 @@ func (c *CLI) Run(opts RunOptions) error {
 			return err
 		}
 	} else {
-		fmt.Println("Connection Mode: Press ESC to enter Request mode")
+		fmt.Fprintln(c.output, "Connection Mode: Press ESC to enter Request mode")
 	}
 
 	for {
@@ -103,7 +106,7 @@ func (c *CLI) Run(opts RunOptions) error {
 				log.Printf("Fail to format message: %s, %s\n", err, msg.Data)
 			}
 
-			fmt.Printf("%s\n\n", output)
+			fmt.Fprintf(c.output, "%s\n\n", output)
 
 			if opts.OutputFile != nil {
 				output, err := c.formater.FormatForFile(msg)
@@ -111,14 +114,14 @@ func (c *CLI) Run(opts RunOptions) error {
 					log.Printf("Fail to format message for file: %s, %s\n", err, msg.Data)
 				}
 
-				fmt.Fprintln(opts.OutputFile, output)
+				fmt.Fprintln(c.output, opts.OutputFile, output)
 			}
 		}
 	}
 }
 
 func (c *CLI) RequestMod(keysEvents <-chan keyboard.KeyEvent) error {
-	fmt.Println("Request Mode: Type your API request and press Ctrl+S to send it. Press ESC to cancel request")
+	fmt.Fprintln(c.output, "Request Mode: Type your API request and press Ctrl+S to send it. Press ESC to cancel request")
 
 	req, err := c.editor.EditRequest(keysEvents, "")
 	if err != nil {
@@ -126,17 +129,17 @@ func (c *CLI) RequestMod(keysEvents <-chan keyboard.KeyEvent) error {
 			return nil
 		}
 
-		fmt.Println(err)
+		fmt.Fprintln(c.output, err)
 	}
 
 	if req != "" {
 		err = c.wsConn.Send(req)
 		if err != nil {
-			fmt.Println("Fail to send request:", err)
+			fmt.Fprintln(c.output, "Fail to send request:", err)
 		}
 	}
 
-	fmt.Println("Connection Mode: Press ESC to enter Request mode")
+	fmt.Fprintln(c.output, "Connection Mode: Press ESC to enter Request mode")
 
 	return nil
 }
