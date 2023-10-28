@@ -72,12 +72,12 @@ func (c *CLI) Run(opts RunOptions) error {
 	}
 	defer c.input.Close()
 
+	fmt.Fprintln(c.output, "Use Esc to switch between modes, Ctrl+C to exit")
+
 	if opts.StartEditor {
 		if err := c.RequestMod(keysEvents); err != nil {
 			return err
 		}
-	} else {
-		fmt.Fprintln(c.output, "Connection Mode: Press ESC to enter Request mode")
 	}
 
 	for {
@@ -121,7 +121,7 @@ func (c *CLI) Run(opts RunOptions) error {
 }
 
 func (c *CLI) RequestMod(keysEvents <-chan keyboard.KeyEvent) error {
-	fmt.Fprintln(c.output, "Request Mode: Type your API request and press Ctrl+S to send it. Press ESC to cancel request")
+	fmt.Fprintln(c.output, "Ctrl+S to send>")
 
 	req, err := c.editor.EditRequest(keysEvents, "")
 	if err != nil {
@@ -139,7 +139,7 @@ func (c *CLI) RequestMod(keysEvents <-chan keyboard.KeyEvent) error {
 		}
 	}
 
-	fmt.Fprintln(c.output, "Connection Mode: Press ESC to enter Request mode")
+	fmt.Fprint(c.output, LineUp+LineClear)
 
 	return nil
 }
