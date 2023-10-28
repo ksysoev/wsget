@@ -8,20 +8,22 @@ import (
 )
 
 type Editor struct {
-	History *History
-	content *Content
-	output  io.Writer
-	buffer  []rune
-	pos     int
+	History      *History
+	content      *Content
+	output       io.Writer
+	buffer       []rune
+	pos          int
+	isSingleLine bool
 }
 
-func NewEditor(output io.Writer, history *History) *Editor {
+func NewEditor(output io.Writer, history *History, isSingleLine bool) *Editor {
 	return &Editor{
-		History: history,
-		content: NewContent(),
-		buffer:  make([]rune, 0),
-		pos:     0,
-		output:  output,
+		History:      history,
+		content:      NewContent(),
+		buffer:       make([]rune, 0),
+		pos:          0,
+		output:       output,
+		isSingleLine: isSingleLine,
 	}
 }
 
@@ -56,6 +58,9 @@ func (ed *Editor) EditRequest(keyStream <-chan keyboard.KeyEvent, initBuffer str
 		case keyboard.KeySpace:
 			fmt.Fprint(ed.output, ed.content.InsertSymbol(' '))
 		case keyboard.KeyEnter:
+			if ed.isSingleLine {
+				continue
+			}
 			fmt.Fprint(ed.output, ed.content.InsertSymbol('\n'))
 		case keyboard.KeyBackspace, keyboard.KeyDelete, MacOSDeleteKey:
 			fmt.Fprint(ed.output, ed.content.RemoveSymbol())
@@ -83,6 +88,10 @@ func (ed *Editor) EditRequest(keyStream <-chan keyboard.KeyEvent, initBuffer str
 			fmt.Fprint(ed.output, ed.content.ReplaceText(req))
 		default:
 			if e.Key > 0 {
+				continue
+			}
+
+			if ed.isSingleLine && e.Rune == '\n' {
 				continue
 			}
 

@@ -51,7 +51,7 @@ func NewCLI(wsConn *ws.Connection, input Inputer, output io.Writer) *CLI {
 
 	return &CLI{
 		formater: formater.NewFormatter(),
-		editor:   NewEditor(output, history),
+		editor:   NewEditor(output, history, false),
 		wsConn:   wsConn,
 		input:    input,
 		output:   output,
@@ -93,7 +93,28 @@ func (c *CLI) Run(opts RunOptions) error {
 				}
 
 			default:
-				continue
+				if event.Key > 0 {
+					continue
+				}
+
+				switch event.Rune {
+				case ':':
+					cmdEditor := NewEditor(c.output, c.editor.History, true)
+
+					fmt.Fprint(c.output, ":")
+					cmd, err := cmdEditor.EditRequest(keysEvents, "")
+					if err != nil {
+						if err.Error() == "interrupted" {
+							return nil
+						}
+
+						fmt.Fprintln(c.output, err)
+					}
+
+					fmt.Fprintln(c.output, cmd)
+				default:
+					continue
+				}
 			}
 
 		case msg, ok := <-c.wsConn.Messages:
