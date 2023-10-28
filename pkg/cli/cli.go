@@ -76,6 +76,10 @@ func (c *CLI) Run(opts RunOptions) error {
 
 	if opts.StartEditor {
 		if err := c.RequestMod(keysEvents); err != nil {
+			if err.Error() == "interrupted" {
+				return nil
+			}
+
 			return err
 		}
 	}
@@ -89,6 +93,10 @@ func (c *CLI) Run(opts RunOptions) error {
 
 			case keyboard.KeyEsc:
 				if err := c.RequestMod(keysEvents); err != nil {
+					if err.Error() == "interrupted" {
+						return nil
+					}
+
 					return err
 				}
 
@@ -125,11 +133,7 @@ func (c *CLI) RequestMod(keysEvents <-chan keyboard.KeyEvent) error {
 
 	req, err := c.editor.EditRequest(keysEvents, "")
 	if err != nil {
-		if err.Error() == "interrupted" {
-			return nil
-		}
-
-		fmt.Fprintln(c.output, err)
+		return err
 	}
 
 	if req != "" {
