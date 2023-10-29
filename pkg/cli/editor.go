@@ -3,25 +3,32 @@ package cli
 import (
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/eiannone/keyboard"
 )
 
+const (
+	PastingTimingThresholdInMicrosec = 250
+)
+
 type Editor struct {
-	History *History
-	content *Content
-	output  io.Writer
-	buffer  []rune
-	pos     int
+	History         *History
+	content         *Content
+	output          io.Writer
+	prevPressedTime time.Time
+	buffer          []rune
+	pos             int
 }
 
 func NewEditor(output io.Writer, history *History) *Editor {
 	return &Editor{
-		History: history,
-		content: NewContent(),
-		buffer:  make([]rune, 0),
-		pos:     0,
-		output:  output,
+		History:         history,
+		content:         NewContent(),
+		buffer:          make([]rune, 0),
+		pos:             0,
+		output:          output,
+		prevPressedTime: time.Now(),
 	}
 }
 
@@ -30,6 +37,8 @@ func (ed *Editor) EditRequest(keyStream <-chan keyboard.KeyEvent, initBuffer str
 	fmt.Fprint(ed.output, ed.content.ReplaceText(initBuffer))
 
 	for e := range keyStream {
+		isPasting := ed.isPasting()
+
 		if e.Err != nil {
 			return "", e.Err
 		}
@@ -47,7 +56,7 @@ func (ed *Editor) EditRequest(keyStream <-chan keyboard.KeyEvent, initBuffer str
 		case keyboard.KeySpace:
 			fmt.Fprint(ed.output, ed.content.InsertSymbol(' '))
 		case keyboard.KeyEnter:
-			if isDone := ed.newLineOrDone(); isDone {
+			if isDone := ed.newLineOrDone(isPasting); isDone {
 				return ed.done()
 			}
 		case keyboard.KeyBackspace, keyboard.KeyDelete, MacOSDeleteKey:
@@ -108,7 +117,7 @@ func (ed *Editor) nextFromHistory() {
 	fmt.Fprint(ed.output, ed.content.ReplaceText(req))
 }
 
-func (ed *Editor) newLineOrDone() (isDone bool) {
+func (ed *Editor) newLineOrDone(isPasting bool) (isDone bool) {
 	prev := ed.content.PrevSymbol()
 
 	isDone = prev != '\\'
@@ -119,5 +128,17 @@ func (ed *Editor) newLineOrDone() (isDone bool) {
 		return isDone
 	}
 
+	if isPasting {
+		fmt.Fprint(ed.output, ed.content.InsertSymbol('\n'))
+		return false
+	}
+
 	return isDone
+}
+
+func (ed *Editor) isPasting() bool {
+	elapsed := time.Since(ed.prevPressedTime)
+	ed.prevPressedTime = time.Now()
+
+	return elapsed.Microseconds() < PastingTimingThresholdInMicrosec
 }
