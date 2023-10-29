@@ -40,8 +40,8 @@ wsget wss://ws.postman-echo.com/raw  -o output.txt
 Example:
 
 ```
-wsget  "wss://frontend.binaryws.com/websockets/v3?app_id=1" -r '{"time":1}'      
-Use Esc to switch between modes, Ctrl+C to exit
+wsget "wss://ws.derivws.com/websockets/v3?app_id=1" -r '{"time":1}'
+Use Enter to input request and send it, Ctrl+C to exit
 ->
 {
   "time": 1
@@ -52,7 +52,7 @@ Use Esc to switch between modes, Ctrl+C to exit
     "time": 1
   },
   "msg_type": "time",
-  "time": 1698548458
+  "time": 1698555261
 }
 ```
 

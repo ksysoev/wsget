@@ -21,17 +21,18 @@ The tool have severl modes of operation:
 
 1. Request mode. The tool will start in interactive mode if no request is provided:
 
-- You can type resquest and press Ctrl+S to send it to the server. 
-- It supports multiline input.
+- You can type resquest and press Enter to send it to the server. 
+- Request editor allows to input multiline request. the last sybmol of line should be \(backslash) to indicate that the request is not finished yet.
 - You can use Ctrl+U to clear the input.
 - You can use Ctrl+C or Ctrl+D to exit the tool.
-- You can use Esc to exit Request mode and switch to connection mode.
+- You can use Esc to cancel input and return to connection mod.
 
 2. Connection mode. The tool will start in connection mode if request is provided.
 In this request mode the tool will send the request to the server and print responses. 
 
+- You can use Enter to switch to request input mode.
+- You can use Esc to exit connection
 - You can use Ctrl+C or Ctrl+D to exit the tool.
-- You can use Esc to switch to Request mode.
 `
 )
 

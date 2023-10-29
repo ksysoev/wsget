@@ -204,6 +204,14 @@ func (c *Content) GetLinesAfterPosition(pos int) (startOfLine int, lines []strin
 	return startOfLine, strings.Split(string(c.text[startOfLine:]), string(NewLine))
 }
 
+func (c *Content) PrevSymbol() rune {
+	if c.pos <= 0 {
+		return 0
+	}
+
+	return c.text[c.pos-1]
+}
+
 func lastIndexOf(buffer []rune, pos int, search rune) int {
 	for i := pos; i >= 0; i-- {
 		if buffer[i] == search {

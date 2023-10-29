@@ -35,18 +35,23 @@ func (ed *Editor) EditRequest(keyStream <-chan keyboard.KeyEvent, initBuffer str
 		}
 
 		switch e.Key {
+		case keyboard.KeyCtrlV:
+			fmt.Println("Ctrl+V")
 		case keyboard.KeyCtrlC, keyboard.KeyCtrlD:
 			return "", fmt.Errorf("interrupted")
 		case keyboard.KeyCtrlS:
 			return ed.done()
 		case keyboard.KeyEsc:
+			fmt.Fprint(ed.output, ed.content.Clear())
 			return "", nil
 		case keyboard.KeyCtrlU:
 			fmt.Fprint(ed.output, ed.content.Clear())
 		case keyboard.KeySpace:
 			fmt.Fprint(ed.output, ed.content.InsertSymbol(' '))
 		case keyboard.KeyEnter:
-			fmt.Fprint(ed.output, ed.content.InsertSymbol('\n'))
+			if isDone := ed.newLineOrDone(); isDone {
+				return ed.done()
+			}
 		case keyboard.KeyBackspace, keyboard.KeyDelete, MacOSDeleteKey:
 			fmt.Fprint(ed.output, ed.content.RemoveSymbol())
 		case keyboard.KeyArrowLeft:
@@ -59,6 +64,7 @@ func (ed *Editor) EditRequest(keyStream <-chan keyboard.KeyEvent, initBuffer str
 			ed.nextFromHistory()
 		default:
 			if e.Key > 0 {
+				fmt.Fprintf(ed.output, ">%q<", e.Key)
 				continue
 			}
 
@@ -75,7 +81,7 @@ func (ed *Editor) done() (string, error) {
 	fmt.Fprint(ed.output, ed.content.Clear())
 
 	if req == "" {
-		return req, fmt.Errorf("cannot send empty request")
+		return req, fmt.Errorf("empty request")
 	}
 
 	ed.History.AddRequest(req)
@@ -103,4 +109,18 @@ func (ed *Editor) nextFromHistory() {
 	}
 
 	fmt.Fprint(ed.output, ed.content.ReplaceText(req))
+}
+
+func (ed *Editor) newLineOrDone() (isDone bool) {
+	prev := ed.content.PrevSymbol()
+
+	isDone = prev != '\\'
+	if !isDone {
+		fmt.Fprint(ed.output, ed.content.RemoveSymbol())
+		fmt.Fprint(ed.output, ed.content.InsertSymbol('\n'))
+
+		return isDone
+	}
+
+	return isDone
 }

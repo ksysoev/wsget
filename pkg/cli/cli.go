@@ -18,6 +18,9 @@ const (
 
 	MacOSDeleteKey = 127
 
+	HideCursor = "\x1b[?25l"
+	ShowCursor = "\x1b[?25h"
+
 	Bell = "\a"
 )
 
@@ -60,11 +63,15 @@ func NewCLI(wsConn *ws.Connection, input Inputer, output io.Writer) (*CLI, error
 
 func (c *CLI) Run(opts RunOptions) error {
 	defer func() {
+		c.showCursor()
 		err := c.editor.History.SaveToFile()
+
 		if err != nil {
-			fmt.Fprintln(c.output, "Fail to save history:", err)
+			color.New(color.FgRed).Fprint(c.output, "Fail to save history:", err)
 		}
 	}()
+
+	c.hideCursor()
 
 	keysEvents, err := c.input.GetKeys()
 	if err != nil {
@@ -72,15 +79,17 @@ func (c *CLI) Run(opts RunOptions) error {
 	}
 	defer c.input.Close()
 
-	fmt.Fprintln(c.output, "Use Esc to switch between modes, Ctrl+C to exit")
+	fmt.Fprintln(c.output, "Use Enter to input request and send it, Ctrl+C to exit")
 
 	if opts.StartEditor {
 		if err := c.RequestMod(keysEvents); err != nil {
-			if err.Error() == "interrupted" {
+			switch err.Error() {
+			case "interrupted":
 				return nil
+			case "empty request":
+			default:
+				return err
 			}
-
-			return err
 		}
 	}
 
@@ -88,16 +97,19 @@ func (c *CLI) Run(opts RunOptions) error {
 		select {
 		case event := <-keysEvents:
 			switch event.Key {
-			case keyboard.KeyCtrlC, keyboard.KeyCtrlD:
+			case keyboard.KeyEsc, keyboard.KeyCtrlC, keyboard.KeyCtrlD:
 				return nil
 
-			case keyboard.KeyEsc:
+			case keyboard.KeyEnter:
 				if err := c.RequestMod(keysEvents); err != nil {
-					if err.Error() == "interrupted" {
+					switch err.Error() {
+					case "interrupted":
 						return nil
+					case "empty request":
+						continue
+					default:
+						return err
 					}
-
-					return err
 				}
 
 			default:
@@ -138,9 +150,13 @@ func (c *CLI) Run(opts RunOptions) error {
 }
 
 func (c *CLI) RequestMod(keysEvents <-chan keyboard.KeyEvent) error {
-	fmt.Fprintln(c.output, "Ctrl+S to send>")
+	color.New(color.FgGreen).Fprint(c.output, "->\n")
 
+	c.showCursor()
 	req, err := c.editor.EditRequest(keysEvents, "")
+	fmt.Fprint(c.output, LineUp+LineClear)
+	c.hideCursor()
+
 	if err != nil {
 		return err
 	}
@@ -152,7 +168,13 @@ func (c *CLI) RequestMod(keysEvents <-chan keyboard.KeyEvent) error {
 		}
 	}
 
-	fmt.Fprint(c.output, LineUp+LineClear)
-
 	return nil
+}
+
+func (c *CLI) hideCursor() {
+	fmt.Fprint(c.output, HideCursor)
+}
+
+func (c *CLI) showCursor() {
+	fmt.Fprint(c.output, ShowCursor)
 }
