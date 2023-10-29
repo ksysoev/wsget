@@ -17,19 +17,44 @@ go install github.com/ksysoev/wsget/cmd/wsget@latest
 
 ## Usage
 
-To use wsget, you need to specify the WebSocket URL using the -u flag:
+To use wsget, you need to specify the WebSocket URL:
 
 ```
-wsget -u "wss://ws.postman-echo.com/raw"
+wsget wss://ws.postman-echo.com/raw
 ```
+
+
+You also can pass initial request as part command line argument by using flag -r
+
+```
+wsget wss://ws.postman-echo.com/raw -r "Hello world!"
+```
+
 
 By default, wsget will print the data received from the WebSocket server only to the console. You can also save the data to a file using the -o flag:
 
 ```
-wsget -u "wss://ws.postman-echo.com/raw"  -o output.txt
+wsget wss://ws.postman-echo.com/raw  -o output.txt
 ```
 
-![Example of usage](./example.png)
+Example:
+
+```
+wsget  "wss://frontend.binaryws.com/websockets/v3?app_id=1" -r '{"time":1}'      
+Use Esc to switch between modes, Ctrl+C to exit
+->
+{
+  "time": 1
+}
+<-
+{
+  "echo_req": {
+    "time": 1
+  },
+  "msg_type": "time",
+  "time": 1698548458
+}
+```
 
 ## License
 
