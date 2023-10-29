@@ -15,6 +15,17 @@ const (
 	Response
 )
 
+func (mt MessageType) String() string {
+	switch mt {
+	case Request:
+		return "Request"
+	case Response:
+		return "Response"
+	default:
+		return "Not defined"
+	}
+}
+
 const (
 	WSMessageBufferSize = 100
 )

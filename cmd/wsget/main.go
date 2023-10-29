@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 
+	"github.com/fatih/color"
 	"github.com/ksysoev/wsget/pkg/cli"
 	"github.com/ksysoev/wsget/pkg/ws"
 	"github.com/spf13/cobra"
@@ -62,20 +62,23 @@ func run(cmd *cobra.Command, args []string) {
 	wsURL := args[0]
 	if wsURL == "" {
 		_ = cmd.Help()
-
-		os.Exit(1)
+		return
 	}
 
-	wsInsp, err := ws.NewWS(wsURL, ws.Options{SkipSSLVerification: insecure})
+	wsConn, err := ws.NewWS(wsURL, ws.Options{SkipSSLVerification: insecure})
 	if err != nil {
-		log.Fatal(err)
+		color.New(color.FgRed).Println("Unable to connect to the server: ", err)
+		return
 	}
 
-	defer wsInsp.Close()
+	defer wsConn.Close()
 
 	input := cli.NewKeyboard()
 
-	client := cli.NewCLI(wsInsp, input, os.Stdout)
+	client, err := cli.NewCLI(wsConn, input, os.Stdout)
+	if err != nil {
+		color.New(color.FgRed).Println("Unable to start CLI: ", err)
+	}
 
 	opts := cli.RunOptions{StartEditor: true}
 
@@ -83,21 +86,20 @@ func run(cmd *cobra.Command, args []string) {
 		opts.StartEditor = false
 
 		go func() {
-			err = wsInsp.Send(request)
-			if err != nil {
-				fmt.Println("Fail to send request:", err)
+			if err = wsConn.Send(request); err != nil {
+				color.New(color.FgRed).Println("Fail to send request: ", err)
 			}
 		}()
 	}
 
 	if outputFile != "" {
 		if opts.OutputFile, err = os.Create(outputFile); err != nil {
-			log.Println(err)
+			color.New(color.FgRed).Println("Fail to open output file: ", err)
 			return
 		}
 	}
 
 	if err = client.Run(opts); err != nil {
-		log.Println("Error:", err)
+		color.New(color.FgRed).Println(err)
 	}
 }

@@ -3,11 +3,11 @@ package cli
 import (
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"os/user"
 
 	"github.com/eiannone/keyboard"
+	"github.com/fatih/color"
 	"github.com/ksysoev/wsget/pkg/formater"
 	"github.com/ksysoev/wsget/pkg/ws"
 )
@@ -39,10 +39,10 @@ type Inputer interface {
 	Close()
 }
 
-func NewCLI(wsConn *ws.Connection, input Inputer, output io.Writer) *CLI {
+func NewCLI(wsConn *ws.Connection, input Inputer, output io.Writer) (*CLI, error) {
 	currentUser, err := user.Current()
 	if err != nil {
-		log.Fatal(err)
+		return nil, fmt.Errorf("fail to get current user: %s", err)
 	}
 
 	homeDir := currentUser.HomeDir
@@ -55,7 +55,7 @@ func NewCLI(wsConn *ws.Connection, input Inputer, output io.Writer) *CLI {
 		wsConn:   wsConn,
 		input:    input,
 		output:   output,
-	}
+	}, nil
 }
 
 func (c *CLI) Run(opts RunOptions) error {
@@ -111,18 +111,27 @@ func (c *CLI) Run(opts RunOptions) error {
 
 			output, err := c.formater.FormatMessage(msg)
 			if err != nil {
-				log.Printf("Fail to format message: %s, %s\n", err, msg.Data)
+				return fmt.Errorf("fail to format for output file: %s, data: %q", err, msg.Data)
 			}
 
-			fmt.Fprintf(c.output, "%s\n\n", output)
+			switch msg.Type {
+			case ws.Request:
+				color.New(color.FgGreen).Fprint(c.output, "->\n")
+			case ws.Response:
+				color.New(color.FgRed).Fprint(c.output, "<-\n")
+			default:
+				return fmt.Errorf("unknown message type: %s, data: %q", msg.Type, msg.Data)
+			}
+
+			fmt.Fprintf(c.output, "%s\n", output)
 
 			if opts.OutputFile != nil {
 				output, err := c.formater.FormatForFile(msg)
 				if err != nil {
-					log.Printf("Fail to format message for file: %s, %s\n", err, msg.Data)
+					return fmt.Errorf("fail to write to output file: %s", err)
 				}
 
-				fmt.Fprintln(c.output, opts.OutputFile, output)
+				fmt.Fprintln(opts.OutputFile, output)
 			}
 		}
 	}
@@ -139,7 +148,7 @@ func (c *CLI) RequestMod(keysEvents <-chan keyboard.KeyEvent) error {
 	if req != "" {
 		err = c.wsConn.Send(req)
 		if err != nil {
-			fmt.Fprintln(c.output, "Fail to send request:", err)
+			return fmt.Errorf("fail to send request: %s", err)
 		}
 	}
 
