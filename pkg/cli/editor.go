@@ -38,17 +38,7 @@ func (ed *Editor) EditRequest(keyStream <-chan keyboard.KeyEvent, initBuffer str
 		case keyboard.KeyCtrlC, keyboard.KeyCtrlD:
 			return "", fmt.Errorf("interrupted")
 		case keyboard.KeyCtrlS:
-			req := ed.content.ToRequest()
-
-			fmt.Fprint(ed.output, ed.content.Clear())
-
-			if req == "" {
-				return req, fmt.Errorf("cannot send empty request")
-			}
-
-			ed.History.AddRequest(req)
-
-			return req, nil
+			return ed.done()
 		case keyboard.KeyEsc:
 			return "", nil
 		case keyboard.KeyCtrlU:
@@ -64,23 +54,9 @@ func (ed *Editor) EditRequest(keyStream <-chan keyboard.KeyEvent, initBuffer str
 		case keyboard.KeyArrowRight:
 			fmt.Fprint(ed.output, ed.content.MovePositionRight())
 		case keyboard.KeyArrowUp:
-			req := ed.History.PrevRequst()
-
-			if req == "" {
-				fmt.Fprint(ed.output, Bell)
-				continue
-			}
-
-			fmt.Fprint(ed.output, ed.content.ReplaceText(req))
+			ed.prevFromHistory()
 		case keyboard.KeyArrowDown:
-			req := ed.History.NextRequst()
-
-			if req == "" {
-				fmt.Fprint(ed.output, Bell)
-				continue
-			}
-
-			fmt.Fprint(ed.output, ed.content.ReplaceText(req))
+			ed.nextFromHistory()
 		default:
 			if e.Key > 0 {
 				continue
@@ -91,4 +67,40 @@ func (ed *Editor) EditRequest(keyStream <-chan keyboard.KeyEvent, initBuffer str
 	}
 
 	return "", fmt.Errorf("keyboard stream was unexpectably closed")
+}
+
+func (ed *Editor) done() (string, error) {
+	req := ed.content.ToRequest()
+
+	fmt.Fprint(ed.output, ed.content.Clear())
+
+	if req == "" {
+		return req, fmt.Errorf("cannot send empty request")
+	}
+
+	ed.History.AddRequest(req)
+
+	return req, nil
+}
+
+func (ed *Editor) prevFromHistory() {
+	req := ed.History.PrevRequst()
+
+	if req == "" {
+		fmt.Fprint(ed.output, Bell)
+		return
+	}
+
+	fmt.Fprint(ed.output, ed.content.ReplaceText(req))
+}
+
+func (ed *Editor) nextFromHistory() {
+	req := ed.History.NextRequst()
+
+	if req == "" {
+		fmt.Fprint(ed.output, Bell)
+		return
+	}
+
+	fmt.Fprint(ed.output, ed.content.ReplaceText(req))
 }
