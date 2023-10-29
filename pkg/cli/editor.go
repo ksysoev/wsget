@@ -35,8 +35,6 @@ func (ed *Editor) EditRequest(keyStream <-chan keyboard.KeyEvent, initBuffer str
 		}
 
 		switch e.Key {
-		case keyboard.KeyCtrlV:
-			fmt.Println("Ctrl+V")
 		case keyboard.KeyCtrlC, keyboard.KeyCtrlD:
 			return "", fmt.Errorf("interrupted")
 		case keyboard.KeyCtrlS:
@@ -64,7 +62,6 @@ func (ed *Editor) EditRequest(keyStream <-chan keyboard.KeyEvent, initBuffer str
 			ed.nextFromHistory()
 		default:
 			if e.Key > 0 {
-				fmt.Fprintf(ed.output, ">%q<", e.Key)
 				continue
 			}
 
