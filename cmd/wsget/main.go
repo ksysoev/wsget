@@ -14,6 +14,7 @@ var insecure bool
 var request string
 var outputFile string
 var headers []string
+var singleResponseTimeout int
 
 const (
 	LongDescription = `A command-line tool for interacting with WebSocket servers.
@@ -52,6 +53,7 @@ func main() {
 	cmd.Flags().BoolVarP(&insecure, "insecure", "k", false, "Skip SSL certificate verification")
 	cmd.Flags().StringVarP(&request, "request", "r", "", "WebSocket request that will be sent to the server")
 	cmd.Flags().StringVarP(&outputFile, "output", "o", "", "Output file for saving all request and responses")
+	cmd.Flags().IntVarP(&singleResponseTimeout, "single-resp", "S", -1, "Timeout for single response in seconds, 0 means no timeout. If this option is set, the tool will exit after receiving the first response")
 	cmd.Flags().StringSliceVarP(&headers, "header", "H", []string{}, "HTTP headers to attach to the request")
 
 	err := cmd.Execute()
@@ -68,7 +70,12 @@ func run(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	wsConn, err := ws.NewWS(wsURL, ws.Options{SkipSSLVerification: insecure, Headers: headers})
+	if singleResponseTimeout > 0 && request == "" {
+		color.New(color.FgRed).Println("Single response timeout could be used only with request")
+		return
+	}
+
+	wsConn, err := ws.NewWS(wsURL, ws.Options{SkipSSLVerification: insecure, Headers: headers, WaitForResp: singleResponseTimeout})
 	if err != nil {
 		color.New(color.FgRed).Println("Unable to connect to the server: ", err)
 		return

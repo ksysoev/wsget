@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/fatih/color"
 	"golang.org/x/net/websocket"
@@ -47,6 +48,7 @@ type Connection struct {
 type Options struct {
 	Headers             []string
 	SkipSSLVerification bool
+	WaitForResp         int
 }
 
 func NewWS(url string, opts Options) (*Connection, error) {
@@ -82,6 +84,13 @@ func NewWS(url string, opts Options) (*Connection, error) {
 
 	ws, err := websocket.DialConfig(cfg)
 
+	if opts.WaitForResp > 0 {
+		go func() {
+			time.Sleep(time.Duration(opts.WaitForResp) * time.Second)
+			ws.Close()
+		}()
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +105,9 @@ func NewWS(url string, opts Options) (*Connection, error) {
 
 			err = websocket.Message.Receive(ws, &msg)
 			if err != nil {
-				if err.Error() == "EOF" {
+				if opts.WaitForResp >= 0 {
+					return
+				} else if err.Error() == "EOF" {
 					color.New(color.FgRed).Println("Connection closed by the server")
 				} else {
 					color.New(color.FgRed).Println("Fail read from connection: ", err)
@@ -106,6 +117,10 @@ func NewWS(url string, opts Options) (*Connection, error) {
 			}
 
 			messages <- Message{Type: Response, Data: msg}
+
+			if opts.WaitForResp >= 0 {
+				return
+			}
 		}
 	}(messages)
 
