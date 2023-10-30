@@ -106,8 +106,12 @@ func NewWS(url string, opts Options) (*Connection, error) {
 			err = websocket.Message.Receive(ws, &msg)
 			if err != nil {
 				if opts.WaitForResp >= 0 {
+					// If we are waiting for single response and connection is closed
+					// we just return from the function
 					return
-				} else if err.Error() == "EOF" {
+				}
+
+				if err.Error() == "EOF" {
 					color.New(color.FgRed).Println("Connection closed by the server")
 				} else {
 					color.New(color.FgRed).Println("Fail read from connection: ", err)
