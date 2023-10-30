@@ -13,6 +13,7 @@ import (
 var insecure bool
 var request string
 var outputFile string
+var headers []string
 
 const (
 	LongDescription = `A command-line tool for interacting with WebSocket servers.
@@ -51,6 +52,7 @@ func main() {
 	cmd.Flags().BoolVarP(&insecure, "insecure", "k", false, "Skip SSL certificate verification")
 	cmd.Flags().StringVarP(&request, "request", "r", "", "WebSocket request that will be sent to the server")
 	cmd.Flags().StringVarP(&outputFile, "output", "o", "", "Output file for saving all request and responses")
+	cmd.Flags().StringSliceVarP(&headers, "header", "H", []string{}, "HTTP headers to attach to the request")
 
 	err := cmd.Execute()
 	if err != nil {
@@ -66,7 +68,7 @@ func run(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	wsConn, err := ws.NewWS(wsURL, ws.Options{SkipSSLVerification: insecure})
+	wsConn, err := ws.NewWS(wsURL, ws.Options{SkipSSLVerification: insecure, Headers: headers})
 	if err != nil {
 		color.New(color.FgRed).Println("Unable to connect to the server: ", err)
 		return

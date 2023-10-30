@@ -2,6 +2,9 @@ package ws
 
 import (
 	"crypto/tls"
+	"fmt"
+	"net/http"
+	"strings"
 
 	"github.com/fatih/color"
 	"golang.org/x/net/websocket"
@@ -28,6 +31,7 @@ func (mt MessageType) String() string {
 
 const (
 	WSMessageBufferSize = 100
+	HeaderPartsNumber   = 2
 )
 
 type Message struct {
@@ -41,6 +45,7 @@ type Connection struct {
 }
 
 type Options struct {
+	Headers             []string
 	SkipSSLVerification bool
 }
 
@@ -57,6 +62,23 @@ func NewWS(url string, opts Options) (*Connection, error) {
 		InsecureSkipVerify: opts.SkipSSLVerification,
 	}
 	cfg.TlsConfig = tlsConfig
+
+	if len(opts.Headers) > 0 {
+		Headers := make(http.Header)
+		for _, headerInput := range opts.Headers {
+			splited := strings.Split(headerInput, ":")
+			if len(splited) != HeaderPartsNumber {
+				return nil, fmt.Errorf("invalid header: %s", headerInput)
+			}
+
+			header := strings.TrimSpace(splited[0])
+			value := strings.TrimSpace(splited[1])
+
+			Headers.Add(header, value)
+		}
+
+		cfg.Header = Headers
+	}
 
 	ws, err := websocket.DialConfig(cfg)
 
