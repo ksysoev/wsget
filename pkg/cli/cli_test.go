@@ -36,7 +36,11 @@ func TestNewCLI(t *testing.T) {
 	}
 
 	output := os.Stdout
-	cli := NewCLI(wsConn, &mockInput{}, output)
+	cli, err := NewCLI(wsConn, &mockInput{}, output)
+
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
 
 	if cli.formater == nil {
 		t.Error("Expected non-nil formater")

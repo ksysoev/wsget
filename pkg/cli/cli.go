@@ -3,11 +3,11 @@ package cli
 import (
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"os/user"
 
 	"github.com/eiannone/keyboard"
+	"github.com/fatih/color"
 	"github.com/ksysoev/wsget/pkg/formater"
 	"github.com/ksysoev/wsget/pkg/ws"
 )
@@ -17,6 +17,9 @@ const (
 	HistoryLimit    = 100
 
 	MacOSDeleteKey = 127
+
+	HideCursor = "\x1b[?25l"
+	ShowCursor = "\x1b[?25h"
 
 	Bell = "\a"
 )
@@ -39,10 +42,10 @@ type Inputer interface {
 	Close()
 }
 
-func NewCLI(wsConn *ws.Connection, input Inputer, output io.Writer) *CLI {
+func NewCLI(wsConn *ws.Connection, input Inputer, output io.Writer) (*CLI, error) {
 	currentUser, err := user.Current()
 	if err != nil {
-		log.Fatal(err)
+		return nil, fmt.Errorf("fail to get current user: %s", err)
 	}
 
 	homeDir := currentUser.HomeDir
@@ -55,16 +58,20 @@ func NewCLI(wsConn *ws.Connection, input Inputer, output io.Writer) *CLI {
 		wsConn:   wsConn,
 		input:    input,
 		output:   output,
-	}
+	}, nil
 }
 
 func (c *CLI) Run(opts RunOptions) error {
 	defer func() {
+		c.showCursor()
 		err := c.editor.History.SaveToFile()
+
 		if err != nil {
-			fmt.Fprintln(c.output, "Fail to save history:", err)
+			color.New(color.FgRed).Fprint(c.output, "Fail to save history:", err)
 		}
 	}()
+
+	c.hideCursor()
 
 	keysEvents, err := c.input.GetKeys()
 	if err != nil {
@@ -72,15 +79,17 @@ func (c *CLI) Run(opts RunOptions) error {
 	}
 	defer c.input.Close()
 
-	fmt.Fprintln(c.output, "Use Esc to switch between modes, Ctrl+C to exit")
+	fmt.Fprintln(c.output, "Use Enter to input request and send it, Ctrl+C to exit")
 
 	if opts.StartEditor {
 		if err := c.RequestMod(keysEvents); err != nil {
-			if err.Error() == "interrupted" {
+			switch err.Error() {
+			case "interrupted":
 				return nil
+			case "empty request":
+			default:
+				return err
 			}
-
-			return err
 		}
 	}
 
@@ -88,16 +97,19 @@ func (c *CLI) Run(opts RunOptions) error {
 		select {
 		case event := <-keysEvents:
 			switch event.Key {
-			case keyboard.KeyCtrlC, keyboard.KeyCtrlD:
+			case keyboard.KeyEsc, keyboard.KeyCtrlC, keyboard.KeyCtrlD:
 				return nil
 
-			case keyboard.KeyEsc:
+			case keyboard.KeyEnter:
 				if err := c.RequestMod(keysEvents); err != nil {
-					if err.Error() == "interrupted" {
+					switch err.Error() {
+					case "interrupted":
 						return nil
+					case "empty request":
+						continue
+					default:
+						return err
 					}
-
-					return err
 				}
 
 			default:
@@ -132,27 +144,40 @@ func (c *CLI) Run(opts RunOptions) error {
 
 			output, err := c.formater.FormatMessage(msg)
 			if err != nil {
-				log.Printf("Fail to format message: %s, %s\n", err, msg.Data)
+				return fmt.Errorf("fail to format for output file: %s, data: %q", err, msg.Data)
 			}
 
-			fmt.Fprintf(c.output, "%s\n\n", output)
+			switch msg.Type {
+			case ws.Request:
+				color.New(color.FgGreen).Fprint(c.output, "->\n")
+			case ws.Response:
+				color.New(color.FgRed).Fprint(c.output, "<-\n")
+			default:
+				return fmt.Errorf("unknown message type: %s, data: %q", msg.Type, msg.Data)
+			}
+
+			fmt.Fprintf(c.output, "%s\n", output)
 
 			if opts.OutputFile != nil {
 				output, err := c.formater.FormatForFile(msg)
 				if err != nil {
-					log.Printf("Fail to format message for file: %s, %s\n", err, msg.Data)
+					return fmt.Errorf("fail to write to output file: %s", err)
 				}
 
-				fmt.Fprintln(c.output, opts.OutputFile, output)
+				fmt.Fprintln(opts.OutputFile, output)
 			}
 		}
 	}
 }
 
 func (c *CLI) RequestMod(keysEvents <-chan keyboard.KeyEvent) error {
-	fmt.Fprintln(c.output, "Ctrl+S to send>")
+	color.New(color.FgGreen).Fprint(c.output, "->\n")
 
+	c.showCursor()
 	req, err := c.editor.EditRequest(keysEvents, "")
+	fmt.Fprint(c.output, LineUp+LineClear)
+	c.hideCursor()
+
 	if err != nil {
 		return err
 	}
@@ -160,11 +185,17 @@ func (c *CLI) RequestMod(keysEvents <-chan keyboard.KeyEvent) error {
 	if req != "" {
 		err = c.wsConn.Send(req)
 		if err != nil {
-			fmt.Fprintln(c.output, "Fail to send request:", err)
+			return fmt.Errorf("fail to send request: %s", err)
 		}
 	}
 
-	fmt.Fprint(c.output, LineUp+LineClear)
-
 	return nil
+}
+
+func (c *CLI) hideCursor() {
+	fmt.Fprint(c.output, HideCursor)
+}
+
+func (c *CLI) showCursor() {
+	fmt.Fprint(c.output, ShowCursor)
 }
