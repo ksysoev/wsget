@@ -84,7 +84,7 @@ func (c *CLI) Run(opts RunOptions) error {
 	if opts.StartEditor {
 		if err := c.RequestMod(keysEvents); err != nil {
 			switch err.Error() {
-			case "interrupted":
+			case ErrInterrupted:
 				return nil
 			case "empty request":
 			default:
@@ -103,7 +103,7 @@ func (c *CLI) Run(opts RunOptions) error {
 			case keyboard.KeyEnter:
 				if err := c.RequestMod(keysEvents); err != nil {
 					switch err.Error() {
-					case "interrupted":
+					case ErrInterrupted:
 						return nil
 					case "empty request":
 						continue
@@ -122,9 +122,10 @@ func (c *CLI) Run(opts RunOptions) error {
 					cmdEditor := NewEditor(c.output, c.editor.History, true)
 
 					fmt.Fprint(c.output, ":")
+
 					cmd, err := cmdEditor.EditRequest(keysEvents, "")
 					if err != nil {
-						if err.Error() == "interrupted" {
+						if err.Error() == ErrInterrupted {
 							return nil
 						}
 

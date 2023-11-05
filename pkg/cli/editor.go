@@ -10,6 +10,7 @@ import (
 
 const (
 	PastingTimingThresholdInMicrosec = 250
+	ErrInterrupted                   = "interrupted"
 )
 
 type Editor struct {
@@ -47,7 +48,7 @@ func (ed *Editor) EditRequest(keyStream <-chan keyboard.KeyEvent, initBuffer str
 
 		switch e.Key {
 		case keyboard.KeyCtrlC, keyboard.KeyCtrlD:
-			return "", fmt.Errorf("interrupted")
+			return "", fmt.Errorf(ErrInterrupted)
 		case keyboard.KeyCtrlS:
 			return ed.done()
 		case keyboard.KeyEsc:
@@ -125,6 +126,10 @@ func (ed *Editor) nextFromHistory() {
 
 func (ed *Editor) newLineOrDone(isPasting bool) (isDone bool) {
 	prev := ed.content.PrevSymbol()
+
+	if ed.isSingleLine {
+		return true
+	}
 
 	isDone = prev != '\\'
 	if !isDone {
