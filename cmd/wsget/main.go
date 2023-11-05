@@ -46,7 +46,7 @@ func main() {
 		Example:    `wsget wss://ws.postman-echo.com/raw -r "Hello, world!"`,
 		Args:       cobra.ExactArgs(1),
 		ArgAliases: []string{"url"},
-		Version:    "0.2.0",
+		Version:    "0.2.1",
 		Run:        run,
 	}
 

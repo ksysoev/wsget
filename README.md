@@ -9,10 +9,21 @@ wsget is a command-line tool for interacting with a WebSocket server. It support
 
 ## Installation
 
-To install wsget, you can use `go install`:
+### Downloading binaries:
+
+Compilied executables can be downloaded from [here](https://github.com/ksysoev/wsget/releases).
+
+### Install from source code:
 
 ```
 go install github.com/ksysoev/wsget/cmd/wsget@latest
+```
+
+### Install with homebrew:
+
+```
+brew tap ksysoev/wsget
+brew install wsget
 ```
 
 ## Usage

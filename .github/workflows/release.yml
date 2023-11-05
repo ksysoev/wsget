@@ -20,6 +20,10 @@ jobs:
         run: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -buildmode=exe -o ./wsget ./cmd/wsget
       - name: Compress Linux
         run: tar -czvf ./wsget-linux-amd64.tar.gz ./wsget ./LICENSE ./README.md
+      - name: Build Linux(ARM)
+        run: CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -buildmode=exe -o ./wsget ./cmd/wsget
+      - name: Compress Linux(ARM)
+        run: tar -czvf ./wsget-linux-arm64.tar.gz ./wsget ./LICENSE ./README.md
       - name: Build MacOS (Intel)
         run: CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -buildmode=exe -o ./wsget ./cmd/wsget 
       - name: Compress MacOS (Intel)
