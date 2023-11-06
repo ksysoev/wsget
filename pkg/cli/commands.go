@@ -100,3 +100,13 @@ func (c *CommandPrintMsg) Execute(exCtx *ExecutionContext) (Executer, error) {
 
 	return nil, nil
 }
+
+type CommandExit struct{}
+
+func NewCommandExit() *CommandExit {
+	return &CommandExit{}
+}
+
+func (c *CommandExit) Execute(_ *ExecutionContext) (Executer, error) {
+	return nil, fmt.Errorf("interrupted")
+}

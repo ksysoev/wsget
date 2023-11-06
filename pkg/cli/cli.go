@@ -101,24 +101,20 @@ func (c *CLI) Run(opts RunOptions) error {
 
 	for {
 		select {
-		case cmd, ok := <-c.commands:
-			if !ok {
-				return nil
-			}
+		case cmd := <-c.commands:
+			nextCmd := cmd
 
-			nextCmd, err := cmd.Execute(exCtx)
+			for nextCmd != nil {
+				nextCmd, err = cmd.Execute(exCtx)
 
-			if err != nil {
-				return err
-			}
-
-			if nextCmd != nil {
-				c.commands <- nextCmd
+				if err != nil {
+					return err
+				}
 			}
 		case event := <-keysEvents:
 			switch event.Key {
 			case keyboard.KeyEsc, keyboard.KeyCtrlC, keyboard.KeyCtrlD:
-				return nil
+				c.commands <- NewCommandExit()
 			case keyboard.KeyEnter:
 				c.commands <- NewCommandEdit("")
 			default:
