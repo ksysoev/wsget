@@ -102,10 +102,8 @@ func (c *CLI) Run(opts RunOptions) error {
 	for {
 		select {
 		case cmd := <-c.commands:
-			nextCmd := cmd
-
-			for nextCmd != nil {
-				nextCmd, err = cmd.Execute(exCtx)
+			for cmd != nil {
+				cmd, err = cmd.Execute(exCtx)
 
 				if err != nil {
 					return err
