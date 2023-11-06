@@ -110,6 +110,11 @@ func run(cmd *cobra.Command, args []string) {
 	}
 
 	if err = client.Run(opts); err != nil {
-		color.New(color.FgRed).Println(err)
+		switch err.Error() {
+		case "interrupted":
+			return
+		default:
+			color.New(color.FgRed).Println(err)
+		}
 	}
 }
