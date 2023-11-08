@@ -28,17 +28,13 @@ func TestNewWS(t *testing.T) {
 		t.Fatalf("Expected ws connection, but got nil")
 	}
 
-	if err = ws.Send("Hello, world!"); err != nil {
+	msg, err := ws.Send("Hello, world!")
+	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
 
-	select {
-	case msg := <-ws.Messages:
-		if msg.Data != "Hello, world!" {
-			t.Errorf("Expected message data to be 'Hello, world!', but got %v", msg.Data)
-		}
-	default:
-		t.Errorf("Expected message, but got none")
+	if msg.Data != "Hello, world!" {
+		t.Errorf("Expected message data to be 'Hello, world!', but got %v", msg.Data)
 	}
 }
 

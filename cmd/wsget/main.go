@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/ksysoev/wsget/pkg/cli"
@@ -75,7 +76,7 @@ func run(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	wsConn, err := ws.NewWS(wsURL, ws.Options{SkipSSLVerification: insecure, Headers: headers, WaitForResp: waitResponse})
+	wsConn, err := ws.NewWS(wsURL, ws.Options{SkipSSLVerification: insecure, Headers: headers})
 	if err != nil {
 		color.New(color.FgRed).Println("Unable to connect to the server: ", err)
 		return
@@ -101,6 +102,14 @@ func run(cmd *cobra.Command, args []string) {
 
 	if request != "" {
 		opts.Commands = []cli.Executer{cli.NewCommandSend(request)}
+
+		if waitResponse >= 0 {
+			opts.Commands = append(
+				opts.Commands,
+				cli.NewCommandWaitForResp(time.Duration(waitResponse)*time.Second),
+				cli.NewCommandExit(),
+			)
+		}
 	} else {
 		opts.Commands = []cli.Executer{cli.NewCommandEdit("")}
 	}

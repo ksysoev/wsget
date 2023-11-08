@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/eiannone/keyboard"
 	"github.com/fatih/color"
@@ -55,11 +56,12 @@ func NewCommandSend(request string) *CommandSend {
 }
 
 func (c *CommandSend) Execute(exCtx *ExecutionContext) (Executer, error) {
-	if err := exCtx.wsConn.Send(c.request); err != nil {
+	msg, err := exCtx.wsConn.Send(c.request)
+	if err != nil {
 		return nil, fmt.Errorf("fail to send request: %s", err)
 	}
 
-	return nil, nil
+	return NewCommandPrintMsg(*msg), nil
 }
 
 type CommandPrintMsg struct {
@@ -109,4 +111,34 @@ func NewCommandExit() *CommandExit {
 
 func (c *CommandExit) Execute(_ *ExecutionContext) (Executer, error) {
 	return nil, fmt.Errorf("interrupted")
+}
+
+type CommandWaitForResp struct {
+	timeout time.Duration
+}
+
+func NewCommandWaitForResp(timeout time.Duration) *CommandWaitForResp {
+	return &CommandWaitForResp{timeout}
+}
+
+func (c *CommandWaitForResp) Execute(exCtx *ExecutionContext) (Executer, error) {
+	if c.timeout.Seconds() == 0 {
+		msg, ok := <-exCtx.wsConn.Messages
+		if !ok {
+			return nil, fmt.Errorf("connection closed")
+		}
+
+		return NewCommandPrintMsg(msg), nil
+	}
+
+	select {
+	case <-time.After(c.timeout):
+		return nil, fmt.Errorf("timeout")
+	case msg, ok := <-exCtx.wsConn.Messages:
+		if !ok {
+			return nil, fmt.Errorf("connection closed")
+		}
+
+		return NewCommandPrintMsg(msg), nil
+	}
 }
