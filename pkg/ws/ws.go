@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/fatih/color"
 	"golang.org/x/net/websocket"
@@ -44,6 +45,7 @@ type Connection struct {
 	ws        *websocket.Conn
 	Messages  chan Message
 	waitGroup *sync.WaitGroup
+	isClosed  atomic.Bool
 }
 
 type Options struct {
@@ -92,6 +94,8 @@ func NewWS(url string, opts Options) (*Connection, error) {
 
 	messages := make(chan Message, WSMessageBufferSize)
 
+	wsInsp := &Connection{ws: ws, Messages: messages, waitGroup: &waitGroup}
+
 	go func() {
 		defer func() {
 			waitGroup.Wait()
@@ -103,6 +107,10 @@ func NewWS(url string, opts Options) (*Connection, error) {
 
 			err = websocket.Message.Receive(ws, &msg)
 			if err != nil {
+				if wsInsp.isClosed.Load() {
+					return
+				}
+
 				if err.Error() == "EOF" {
 					color.New(color.FgRed).Println("Connection closed by the server")
 				} else {
@@ -116,7 +124,7 @@ func NewWS(url string, opts Options) (*Connection, error) {
 		}
 	}()
 
-	return &Connection{ws: ws, Messages: messages, waitGroup: &waitGroup}, nil
+	return wsInsp, nil
 }
 
 func (wsInsp *Connection) Send(msg string) (*Message, error) {
@@ -133,5 +141,11 @@ func (wsInsp *Connection) Send(msg string) (*Message, error) {
 }
 
 func (wsInsp *Connection) Close() {
+	if wsInsp.isClosed.Load() {
+		return
+	}
+
+	wsInsp.isClosed.Store(true)
+
 	wsInsp.ws.Close()
 }
