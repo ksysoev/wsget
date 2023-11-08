@@ -35,8 +35,8 @@ type CLI struct {
 }
 
 type RunOptions struct {
-	OutputFile  *os.File
-	StartEditor bool
+	OutputFile *os.File
+	Commands   []Executer
 }
 
 type Inputer interface {
@@ -86,8 +86,8 @@ func (c *CLI) Run(opts RunOptions) error {
 
 	fmt.Fprintln(c.output, "Use Enter to input request and send it, Ctrl+C to exit")
 
-	if opts.StartEditor {
-		c.commands <- NewCommandEdit("")
+	for _, cmd := range opts.Commands {
+		c.commands <- cmd
 	}
 
 	exCtx := &ExecutionContext{

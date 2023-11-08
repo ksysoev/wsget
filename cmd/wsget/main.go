@@ -90,23 +90,19 @@ func run(cmd *cobra.Command, args []string) {
 		color.New(color.FgRed).Println("Unable to start CLI: ", err)
 	}
 
-	opts := cli.RunOptions{StartEditor: true}
-
-	if request != "" {
-		opts.StartEditor = false
-
-		go func() {
-			if err = wsConn.Send(request); err != nil {
-				color.New(color.FgRed).Println("Fail to send request: ", err)
-			}
-		}()
-	}
+	opts := cli.RunOptions{}
 
 	if outputFile != "" {
 		if opts.OutputFile, err = os.Create(outputFile); err != nil {
 			color.New(color.FgRed).Println("Fail to open output file: ", err)
 			return
 		}
+	}
+
+	if request != "" {
+		opts.Commands = []cli.Executer{cli.NewCommandSend(request)}
+	} else {
+		opts.Commands = []cli.Executer{cli.NewCommandEdit("")}
 	}
 
 	if err = client.Run(opts); err != nil {
