@@ -9,7 +9,6 @@ import (
 
 	"github.com/eiannone/keyboard"
 	"github.com/fatih/color"
-	"github.com/ksysoev/wsget/pkg/formater"
 	"github.com/ksysoev/wsget/pkg/ws"
 )
 
@@ -19,19 +18,12 @@ const (
 
 type ExecutionContext struct {
 	input      <-chan keyboard.KeyEvent
-	output     io.Writer
-	editor     *Editor
-	wsConn     *ws.Connection
+	cli        *CLI
 	outputFile io.Writer
-	formater   *formater.Formater
 }
 
 type Executer interface {
 	Execute(*ExecutionContext) (Executer, error)
-}
-
-type CommandEdit struct {
-	content string
 }
 
 func CommandFactory(raw string) (Executer, error) {
@@ -76,17 +68,21 @@ func CommandFactory(raw string) (Executer, error) {
 	}
 }
 
+type CommandEdit struct {
+	content string
+}
+
 func NewCommandEdit(content string) *CommandEdit {
 	return &CommandEdit{content}
 }
 
 func (c *CommandEdit) Execute(exCtx *ExecutionContext) (Executer, error) {
-	color.New(color.FgGreen).Fprint(exCtx.output, "->\n")
+	color.New(color.FgGreen).Fprint(exCtx.cli.output, "->\n")
 
-	fmt.Fprint(exCtx.output, ShowCursor)
-	req, err := exCtx.editor.EditRequest(exCtx.input, c.content)
-	fmt.Fprint(exCtx.output, LineUp+LineClear)
-	fmt.Fprint(exCtx.output, HideCursor)
+	fmt.Fprint(exCtx.cli.output, ShowCursor)
+	req, err := exCtx.cli.editor.EditRequest(exCtx.input, c.content)
+	fmt.Fprint(exCtx.cli.output, LineUp+LineClear)
+	fmt.Fprint(exCtx.cli.output, HideCursor)
 
 	if err != nil || req == "" {
 		return nil, err
@@ -104,7 +100,7 @@ func NewCommandSend(request string) *CommandSend {
 }
 
 func (c *CommandSend) Execute(exCtx *ExecutionContext) (Executer, error) {
-	msg, err := exCtx.wsConn.Send(c.request)
+	msg, err := exCtx.cli.wsConn.Send(c.request)
 	if err != nil {
 		return nil, fmt.Errorf("fail to send request: %s", err)
 	}
@@ -122,7 +118,7 @@ func NewCommandPrintMsg(msg ws.Message) *CommandPrintMsg {
 
 func (c *CommandPrintMsg) Execute(exCtx *ExecutionContext) (Executer, error) {
 	msg := c.msg
-	output, err := exCtx.formater.FormatMessage(msg)
+	output, err := exCtx.cli.formater.FormatMessage(msg)
 
 	if err != nil {
 		return nil, fmt.Errorf("fail to format for output file: %s, data: %q", err, msg.Data)
@@ -130,17 +126,17 @@ func (c *CommandPrintMsg) Execute(exCtx *ExecutionContext) (Executer, error) {
 
 	switch msg.Type {
 	case ws.Request:
-		color.New(color.FgGreen).Fprint(exCtx.output, "->\n")
+		color.New(color.FgGreen).Fprint(exCtx.cli.output, "->\n")
 	case ws.Response:
-		color.New(color.FgRed).Fprint(exCtx.output, "<-\n")
+		color.New(color.FgRed).Fprint(exCtx.cli.output, "<-\n")
 	default:
 		return nil, fmt.Errorf("unknown message type: %s, data: %q", msg.Type, msg.Data)
 	}
 
-	fmt.Fprintf(exCtx.output, "%s\n", output)
+	fmt.Fprintf(exCtx.cli.output, "%s\n", output)
 
 	if exCtx.outputFile != nil {
-		output, err := exCtx.formater.FormatForFile(msg)
+		output, err := exCtx.cli.formater.FormatForFile(msg)
 		if err != nil {
 			return nil, fmt.Errorf("fail to write to output file: %s", err)
 		}
@@ -171,7 +167,7 @@ func NewCommandWaitForResp(timeout time.Duration) *CommandWaitForResp {
 
 func (c *CommandWaitForResp) Execute(exCtx *ExecutionContext) (Executer, error) {
 	if c.timeout.Seconds() == 0 {
-		msg, ok := <-exCtx.wsConn.Messages
+		msg, ok := <-exCtx.cli.wsConn.Messages
 		if !ok {
 			return nil, fmt.Errorf("connection closed")
 		}
@@ -182,11 +178,39 @@ func (c *CommandWaitForResp) Execute(exCtx *ExecutionContext) (Executer, error) 
 	select {
 	case <-time.After(c.timeout):
 		return nil, fmt.Errorf("timeout")
-	case msg, ok := <-exCtx.wsConn.Messages:
+	case msg, ok := <-exCtx.cli.wsConn.Messages:
 		if !ok {
 			return nil, fmt.Errorf("connection closed")
 		}
 
 		return NewCommandPrintMsg(msg), nil
 	}
+}
+
+type CommandCmdEdit struct{}
+
+func NewCommandCmdEdit() *CommandCmdEdit {
+	return &CommandCmdEdit{}
+}
+
+func (c *CommandCmdEdit) Execute(exCtx *ExecutionContext) (Executer, error) {
+	fmt.Fprint(exCtx.cli.output, ":")
+
+	fmt.Fprint(exCtx.cli.output, ShowCursor)
+	rawCmd, err := exCtx.cli.cmdEditor.EditRequest(exCtx.input, "")
+	fmt.Fprint(exCtx.cli.output, LineClear+"\r")
+	fmt.Fprint(exCtx.cli.output, HideCursor)
+
+	if err != nil {
+		return nil, err
+	}
+
+	cmd, err := CommandFactory(rawCmd)
+
+	if err != nil {
+		color.New(color.FgRed).Fprintln(exCtx.cli.output, err)
+		return nil, nil
+	}
+
+	return cmd, nil
 }

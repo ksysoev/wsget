@@ -11,7 +11,7 @@ import (
 func TestNewEditor(t *testing.T) {
 	output := new(bytes.Buffer)
 	history := NewHistory("", 0)
-	editor := NewEditor(output, history)
+	editor := NewEditor(output, history, false)
 
 	if editor.content == nil {
 		t.Error("Expected non-nil content")
@@ -44,7 +44,7 @@ func TestEditRequest(t *testing.T) {
 
 	output := new(bytes.Buffer)
 	history := NewHistory(tmpfile.Name(), 5)
-	editor := NewEditor(output, history)
+	editor := NewEditor(output, history, false)
 
 	keyStream := make(chan keyboard.KeyEvent)
 	defer close(keyStream)
@@ -78,7 +78,7 @@ func TestEditRequestInterrupted(t *testing.T) {
 
 	output := new(bytes.Buffer)
 	history := NewHistory(tmpfile.Name(), 5)
-	editor := NewEditor(output, history)
+	editor := NewEditor(output, history, false)
 
 	keyStream := make(chan keyboard.KeyEvent)
 	defer close(keyStream)
@@ -122,7 +122,7 @@ func TestEditRequestExitEditor(t *testing.T) {
 
 	output := new(bytes.Buffer)
 	history := NewHistory(tmpfile.Name(), 5)
-	editor := NewEditor(output, history)
+	editor := NewEditor(output, history, false)
 
 	keyStream := make(chan keyboard.KeyEvent)
 	defer close(keyStream)
@@ -152,7 +152,7 @@ func TestEditRequestClosingKeyboard(t *testing.T) {
 
 	output := new(bytes.Buffer)
 	history := NewHistory(tmpfile.Name(), 5)
-	editor := NewEditor(output, history)
+	editor := NewEditor(output, history, false)
 
 	keyStream := make(chan keyboard.KeyEvent)
 	close(keyStream)
@@ -178,7 +178,7 @@ func TestEditRequestSpecialKeys(t *testing.T) {
 
 	output := new(bytes.Buffer)
 	history := NewHistory(tmpfile.Name(), 5)
-	editor := NewEditor(output, history)
+	editor := NewEditor(output, history, false)
 
 	keyStream := make(chan keyboard.KeyEvent)
 

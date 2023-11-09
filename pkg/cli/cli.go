@@ -13,9 +13,10 @@ import (
 )
 
 const (
-	HistoryFilename = ".wsget_history"
-	CommandsLimit   = 100
-	HistoryLimit    = 100
+	HistoryFilename    = ".wsget_history"
+	HistoryCmdFilename = ".wsget_cmd_history"
+	CommandsLimit      = 100
+	HistoryLimit       = 100
 
 	MacOSDeleteKey = 127
 
@@ -26,12 +27,13 @@ const (
 )
 
 type CLI struct {
-	formater *formater.Formater
-	wsConn   *ws.Connection
-	editor   *Editor
-	input    Inputer
-	output   io.Writer
-	commands chan Executer
+	formater  *formater.Formater
+	wsConn    *ws.Connection
+	editor    *Editor
+	cmdEditor *Editor
+	input     Inputer
+	output    io.Writer
+	commands  chan Executer
 }
 
 type RunOptions struct {
@@ -53,16 +55,18 @@ func NewCLI(wsConn *ws.Connection, input Inputer, output io.Writer) (*CLI, error
 	homeDir := currentUser.HomeDir
 
 	history := NewHistory(homeDir+"/"+HistoryFilename, HistoryLimit)
+	cmdHistory := NewHistory(homeDir+"/"+HistoryCmdFilename, HistoryLimit)
 
 	commands := make(chan Executer, CommandsLimit)
 
 	return &CLI{
-		formater: formater.NewFormatter(),
-		editor:   NewEditor(output, history),
-		wsConn:   wsConn,
-		input:    input,
-		output:   output,
-		commands: commands,
+		formater:  formater.NewFormatter(),
+		editor:    NewEditor(output, history, false),
+		cmdEditor: NewEditor(output, cmdHistory, true),
+		wsConn:    wsConn,
+		input:     input,
+		output:    output,
+		commands:  commands,
 	}, nil
 }
 
@@ -92,11 +96,8 @@ func (c *CLI) Run(opts RunOptions) error {
 
 	exCtx := &ExecutionContext{
 		input:      keysEvents,
-		output:     c.output,
-		editor:     c.editor,
-		wsConn:     c.wsConn,
+		cli:        c,
 		outputFile: opts.OutputFile,
-		formater:   c.formater,
 	}
 
 	for {
@@ -116,7 +117,16 @@ func (c *CLI) Run(opts RunOptions) error {
 			case keyboard.KeyEnter:
 				c.commands <- NewCommandEdit("")
 			default:
-				continue
+				if event.Key > 0 {
+					continue
+				}
+
+				switch event.Rune {
+				case ':':
+					c.commands <- NewCommandCmdEdit()
+				default:
+					continue
+				}
 			}
 
 		case msg, ok := <-c.wsConn.Messages:
