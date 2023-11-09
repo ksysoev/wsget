@@ -3,12 +3,18 @@ package cli
 import (
 	"fmt"
 	"io"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/eiannone/keyboard"
 	"github.com/fatih/color"
 	"github.com/ksysoev/wsget/pkg/formater"
 	"github.com/ksysoev/wsget/pkg/ws"
+)
+
+const (
+	CommandPartsNumber = 2
 )
 
 type ExecutionContext struct {
@@ -26,6 +32,48 @@ type Executer interface {
 
 type CommandEdit struct {
 	content string
+}
+
+func CommandFactory(raw string) (Executer, error) {
+	if raw == "" {
+		return nil, fmt.Errorf("empty command")
+	}
+
+	parts := strings.SplitN(raw, " ", CommandPartsNumber)
+	cmd := parts[0]
+
+	switch cmd {
+	case "exit":
+		return NewCommandExit(), nil
+	case "edit":
+		content := ""
+		if len(parts) > 1 {
+			content = parts[1]
+		}
+
+		return NewCommandEdit(content), nil
+	case "send":
+		if len(parts) == 1 {
+			return nil, fmt.Errorf("empty request")
+		}
+
+		return NewCommandSend(parts[1]), nil
+	case "wait":
+		timeout := time.Duration(0)
+
+		if len(parts) > 1 {
+			sec, err := strconv.Atoi(parts[1])
+			if err != nil || sec < 0 {
+				return nil, fmt.Errorf("invalid timeout: %s", err)
+			}
+
+			timeout = time.Duration(sec) * time.Second
+		}
+
+		return NewCommandWaitForResp(timeout), nil
+	default:
+		return nil, fmt.Errorf("unknown command: %s", cmd)
+	}
 }
 
 func NewCommandEdit(content string) *CommandEdit {
