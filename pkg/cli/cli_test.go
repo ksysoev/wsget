@@ -54,7 +54,7 @@ func TestNewCLI(t *testing.T) {
 		t.Error("Expected non-nil editor")
 	}
 
-	if err = wsConn.Send("Hello, world!"); err != nil {
+	if _, err = wsConn.Send("Hello, world!"); err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
 

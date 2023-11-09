@@ -94,7 +94,7 @@ func (ed *Editor) done() (string, error) {
 	fmt.Fprint(ed.output, ed.content.Clear())
 
 	if req == "" {
-		return req, fmt.Errorf("empty request")
+		return req, nil
 	}
 
 	ed.History.AddRequest(req)

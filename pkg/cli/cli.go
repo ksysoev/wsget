@@ -14,6 +14,7 @@ import (
 
 const (
 	HistoryFilename = ".wsget_history"
+	CommandsLimit   = 100
 	HistoryLimit    = 100
 
 	MacOSDeleteKey = 127
@@ -30,11 +31,12 @@ type CLI struct {
 	editor   *Editor
 	input    Inputer
 	output   io.Writer
+	commands chan Executer
 }
 
 type RunOptions struct {
-	OutputFile  *os.File
-	StartEditor bool
+	OutputFile *os.File
+	Commands   []Executer
 }
 
 type Inputer interface {
@@ -52,12 +54,15 @@ func NewCLI(wsConn *ws.Connection, input Inputer, output io.Writer) (*CLI, error
 
 	history := NewHistory(homeDir+"/"+HistoryFilename, HistoryLimit)
 
+	commands := make(chan Executer, CommandsLimit)
+
 	return &CLI{
 		formater: formater.NewFormatter(),
 		editor:   NewEditor(output, history, false),
 		wsConn:   wsConn,
 		input:    input,
 		output:   output,
+		commands: commands,
 	}, nil
 }
 
@@ -81,37 +86,35 @@ func (c *CLI) Run(opts RunOptions) error {
 
 	fmt.Fprintln(c.output, "Use Enter to input request and send it, Ctrl+C to exit")
 
-	if opts.StartEditor {
-		if err := c.RequestMod(keysEvents); err != nil {
-			switch err.Error() {
-			case ErrInterrupted:
-				return nil
-			case "empty request":
-			default:
-				return err
-			}
-		}
+	for _, cmd := range opts.Commands {
+		c.commands <- cmd
+	}
+
+	exCtx := &ExecutionContext{
+		input:      keysEvents,
+		output:     c.output,
+		editor:     c.editor,
+		wsConn:     c.wsConn,
+		outputFile: opts.OutputFile,
+		formater:   c.formater,
 	}
 
 	for {
 		select {
+		case cmd := <-c.commands:
+			for cmd != nil {
+				cmd, err = cmd.Execute(exCtx)
+
+				if err != nil {
+					return err
+				}
+			}
 		case event := <-keysEvents:
 			switch event.Key {
 			case keyboard.KeyEsc, keyboard.KeyCtrlC, keyboard.KeyCtrlD:
-				return nil
-
+				c.commands <- NewCommandExit()
 			case keyboard.KeyEnter:
-				if err := c.RequestMod(keysEvents); err != nil {
-					switch err.Error() {
-					case ErrInterrupted:
-						return nil
-					case "empty request":
-						continue
-					default:
-						return err
-					}
-				}
-
+				c.commands <- NewCommandEdit("")
 			default:
 				if event.Key > 0 {
 					continue
@@ -143,54 +146,9 @@ func (c *CLI) Run(opts RunOptions) error {
 				return nil
 			}
 
-			output, err := c.formater.FormatMessage(msg)
-			if err != nil {
-				return fmt.Errorf("fail to format for output file: %s, data: %q", err, msg.Data)
-			}
-
-			switch msg.Type {
-			case ws.Request:
-				color.New(color.FgGreen).Fprint(c.output, "->\n")
-			case ws.Response:
-				color.New(color.FgRed).Fprint(c.output, "<-\n")
-			default:
-				return fmt.Errorf("unknown message type: %s, data: %q", msg.Type, msg.Data)
-			}
-
-			fmt.Fprintf(c.output, "%s\n", output)
-
-			if opts.OutputFile != nil {
-				output, err := c.formater.FormatForFile(msg)
-				if err != nil {
-					return fmt.Errorf("fail to write to output file: %s", err)
-				}
-
-				fmt.Fprintln(opts.OutputFile, output)
-			}
+			c.commands <- NewCommandPrintMsg(msg)
 		}
 	}
-}
-
-func (c *CLI) RequestMod(keysEvents <-chan keyboard.KeyEvent) error {
-	color.New(color.FgGreen).Fprint(c.output, "->\n")
-
-	c.showCursor()
-	req, err := c.editor.EditRequest(keysEvents, "")
-	fmt.Fprint(c.output, LineUp+LineClear)
-	c.hideCursor()
-
-	if err != nil {
-		return err
-	}
-
-	if req != "" {
-		err = c.wsConn.Send(req)
-		if err != nil {
-			return fmt.Errorf("fail to send request: %s", err)
-		}
-	}
-
-	return nil
 }
 
 func (c *CLI) hideCursor() {

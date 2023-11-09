@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/ksysoev/wsget/pkg/cli"
@@ -46,7 +47,7 @@ func main() {
 		Example:    `wsget wss://ws.postman-echo.com/raw -r "Hello, world!"`,
 		Args:       cobra.ExactArgs(1),
 		ArgAliases: []string{"url"},
-		Version:    "0.2.0",
+		Version:    "0.2.1",
 		Run:        run,
 	}
 
@@ -75,7 +76,7 @@ func run(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	wsConn, err := ws.NewWS(wsURL, ws.Options{SkipSSLVerification: insecure, Headers: headers, WaitForResp: waitResponse})
+	wsConn, err := ws.NewWS(wsURL, ws.Options{SkipSSLVerification: insecure, Headers: headers})
 	if err != nil {
 		color.New(color.FgRed).Println("Unable to connect to the server: ", err)
 		return
@@ -90,17 +91,7 @@ func run(cmd *cobra.Command, args []string) {
 		color.New(color.FgRed).Println("Unable to start CLI: ", err)
 	}
 
-	opts := cli.RunOptions{StartEditor: true}
-
-	if request != "" {
-		opts.StartEditor = false
-
-		go func() {
-			if err = wsConn.Send(request); err != nil {
-				color.New(color.FgRed).Println("Fail to send request: ", err)
-			}
-		}()
-	}
+	opts := cli.RunOptions{}
 
 	if outputFile != "" {
 		if opts.OutputFile, err = os.Create(outputFile); err != nil {
@@ -109,7 +100,26 @@ func run(cmd *cobra.Command, args []string) {
 		}
 	}
 
+	if request != "" {
+		opts.Commands = []cli.Executer{cli.NewCommandSend(request)}
+
+		if waitResponse >= 0 {
+			opts.Commands = append(
+				opts.Commands,
+				cli.NewCommandWaitForResp(time.Duration(waitResponse)*time.Second),
+				cli.NewCommandExit(),
+			)
+		}
+	} else {
+		opts.Commands = []cli.Executer{cli.NewCommandEdit("")}
+	}
+
 	if err = client.Run(opts); err != nil {
-		color.New(color.FgRed).Println(err)
+		switch err.Error() {
+		case "interrupted":
+			return
+		default:
+			color.New(color.FgRed).Println(err)
+		}
 	}
 }

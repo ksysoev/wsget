@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
-	"time"
+	"sync/atomic"
 
 	"github.com/fatih/color"
 	"golang.org/x/net/websocket"
@@ -45,12 +45,12 @@ type Connection struct {
 	ws        *websocket.Conn
 	Messages  chan Message
 	waitGroup *sync.WaitGroup
+	isClosed  atomic.Bool
 }
 
 type Options struct {
 	Headers             []string
 	SkipSSLVerification bool
-	WaitForResp         int
 }
 
 func NewWS(url string, opts Options) (*Connection, error) {
@@ -86,14 +86,6 @@ func NewWS(url string, opts Options) (*Connection, error) {
 
 	ws, err := websocket.DialConfig(cfg)
 
-	if opts.WaitForResp > 0 {
-		go func() {
-			time.Sleep(time.Duration(opts.WaitForResp) * time.Second)
-			color.New(color.FgRed).Println("Timeout reached. Closing connection")
-			ws.Close()
-		}()
-	}
-
 	if err != nil {
 		return nil, err
 	}
@@ -101,6 +93,8 @@ func NewWS(url string, opts Options) (*Connection, error) {
 	var waitGroup sync.WaitGroup
 
 	messages := make(chan Message, WSMessageBufferSize)
+
+	wsInsp := &Connection{ws: ws, Messages: messages, waitGroup: &waitGroup}
 
 	go func() {
 		defer func() {
@@ -113,9 +107,7 @@ func NewWS(url string, opts Options) (*Connection, error) {
 
 			err = websocket.Message.Receive(ws, &msg)
 			if err != nil {
-				if opts.WaitForResp >= 0 {
-					// If we are waiting for single response and connection is closed
-					// we just return from the function
+				if wsInsp.isClosed.Load() {
 					return
 				}
 
@@ -129,31 +121,31 @@ func NewWS(url string, opts Options) (*Connection, error) {
 			}
 
 			messages <- Message{Type: Response, Data: msg}
-
-			if opts.WaitForResp >= 0 {
-				return
-			}
 		}
 	}()
 
-	return &Connection{ws: ws, Messages: messages, waitGroup: &waitGroup}, nil
+	return wsInsp, nil
 }
 
-func (wsInsp *Connection) Send(msg string) error {
+func (wsInsp *Connection) Send(msg string) (*Message, error) {
 	wsInsp.waitGroup.Add(1)
 	defer wsInsp.waitGroup.Done()
 
 	err := websocket.Message.Send(wsInsp.ws, msg)
 
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	wsInsp.Messages <- Message{Type: Request, Data: msg}
-
-	return nil
+	return &Message{Type: Request, Data: msg}, nil
 }
 
 func (wsInsp *Connection) Close() {
+	if wsInsp.isClosed.Load() {
+		return
+	}
+
+	wsInsp.isClosed.Store(true)
+
 	wsInsp.ws.Close()
 }
