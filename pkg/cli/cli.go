@@ -84,7 +84,7 @@ func (c *CLI) Run(opts RunOptions) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(macro)
+
 	c.hideCursor()
 
 	keysEvents, err := c.input.GetKeys()

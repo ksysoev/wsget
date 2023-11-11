@@ -22,7 +22,7 @@ func LoadMacro(path string) (*Macro, error) {
 	}
 
 	var cfg Config
-	if err = yaml.Unmarshal(data, &cfg); err != nil {
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return nil, err
 	}
 
@@ -31,19 +31,24 @@ func LoadMacro(path string) (*Macro, error) {
 	}
 
 	macro := make(Macro)
+
 	for name, rawCommands := range cfg.Macro {
-		var command Executer
+		var commands []Executer
+
 		for _, rawCommand := range rawCommands {
 			cmd, err := CommandFactory(rawCommand, nil)
 			if err != nil {
 				return nil, err
 			}
 
-			command = cmd
-			break
+			commands = append(commands, cmd)
 		}
 
-		macro[name] = command
+		if len(commands) == 0 {
+			return nil, fmt.Errorf("empty macro: %s", name)
+		}
+
+		macro[name] = commands[0]
 	}
 
 	return &macro, nil

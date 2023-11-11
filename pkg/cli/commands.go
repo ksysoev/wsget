@@ -70,6 +70,7 @@ func CommandFactory(raw string, macro *Macro) (Executer, error) {
 				return command, nil
 			}
 		}
+
 		return nil, fmt.Errorf("unknown command: %s", cmd)
 	}
 }
