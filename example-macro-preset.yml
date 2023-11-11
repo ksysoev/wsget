@@ -1,0 +1,9 @@
+version: '1'
+
+domains:
+  - derivws.com
+  - binaryws.com
+  - deriv.dev
+
+macro:
+  ticks: ['edit {"ticks": "R_50"}']
