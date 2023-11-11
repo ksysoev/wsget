@@ -13,8 +13,11 @@ import (
 )
 
 const (
-	HistoryFilename    = ".wsget_history"
-	HistoryCmdFilename = ".wsget_cmd_history"
+	MacroDir           = "macro"
+	ConfigDir          = ".wsget"
+	HistoryFilename    = ConfigDir + "/history"
+	HistoryCmdFilename = ConfigDir + "/cmd_history"
+	ConfigDirMode      = 0o755
 	CommandsLimit      = 100
 	HistoryLimit       = 100
 
@@ -34,6 +37,7 @@ type CLI struct {
 	input     Inputer
 	output    io.Writer
 	commands  chan Executer
+	macro     *Macro
 }
 
 type RunOptions struct {
@@ -53,9 +57,17 @@ func NewCLI(wsConn *ws.Connection, input Inputer, output io.Writer) (*CLI, error
 	}
 
 	homeDir := currentUser.HomeDir
+	if err = os.MkdirAll(homeDir+"/"+ConfigDir+"/"+MacroDir, ConfigDirMode); err != nil {
+		return nil, fmt.Errorf("fail to get current user: %s", err)
+	}
 
 	history := NewHistory(homeDir+"/"+HistoryFilename, HistoryLimit)
 	cmdHistory := NewHistory(homeDir+"/"+HistoryCmdFilename, HistoryLimit)
+
+	macro, err := LoadMacroForDomain(homeDir+"/"+ConfigDir+"/"+MacroDir, wsConn.Hostname)
+	if err != nil {
+		return nil, fmt.Errorf("fail to load macro: %s", err)
+	}
 
 	commands := make(chan Executer, CommandsLimit)
 
@@ -67,6 +79,7 @@ func NewCLI(wsConn *ws.Connection, input Inputer, output io.Writer) (*CLI, error
 		input:     input,
 		output:    output,
 		commands:  commands,
+		macro:     macro,
 	}, nil
 }
 
@@ -79,11 +92,6 @@ func (c *CLI) Run(opts RunOptions) error {
 			color.New(color.FgRed).Fprint(c.output, "Fail to save history:", err)
 		}
 	}()
-
-	macro, err := LoadMacro("./example-macro-preset.yml")
-	if err != nil {
-		return err
-	}
 
 	c.hideCursor()
 
@@ -103,7 +111,6 @@ func (c *CLI) Run(opts RunOptions) error {
 		input:      keysEvents,
 		cli:        c,
 		outputFile: opts.OutputFile,
-		macro:      macro,
 	}
 
 	for {

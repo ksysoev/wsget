@@ -2,7 +2,9 @@ package cli
 
 import (
 	"fmt"
+	"log"
 	"os"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -53,6 +55,18 @@ func (m *Macro) AddCommands(name string, rawCommands []string) error {
 	return nil
 }
 
+func (m *Macro) merge(macro *Macro) error {
+	for name, cmd := range macro.macro {
+		if _, ok := m.macro[name]; ok {
+			return fmt.Errorf("duplicate macro name: %s", name)
+		}
+
+		m.macro[name] = cmd
+	}
+
+	return nil
+}
+
 func (m *Macro) Get(name string) (Executer, error) {
 	if cmd, ok := m.macro[name]; ok {
 		return cmd, nil
@@ -73,7 +87,7 @@ func LoadMacro(path string) (*Macro, error) {
 	}
 
 	if cfg.Version != "1" {
-		return nil, fmt.Errorf("unsupported macro version: %s", cfg.Version)
+		return nil, fmt.Errorf("unsupported macro file version: %s", path)
 	}
 
 	macroCfg := NewMacro(cfg.Domains)
@@ -85,4 +99,46 @@ func LoadMacro(path string) (*Macro, error) {
 	}
 
 	return macroCfg, nil
+}
+
+func LoadMacroForDomain(macroDir, domain string) (*Macro, error) {
+	files, err := os.ReadDir(macroDir)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var macro *Macro
+
+	for _, file := range files {
+		fileMacro, err := LoadMacro(macroDir + "/" + file.Name())
+
+		if err != nil {
+			return nil, err
+		}
+
+		hasDomain := false
+
+		for _, fileDomain := range fileMacro.domains {
+			if strings.HasSuffix(domain, fileDomain) {
+				hasDomain = true
+				break
+			}
+		}
+
+		if !hasDomain {
+			continue
+		}
+
+		if macro == nil {
+			macro = fileMacro
+		} else {
+			err := macro.merge(fileMacro)
+
+			if err != nil {
+				return nil, fmt.Errorf("fail to loading macro from file %s, %s ", file.Name(), err)
+			}
+		}
+	}
+
+	return macro, nil
 }

@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -45,6 +46,7 @@ type Connection struct {
 	ws        *websocket.Conn
 	Messages  chan Message
 	waitGroup *sync.WaitGroup
+	Hostname  string
 	isClosed  atomic.Bool
 }
 
@@ -53,8 +55,13 @@ type Options struct {
 	SkipSSLVerification bool
 }
 
-func NewWS(url string, opts Options) (*Connection, error) {
-	cfg, err := websocket.NewConfig(url, "http://localhost")
+func NewWS(wsURL string, opts Options) (*Connection, error) {
+	parsedURL, err := url.Parse(wsURL)
+	if err != nil {
+		return nil, err
+	}
+
+	cfg, err := websocket.NewConfig(wsURL, "http://localhost")
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +101,7 @@ func NewWS(url string, opts Options) (*Connection, error) {
 
 	messages := make(chan Message, WSMessageBufferSize)
 
-	wsInsp := &Connection{ws: ws, Messages: messages, waitGroup: &waitGroup}
+	wsInsp := &Connection{ws: ws, Messages: messages, waitGroup: &waitGroup, Hostname: parsedURL.Hostname()}
 
 	go func() {
 		defer func() {

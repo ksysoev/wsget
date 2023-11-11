@@ -20,7 +20,6 @@ type ExecutionContext struct {
 	input      <-chan keyboard.KeyEvent
 	cli        *CLI
 	outputFile io.Writer
-	macro      *Macro
 }
 
 type Executer interface {
@@ -210,7 +209,7 @@ func (c *CommandCmdEdit) Execute(exCtx *ExecutionContext) (Executer, error) {
 		return nil, err
 	}
 
-	cmd, err := CommandFactory(rawCmd, exCtx.macro)
+	cmd, err := CommandFactory(rawCmd, exCtx.cli.macro)
 
 	if err != nil {
 		color.New(color.FgRed).Fprintln(exCtx.cli.output, err)
