@@ -80,6 +80,11 @@ func (c *CLI) Run(opts RunOptions) error {
 		}
 	}()
 
+	macro, err := LoadMacro("./example-macro-preset.yml")
+	if err != nil {
+		return err
+	}
+	fmt.Println(macro)
 	c.hideCursor()
 
 	keysEvents, err := c.input.GetKeys()
@@ -98,6 +103,7 @@ func (c *CLI) Run(opts RunOptions) error {
 		input:      keysEvents,
 		cli:        c,
 		outputFile: opts.OutputFile,
+		macro:      macro,
 	}
 
 	for {

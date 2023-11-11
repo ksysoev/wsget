@@ -20,13 +20,14 @@ type ExecutionContext struct {
 	input      <-chan keyboard.KeyEvent
 	cli        *CLI
 	outputFile io.Writer
+	macro      *Macro
 }
 
 type Executer interface {
 	Execute(*ExecutionContext) (Executer, error)
 }
 
-func CommandFactory(raw string) (Executer, error) {
+func CommandFactory(raw string, macro *Macro) (Executer, error) {
 	if raw == "" {
 		return nil, fmt.Errorf("empty command")
 	}
@@ -64,6 +65,11 @@ func CommandFactory(raw string) (Executer, error) {
 
 		return NewCommandWaitForResp(timeout), nil
 	default:
+		if macro != nil {
+			if command, ok := (*macro)[cmd]; ok {
+				return command, nil
+			}
+		}
 		return nil, fmt.Errorf("unknown command: %s", cmd)
 	}
 }
@@ -205,7 +211,7 @@ func (c *CommandCmdEdit) Execute(exCtx *ExecutionContext) (Executer, error) {
 		return nil, err
 	}
 
-	cmd, err := CommandFactory(rawCmd)
+	cmd, err := CommandFactory(rawCmd, exCtx.macro)
 
 	if err != nil {
 		color.New(color.FgRed).Fprintln(exCtx.cli.output, err)
