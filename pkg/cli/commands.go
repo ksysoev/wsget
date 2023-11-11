@@ -66,9 +66,7 @@ func CommandFactory(raw string, macro *Macro) (Executer, error) {
 		return NewCommandWaitForResp(timeout), nil
 	default:
 		if macro != nil {
-			if command, ok := (*macro)[cmd]; ok {
-				return command, nil
-			}
+			return macro.Get(cmd)
 		}
 
 		return nil, fmt.Errorf("unknown command: %s", cmd)
@@ -220,4 +218,25 @@ func (c *CommandCmdEdit) Execute(exCtx *ExecutionContext) (Executer, error) {
 	}
 
 	return cmd, nil
+}
+
+type CommandSequence struct {
+	subCommands []Executer
+}
+
+func NewCommandSequence(subCommands []Executer) *CommandSequence {
+	return &CommandSequence{subCommands}
+}
+
+func (c *CommandSequence) Execute(exCtx *ExecutionContext) (Executer, error) {
+	for _, cmd := range c.subCommands {
+		for cmd != nil {
+			var err error
+			if cmd, err = cmd.Execute(exCtx); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return nil, nil
 }
