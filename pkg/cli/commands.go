@@ -26,7 +26,7 @@ type Executer interface {
 	Execute(*ExecutionContext) (Executer, error)
 }
 
-func CommandFactory(raw string) (Executer, error) {
+func CommandFactory(raw string, macro *Macro) (Executer, error) {
 	if raw == "" {
 		return nil, fmt.Errorf("empty command")
 	}
@@ -64,6 +64,10 @@ func CommandFactory(raw string) (Executer, error) {
 
 		return NewCommandWaitForResp(timeout), nil
 	default:
+		if macro != nil {
+			return macro.Get(cmd)
+		}
+
 		return nil, fmt.Errorf("unknown command: %s", cmd)
 	}
 }
@@ -205,7 +209,7 @@ func (c *CommandCmdEdit) Execute(exCtx *ExecutionContext) (Executer, error) {
 		return nil, err
 	}
 
-	cmd, err := CommandFactory(rawCmd)
+	cmd, err := CommandFactory(rawCmd, exCtx.cli.macro)
 
 	if err != nil {
 		color.New(color.FgRed).Fprintln(exCtx.cli.output, err)
@@ -213,4 +217,25 @@ func (c *CommandCmdEdit) Execute(exCtx *ExecutionContext) (Executer, error) {
 	}
 
 	return cmd, nil
+}
+
+type CommandSequence struct {
+	subCommands []Executer
+}
+
+func NewCommandSequence(subCommands []Executer) *CommandSequence {
+	return &CommandSequence{subCommands}
+}
+
+func (c *CommandSequence) Execute(exCtx *ExecutionContext) (Executer, error) {
+	for _, cmd := range c.subCommands {
+		for cmd != nil {
+			var err error
+			if cmd, err = cmd.Execute(exCtx); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return nil, nil
 }

@@ -89,6 +89,7 @@ func run(cmd *cobra.Command, args []string) {
 	client, err := cli.NewCLI(wsConn, input, os.Stdout)
 	if err != nil {
 		color.New(color.FgRed).Println("Unable to start CLI: ", err)
+		return
 	}
 
 	opts := cli.RunOptions{}
