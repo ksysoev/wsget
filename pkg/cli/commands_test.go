@@ -11,18 +11,12 @@ import (
 	"github.com/ksysoev/wsget/pkg/ws"
 )
 
-type mockMacro struct{}
-
-func (m *mockMacro) Get(name string) (Executer, error) {
-	return nil, fmt.Errorf("macro not found: %s", name)
-}
-
 func TestCommandFactory(t *testing.T) {
 	tests := []struct {
-		name    string
-		raw     string
 		macro   *Macro
 		want    Executer
+		name    string
+		raw     string
 		wantErr bool
 	}{
 		{
@@ -123,18 +117,18 @@ func TestCommandFactory(t *testing.T) {
 			}
 
 			if got != nil && tt.want != nil {
-				switch got.(type) {
+				switch gotType := got.(type) {
 				case *CommandEdit:
 					if got.(*CommandEdit).content != tt.want.(*CommandEdit).content {
-						t.Errorf("CommandFactory() got = %v, want %v", got, tt.want)
+						t.Errorf("CommandFactory() type %v,  got = %v, want %v", gotType, got, tt.want)
 					}
 				case *CommandSend:
 					if got.(*CommandSend).request != tt.want.(*CommandSend).request {
-						t.Errorf("CommandFactory() got = %v, want %v", got, tt.want)
+						t.Errorf("CommandFactory() type %v, got = %v, want %v", gotType, got, tt.want)
 					}
 				case *CommandWaitForResp:
 					if got.(*CommandWaitForResp).timeout != tt.want.(*CommandWaitForResp).timeout {
-						t.Errorf("CommandFactory() got = %v, want %v", got, tt.want)
+						t.Errorf("CommandFactory() type %v, got = %v, want %v", gotType, got, tt.want)
 					}
 				}
 			}
@@ -146,15 +140,15 @@ type mockCommand struct {
 	err error
 }
 
-func (c *mockCommand) Execute(exCtx *ExecutionContext) (Executer, error) {
+func (c *mockCommand) Execute(_ *ExecutionContext) (Executer, error) {
 	return nil, c.err
 }
 
 func TestCommandSequence_Execute(t *testing.T) {
 	tests := []struct {
+		exCtx       *ExecutionContext
 		name        string
 		subCommands []Executer
-		exCtx       *ExecutionContext
 		wantErr     bool
 	}{
 		{
@@ -211,9 +205,11 @@ func TestCommandSequence_Execute(t *testing.T) {
 func TestCommandExit_Execute(t *testing.T) {
 	c := &CommandExit{}
 	_, err := c.Execute(nil)
+
 	if err == nil {
 		t.Errorf("CommandExit.Execute() error = %v, wantErr %v", err, true)
 	}
+
 	if err.Error() != "interrupted" {
 		t.Errorf("CommandExit.Execute() error = %v, wantErr %v", err, "interrupted")
 	}
@@ -221,11 +217,11 @@ func TestCommandExit_Execute(t *testing.T) {
 
 func TestCommandPrintMsg_Execute(t *testing.T) {
 	tests := []struct {
-		name        string
-		msg         ws.Message
 		exCtx       *ExecutionContext
-		wantErr     bool
+		name        string
 		expectedOut string
+		msg         ws.Message
+		wantErr     bool
 	}{
 		{
 			name: "request message",
