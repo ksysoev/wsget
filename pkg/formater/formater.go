@@ -30,7 +30,7 @@ func (f *Formater) FormatMessage(wsMsg ws.Message) (string, error) {
 	obj, ok := f.parseJSON(wsMsgData)
 
 	if !ok {
-		return f.formatTestMessage(wsMsg.Type, wsMsgData)
+		return f.formatTextMessage(wsMsg.Type, wsMsgData)
 	}
 
 	return f.formatJSONMessage(wsMsg.Type, obj)
@@ -51,8 +51,8 @@ func (f *Formater) FormatForFile(wsMsg ws.Message) (string, error) {
 	return f.json.FormatForFile(obj)
 }
 
-// formatTestMessage formats the given WebSocket message data as text based on its type.
-func (f *Formater) formatTestMessage(msgType ws.MessageType, data string) (string, error) {
+// formatTextMessage formats the given WebSocket message data as text based on its type.
+func (f *Formater) formatTextMessage(msgType ws.MessageType, data string) (string, error) {
 	switch msgType {
 	case ws.Request:
 		return f.text.FormatRequest(data)

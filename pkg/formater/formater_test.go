@@ -125,14 +125,14 @@ func TestFormater_FormatForFile(t *testing.T) {
 	}
 }
 
-func TestFormater_formatTestMessage(t *testing.T) {
+func TestFormater_formatTextMessage(t *testing.T) {
 	formater := NewFormatter()
 
 	// Test request message formatting
 	requestMsg := ws.Request
 	requestData := "GET / HTTP/1.1\r\nHost: example.com\r\n\r\n"
 
-	formattedRequestMsg, err := formater.formatTestMessage(requestMsg, requestData)
+	formattedRequestMsg, err := formater.formatTextMessage(requestMsg, requestData)
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
@@ -146,7 +146,7 @@ func TestFormater_formatTestMessage(t *testing.T) {
 	responseMsg := ws.Response
 	responseData := "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nHello, world!"
 
-	formattedResponseMsg, err := formater.formatTestMessage(responseMsg, responseData)
+	formattedResponseMsg, err := formater.formatTextMessage(responseMsg, responseData)
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
@@ -160,7 +160,7 @@ func TestFormater_formatTestMessage(t *testing.T) {
 	unknownMsg := ws.MessageType(0)
 	unknownData := "Hello, world!"
 
-	formattedUnknownMsg, err := formater.formatTestMessage(unknownMsg, unknownData)
+	formattedUnknownMsg, err := formater.formatTextMessage(unknownMsg, unknownData)
 	if err == nil {
 		t.Errorf("Expected error, but got nil")
 	}
