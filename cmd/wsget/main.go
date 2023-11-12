@@ -16,6 +16,7 @@ var request string
 var outputFile string
 var headers []string
 var waitResponse int
+var Version = "dev"
 
 const (
 	LongDescription = `A command-line tool for interacting with WebSocket servers.
@@ -47,7 +48,7 @@ func main() {
 		Example:    `wsget wss://ws.postman-echo.com/raw -r "Hello, world!"`,
 		Args:       cobra.ExactArgs(1),
 		ArgAliases: []string{"url"},
-		Version:    "0.2.1",
+		Version:    Version,
 		Run:        run,
 	}
 
