@@ -84,7 +84,7 @@ func NewCommandEdit(content string) *CommandEdit {
 	return &CommandEdit{content}
 }
 
-// Execute executes the edit command and returns a Send command id editing was succesful or an error in other case.
+// Execute executes the edit command and returns a Send command id editing was successful or an error in other case.
 func (c *CommandEdit) Execute(exCtx *ExecutionContext) (Executer, error) {
 	color.New(color.FgGreen).Fprint(exCtx.cli.output, "->\n")
 
