@@ -55,6 +55,8 @@ type Options struct {
 	SkipSSLVerification bool
 }
 
+// NewWS creates a new WebSocket connection to the specified URL with the given options.
+// It returns a Connection object and an error if any occurred.
 func NewWS(wsURL string, opts Options) (*Connection, error) {
 	parsedURL, err := url.Parse(wsURL)
 	if err != nil {
@@ -103,37 +105,44 @@ func NewWS(wsURL string, opts Options) (*Connection, error) {
 
 	wsInsp := &Connection{ws: ws, Messages: messages, waitGroup: &waitGroup, Hostname: parsedURL.Hostname()}
 
-	go func() {
-		defer func() {
-			waitGroup.Wait()
-			close(messages)
-		}()
-
-		for {
-			var msg string
-
-			err = websocket.Message.Receive(ws, &msg)
-			if err != nil {
-				if wsInsp.isClosed.Load() {
-					return
-				}
-
-				if err.Error() == "EOF" {
-					color.New(color.FgRed).Println("Connection closed by the server")
-				} else {
-					color.New(color.FgRed).Println("Fail read from connection: ", err)
-				}
-
-				return
-			}
-
-			messages <- Message{Type: Response, Data: msg}
-		}
-	}()
+	go wsInsp.handleResponses()
 
 	return wsInsp, nil
 }
 
+// handleResponses reads messages from the websocket connection and sends them to the Messages channel.
+// It runs in a loop until the connection is closed or an error occurs.
+func (wsInsp *Connection) handleResponses() {
+	defer func() {
+		wsInsp.waitGroup.Wait()
+		close(wsInsp.Messages)
+	}()
+
+	for {
+		var msg string
+
+		err := websocket.Message.Receive(wsInsp.ws, &msg)
+		if err != nil {
+			if wsInsp.isClosed.Load() {
+				return
+			}
+
+			if err.Error() == "EOF" {
+				color.New(color.FgRed).Println("Connection closed by the server")
+			} else {
+				color.New(color.FgRed).Println("Fail read from connection: ", err)
+			}
+
+			return
+		}
+
+		wsInsp.Messages <- Message{Type: Response, Data: msg}
+	}
+}
+
+// Send sends a message to the websocket connection and returns a Message and an error.
+// It takes a string message as input and returns a pointer to a Message struct and an error.
+// The Message struct contains the message type and data.
 func (wsInsp *Connection) Send(msg string) (*Message, error) {
 	wsInsp.waitGroup.Add(1)
 	defer wsInsp.waitGroup.Done()
@@ -147,6 +156,8 @@ func (wsInsp *Connection) Send(msg string) (*Message, error) {
 	return &Message{Type: Request, Data: msg}, nil
 }
 
+// Close closes the WebSocket connection.
+// If the connection is already closed, it returns immediately.
 func (wsInsp *Connection) Close() {
 	if wsInsp.isClosed.Load() {
 		return
