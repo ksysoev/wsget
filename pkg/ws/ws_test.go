@@ -165,3 +165,34 @@ func TestHandleError(t *testing.T) {
 		t.Errorf("Expected empty string, but got %v", buf.String())
 	}
 }
+func TestMessageTypeString(t *testing.T) {
+	tests := []struct {
+		name string
+		mt   MessageType
+		want string
+	}{
+		{
+			name: "Request",
+			mt:   Request,
+			want: "Request",
+		},
+		{
+			name: "Response",
+			mt:   Response,
+			want: "Response",
+		},
+		{
+			name: "Not defined",
+			mt:   MessageType(42),
+			want: "Not defined",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.mt.String(); got != tt.want {
+				t.Errorf("MessageType.String() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
