@@ -1,4 +1,4 @@
-package cli
+package edit
 
 import (
 	"bytes"
@@ -34,7 +34,7 @@ func TestNewEditor(t *testing.T) {
 	}
 }
 
-func TestEditRequest(t *testing.T) {
+func TestEdit(t *testing.T) {
 	tmpfile, err := os.CreateTemp("", "test_history")
 	if err != nil {
 		t.Fatal(err)
@@ -57,7 +57,7 @@ func TestEditRequest(t *testing.T) {
 		keyStream <- keyboard.KeyEvent{Key: keyboard.KeyCtrlS}
 	}()
 
-	req, err := editor.EditRequest(keyStream, "")
+	req, err := editor.Edit(keyStream, "")
 
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -68,7 +68,7 @@ func TestEditRequest(t *testing.T) {
 	}
 }
 
-func TestEditRequestInterrupted(t *testing.T) {
+func TestEditInterrupted(t *testing.T) {
 	tmpfile, err := os.CreateTemp("", "test_history")
 	if err != nil {
 		t.Fatal(err)
@@ -87,7 +87,7 @@ func TestEditRequestInterrupted(t *testing.T) {
 		keyStream <- keyboard.KeyEvent{Key: keyboard.KeyCtrlC}
 	}()
 
-	req, err := editor.EditRequest(keyStream, "")
+	req, err := editor.Edit(keyStream, "")
 
 	if err == nil {
 		t.Error("Expected error")
@@ -101,7 +101,7 @@ func TestEditRequestInterrupted(t *testing.T) {
 		keyStream <- keyboard.KeyEvent{Key: keyboard.KeyCtrlD}
 	}()
 
-	req, err = editor.EditRequest(keyStream, "")
+	req, err = editor.Edit(keyStream, "")
 
 	if err == nil {
 		t.Error("Expected error")
@@ -112,7 +112,7 @@ func TestEditRequestInterrupted(t *testing.T) {
 	}
 }
 
-func TestEditRequestExitEditor(t *testing.T) {
+func TestEditExitEditor(t *testing.T) {
 	tmpfile, err := os.CreateTemp("", "test_history")
 	if err != nil {
 		t.Fatal(err)
@@ -131,7 +131,7 @@ func TestEditRequestExitEditor(t *testing.T) {
 		keyStream <- keyboard.KeyEvent{Key: keyboard.KeyEsc}
 	}()
 
-	req, err := editor.EditRequest(keyStream, "")
+	req, err := editor.Edit(keyStream, "")
 
 	if err != nil {
 		t.Error("Expected no error")
@@ -142,7 +142,7 @@ func TestEditRequestExitEditor(t *testing.T) {
 	}
 }
 
-func TestEditRequestClosingKeyboard(t *testing.T) {
+func TestEditClosingKeyboard(t *testing.T) {
 	tmpfile, err := os.CreateTemp("", "test_history")
 	if err != nil {
 		t.Fatal(err)
@@ -157,7 +157,7 @@ func TestEditRequestClosingKeyboard(t *testing.T) {
 	keyStream := make(chan keyboard.KeyEvent)
 	close(keyStream)
 
-	req, err := editor.EditRequest(keyStream, "")
+	req, err := editor.Edit(keyStream, "")
 
 	if err == nil {
 		t.Error("Expected error")
@@ -168,7 +168,7 @@ func TestEditRequestClosingKeyboard(t *testing.T) {
 	}
 }
 
-func TestEditRequestSpecialKeys(t *testing.T) {
+func TestEditSpecialKeys(t *testing.T) {
 	tmpfile, err := os.CreateTemp("", "test_history")
 	if err != nil {
 		t.Fatal(err)
@@ -192,7 +192,7 @@ func TestEditRequestSpecialKeys(t *testing.T) {
 		}
 	}()
 
-	req, err := editor.EditRequest(keyStream, "")
+	req, err := editor.Edit(keyStream, "")
 
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)

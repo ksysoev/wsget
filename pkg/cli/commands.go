@@ -14,6 +14,8 @@ import (
 
 const (
 	CommandPartsNumber = 2
+	LineUp             = "\x1b[1A"
+	LineClear          = "\x1b[2K"
 )
 
 type ExecutionContext struct {
@@ -89,7 +91,7 @@ func (c *CommandEdit) Execute(exCtx *ExecutionContext) (Executer, error) {
 	color.New(color.FgGreen).Fprint(exCtx.cli.output, "->\n")
 
 	fmt.Fprint(exCtx.cli.output, ShowCursor)
-	req, err := exCtx.cli.editor.EditRequest(exCtx.input, c.content)
+	req, err := exCtx.cli.editor.Edit(exCtx.input, c.content)
 	fmt.Fprint(exCtx.cli.output, LineUp+LineClear)
 	fmt.Fprint(exCtx.cli.output, HideCursor)
 
@@ -219,7 +221,7 @@ func (c *CommandCmdEdit) Execute(exCtx *ExecutionContext) (Executer, error) {
 	fmt.Fprint(exCtx.cli.output, ":")
 
 	fmt.Fprint(exCtx.cli.output, ShowCursor)
-	rawCmd, err := exCtx.cli.cmdEditor.EditRequest(exCtx.input, "")
+	rawCmd, err := exCtx.cli.cmdEditor.Edit(exCtx.input, "")
 	fmt.Fprint(exCtx.cli.output, LineClear+"\r")
 	fmt.Fprint(exCtx.cli.output, HideCursor)
 

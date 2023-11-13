@@ -1,4 +1,4 @@
-package cli
+package edit
 
 import (
 	"fmt"
@@ -11,6 +11,8 @@ import (
 const (
 	PastingTimingThresholdInMicrosec = 250
 	ErrInterrupted                   = "interrupted"
+	MacOSDeleteKey                   = 127
+	Bell                             = "\a"
 )
 
 type Editor struct {
@@ -39,10 +41,10 @@ func NewEditor(output io.Writer, history *History, isSingleLine bool) *Editor {
 	}
 }
 
-// EditRequest reads input from the user via a keyboard stream and returns the resulting string.
+// Edit reads input from the user via a keyboard stream and returns the resulting string.
 // It takes a channel of keyboard events and an initial buffer string as input.
 // It returns the resulting string and an error if any.
-func (ed *Editor) EditRequest(keyStream <-chan keyboard.KeyEvent, initBuffer string) (string, error) {
+func (ed *Editor) Edit(keyStream <-chan keyboard.KeyEvent, initBuffer string) (string, error) {
 	ed.History.ResetPosition()
 	fmt.Fprint(ed.output, ed.content.ReplaceText(initBuffer))
 
@@ -171,4 +173,9 @@ func (ed *Editor) isPasting() bool {
 	ed.prevPressedTime = time.Now()
 
 	return elapsed.Microseconds() < PastingTimingThresholdInMicrosec
+}
+
+// Close saves the history to the history file.
+func (ed *Editor) Close() error {
+	return ed.History.SaveToFile()
 }

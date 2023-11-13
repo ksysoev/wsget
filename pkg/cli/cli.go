@@ -8,6 +8,7 @@ import (
 
 	"github.com/eiannone/keyboard"
 	"github.com/fatih/color"
+	"github.com/ksysoev/wsget/pkg/edit"
 	"github.com/ksysoev/wsget/pkg/formater"
 	"github.com/ksysoev/wsget/pkg/ws"
 )
@@ -29,11 +30,16 @@ const (
 	Bell = "\a"
 )
 
+type Editor interface {
+	Edit(keyStream <-chan keyboard.KeyEvent, initBuffer string) (string, error)
+	Close() error
+}
+
 type CLI struct {
 	formater  *formater.Formater
 	wsConn    ws.ConnectionHandler
-	editor    *Editor
-	cmdEditor *Editor
+	editor    Editor
+	cmdEditor Editor
 	input     Inputer
 	output    io.Writer
 	commands  chan Executer
@@ -64,8 +70,8 @@ func NewCLI(wsConn ws.ConnectionHandler, input Inputer, output io.Writer) (*CLI,
 		return nil, fmt.Errorf("fail to get current user: %s", err)
 	}
 
-	history := NewHistory(homeDir+"/"+HistoryFilename, HistoryLimit)
-	cmdHistory := NewHistory(homeDir+"/"+HistoryCmdFilename, HistoryLimit)
+	history := edit.NewHistory(homeDir+"/"+HistoryFilename, HistoryLimit)
+	cmdHistory := edit.NewHistory(homeDir+"/"+HistoryCmdFilename, HistoryLimit)
 
 	macro, err := LoadMacroForDomain(homeDir+"/"+ConfigDir+"/"+MacroDir, wsConn.Hostname())
 	if err != nil {
@@ -76,8 +82,8 @@ func NewCLI(wsConn ws.ConnectionHandler, input Inputer, output io.Writer) (*CLI,
 
 	return &CLI{
 		formater:  formater.NewFormatter(),
-		editor:    NewEditor(output, history, false),
-		cmdEditor: NewEditor(output, cmdHistory, true),
+		editor:    edit.NewEditor(output, history, false),
+		cmdEditor: edit.NewEditor(output, cmdHistory, true),
 		wsConn:    wsConn,
 		input:     input,
 		output:    output,
@@ -91,8 +97,13 @@ func NewCLI(wsConn ws.ConnectionHandler, input Inputer, output io.Writer) (*CLI,
 func (c *CLI) Run(opts RunOptions) error {
 	defer func() {
 		c.showCursor()
-		err := c.editor.History.SaveToFile()
+		err := c.editor.Close()
 
+		if err != nil {
+			color.New(color.FgRed).Fprint(c.output, "Fail to save history:", err)
+		}
+
+		err = c.cmdEditor.Close()
 		if err != nil {
 			color.New(color.FgRed).Fprint(c.output, "Fail to save history:", err)
 		}
