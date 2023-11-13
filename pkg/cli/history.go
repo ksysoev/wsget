@@ -18,6 +18,9 @@ type History struct {
 	pos      int
 }
 
+// NewHistory creates a new History instance with the given file name and limit.
+// The History instance stores a list of requests made by the user and loads them from the file if it exists.
+// The limit parameter specifies the maximum number of requests to store in the history.
 func NewHistory(fileName string, limit uint) *History {
 	h := &History{
 		fileName: fileName,
@@ -31,6 +34,8 @@ func NewHistory(fileName string, limit uint) *History {
 	return h
 }
 
+// loadFromFile reads the history file and loads the requests into the History struct.
+// It returns an error if the file cannot be opened or read.
 func (h *History) loadFromFile() error {
 	fileHandler, err := os.OpenFile(h.fileName, os.O_RDONLY|os.O_CREATE, HistoryFileRigths)
 	if err != nil {
@@ -66,6 +71,12 @@ func (h *History) loadFromFile() error {
 	return nil
 }
 
+// SaveToFile saves the history to a file.
+// It opens the file with the given filename and writes the history requests to it.
+// If the file does not exist, it creates it.
+// If the number of requests is greater than the limit, it writes only the last limit requests.
+// It replaces newlines with the escape sequence "\\n".
+// It returns an error if it fails to open the file or write to it.
 func (h *History) SaveToFile() error {
 	fileHandler, err := os.OpenFile(h.fileName, os.O_WRONLY|os.O_CREATE, HistoryFileRigths)
 	if err != nil {
@@ -100,6 +111,7 @@ func (h *History) SaveToFile() error {
 	return writer.Flush()
 }
 
+// AddRequest adds a request to the history. If the request is empty or the same as the last request, it will not be added.
 func (h *History) AddRequest(request string) {
 	if request == "" {
 		return
@@ -115,6 +127,8 @@ func (h *History) AddRequest(request string) {
 	h.pos = len(h.requests)
 }
 
+// PrevRequst returns the previous request in the history.
+// If there are no more previous requests, it returns an empty string.
 func (h *History) PrevRequst() string {
 	if h.pos <= 0 {
 		return ""
@@ -126,6 +140,8 @@ func (h *History) PrevRequst() string {
 	return req
 }
 
+// NextRequest returns the next request in the history.
+// If there are no more requests, it returns an empty string.
 func (h *History) NextRequst() string {
 	if h.pos >= len(h.requests)-1 {
 		return ""
@@ -137,6 +153,8 @@ func (h *History) NextRequst() string {
 	return req
 }
 
+// ResetPosition resets the position of the history to the end.
+// If the history is empty, it does nothing.
 func (h *History) ResetPosition() {
 	if len(h.requests) == 0 {
 		return
