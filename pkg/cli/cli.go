@@ -50,6 +50,9 @@ type Inputer interface {
 	Close()
 }
 
+// NewCLI creates a new CLI instance with the given wsConn, input, and output.
+// It returns an error if it fails to get the current user, create the necessary directories,
+// load the macro for the domain, or initialize the CLI instance.
 func NewCLI(wsConn *ws.Connection, input Inputer, output io.Writer) (*CLI, error) {
 	currentUser, err := user.Current()
 	if err != nil {
@@ -83,6 +86,8 @@ func NewCLI(wsConn *ws.Connection, input Inputer, output io.Writer) (*CLI, error
 	}, nil
 }
 
+// Run runs the CLI with the provided options.
+// It listens for user input and executes commands accordingly.
 func (c *CLI) Run(opts RunOptions) error {
 	defer func() {
 		c.showCursor()
@@ -152,10 +157,12 @@ func (c *CLI) Run(opts RunOptions) error {
 	}
 }
 
+// hideCursor hides the cursor in the terminal output.
 func (c *CLI) hideCursor() {
 	fmt.Fprint(c.output, HideCursor)
 }
 
+// showCursor shows the cursor in the terminal output.
 func (c *CLI) showCursor() {
 	fmt.Fprint(c.output, ShowCursor)
 }
