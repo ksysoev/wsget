@@ -168,8 +168,8 @@ func TestHandleError(t *testing.T) {
 func TestMessageTypeString(t *testing.T) {
 	tests := []struct {
 		name string
-		mt   MessageType
 		want string
+		mt   MessageType
 	}{
 		{
 			name: "Request",
