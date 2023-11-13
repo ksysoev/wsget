@@ -20,6 +20,9 @@ type Macro struct {
 	domains []string
 }
 
+// NewMacro creates a new Macro instance with the specified domains.
+// The domains parameter is a slice of strings representing the allowed domains for the macro.
+// Returns a pointer to the newly created Macro instance.
 func NewMacro(domains []string) *Macro {
 	return &Macro{
 		macro:   make(map[string]Executer),
@@ -27,6 +30,11 @@ func NewMacro(domains []string) *Macro {
 	}
 }
 
+// AddCommands adds a new macro with the given name and commands to the Macro instance.
+// If a macro with the same name already exists, it returns an error.
+// If the rawCommands slice is empty, it returns an error.
+// If the rawCommands slice has only one command, it adds the command directly to the macro.
+// Otherwise, it creates a new CommandSequence with the commands and adds it to the macro.
 func (m *Macro) AddCommands(name string, rawCommands []string) error {
 	if _, ok := m.macro[name]; ok {
 		return fmt.Errorf("macro already exists: %s", name)
@@ -55,6 +63,8 @@ func (m *Macro) AddCommands(name string, rawCommands []string) error {
 	return nil
 }
 
+// merge merges the given macro into the current macro.
+// If a macro with the same name already exists, an error is returned.
 func (m *Macro) merge(macro *Macro) error {
 	for name, cmd := range macro.macro {
 		if _, ok := m.macro[name]; ok {
@@ -67,6 +77,7 @@ func (m *Macro) merge(macro *Macro) error {
 	return nil
 }
 
+// Get returns the Executer associated with the given name, or an error if the name is not found.
 func (m *Macro) Get(name string) (Executer, error) {
 	if cmd, ok := m.macro[name]; ok {
 		return cmd, nil
@@ -75,7 +86,9 @@ func (m *Macro) Get(name string) (Executer, error) {
 	return nil, fmt.Errorf("unknown command: %s", name)
 }
 
-func LoadMacro(path string) (*Macro, error) {
+// LoadFromFile loads a macro configuration from a file at the given path.
+// It returns a Macro instance and an error if the file cannot be read or parsed.
+func LoadFromFile(path string) (*Macro, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -101,6 +114,9 @@ func LoadMacro(path string) (*Macro, error) {
 	return macroCfg, nil
 }
 
+// LoadMacroForDomain loads a macro for a given domain from a directory.
+// It takes the directory path and the domain name as input parameters.
+// It returns a pointer to a Macro struct and an error if any.
 func LoadMacroForDomain(macroDir, domain string) (*Macro, error) {
 	files, err := os.ReadDir(macroDir)
 	if err != nil {
@@ -110,7 +126,7 @@ func LoadMacroForDomain(macroDir, domain string) (*Macro, error) {
 	var macro *Macro
 
 	for _, file := range files {
-		fileMacro, err := LoadMacro(macroDir + "/" + file.Name())
+		fileMacro, err := LoadFromFile(macroDir + "/" + file.Name())
 
 		if err != nil {
 			return nil, err
