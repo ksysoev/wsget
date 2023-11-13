@@ -31,7 +31,7 @@ const (
 
 type CLI struct {
 	formater  *formater.Formater
-	wsConn    *ws.Connection
+	wsConn    ws.ConnectionHandler
 	editor    *Editor
 	cmdEditor *Editor
 	input     Inputer
@@ -53,7 +53,7 @@ type Inputer interface {
 // NewCLI creates a new CLI instance with the given wsConn, input, and output.
 // It returns an error if it fails to get the current user, create the necessary directories,
 // load the macro for the domain, or initialize the CLI instance.
-func NewCLI(wsConn *ws.Connection, input Inputer, output io.Writer) (*CLI, error) {
+func NewCLI(wsConn ws.ConnectionHandler, input Inputer, output io.Writer) (*CLI, error) {
 	currentUser, err := user.Current()
 	if err != nil {
 		return nil, fmt.Errorf("fail to get current user: %s", err)
@@ -67,7 +67,7 @@ func NewCLI(wsConn *ws.Connection, input Inputer, output io.Writer) (*CLI, error
 	history := NewHistory(homeDir+"/"+HistoryFilename, HistoryLimit)
 	cmdHistory := NewHistory(homeDir+"/"+HistoryCmdFilename, HistoryLimit)
 
-	macro, err := LoadMacroForDomain(homeDir+"/"+ConfigDir+"/"+MacroDir, wsConn.Hostname)
+	macro, err := LoadMacroForDomain(homeDir+"/"+ConfigDir+"/"+MacroDir, wsConn.Hostname())
 	if err != nil {
 		return nil, fmt.Errorf("fail to load macro: %s", err)
 	}
@@ -147,7 +147,7 @@ func (c *CLI) Run(opts RunOptions) error {
 				}
 			}
 
-		case msg, ok := <-c.wsConn.Messages:
+		case msg, ok := <-c.wsConn.Messages():
 			if !ok {
 				return nil
 			}

@@ -187,7 +187,7 @@ func NewCommandWaitForResp(timeout time.Duration) *CommandWaitForResp {
 // If the WebSocket connection is closed, it will return an error.
 func (c *CommandWaitForResp) Execute(exCtx *ExecutionContext) (Executer, error) {
 	if c.timeout.Seconds() == 0 {
-		msg, ok := <-exCtx.cli.wsConn.Messages
+		msg, ok := <-exCtx.cli.wsConn.Messages()
 		if !ok {
 			return nil, fmt.Errorf("connection closed")
 		}
@@ -198,7 +198,7 @@ func (c *CommandWaitForResp) Execute(exCtx *ExecutionContext) (Executer, error) 
 	select {
 	case <-time.After(c.timeout):
 		return nil, fmt.Errorf("timeout")
-	case msg, ok := <-exCtx.cli.wsConn.Messages:
+	case msg, ok := <-exCtx.cli.wsConn.Messages():
 		if !ok {
 			return nil, fmt.Errorf("connection closed")
 		}

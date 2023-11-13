@@ -77,7 +77,7 @@ func TestNewWSDisconnect(t *testing.T) {
 	ws.Close()
 
 	select {
-	case _, ok := <-ws.Messages:
+	case _, ok := <-ws.Messages():
 		if ok {
 			t.Errorf("Expected channel to be closed")
 		}

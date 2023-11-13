@@ -44,10 +44,17 @@ type Message struct {
 
 type Connection struct {
 	ws        *websocket.Conn
-	Messages  chan Message
+	messages  chan Message
 	waitGroup *sync.WaitGroup
-	Hostname  string
+	hostname  string
 	isClosed  atomic.Bool
+}
+
+type ConnectionHandler interface {
+	Messages() <-chan Message
+	Hostname() string
+	Send(msg string) (*Message, error)
+	Close()
 }
 
 type Options struct {
@@ -103,11 +110,21 @@ func NewWS(wsURL string, opts Options) (*Connection, error) {
 
 	messages := make(chan Message, WSMessageBufferSize)
 
-	wsInsp := &Connection{ws: ws, Messages: messages, waitGroup: &waitGroup, Hostname: parsedURL.Hostname()}
+	wsInsp := &Connection{ws: ws, messages: messages, waitGroup: &waitGroup, hostname: parsedURL.Hostname()}
 
 	go wsInsp.handleResponses()
 
 	return wsInsp, nil
+}
+
+// Messages returns a channel that receives messages from the WebSocket connection.
+func (wsInsp *Connection) Messages() <-chan Message {
+	return wsInsp.messages
+}
+
+// Hostname returns the hostname of the WebSocket server.
+func (wsInsp *Connection) Hostname() string {
+	return wsInsp.hostname
 }
 
 // handleResponses reads messages from the websocket connection and sends them to the Messages channel.
@@ -115,7 +132,7 @@ func NewWS(wsURL string, opts Options) (*Connection, error) {
 func (wsInsp *Connection) handleResponses() {
 	defer func() {
 		wsInsp.waitGroup.Wait()
-		close(wsInsp.Messages)
+		close(wsInsp.messages)
 	}()
 
 	for {
@@ -127,7 +144,7 @@ func (wsInsp *Connection) handleResponses() {
 			return
 		}
 
-		wsInsp.Messages <- Message{Type: Response, Data: msg}
+		wsInsp.messages <- Message{Type: Response, Data: msg}
 	}
 }
 
