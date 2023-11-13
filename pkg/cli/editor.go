@@ -23,6 +23,10 @@ type Editor struct {
 	isSingleLine    bool
 }
 
+// NewEditor creates a new instance of Editor struct.
+// It takes an io.Writer to output the editor content, a *History to store the command history,
+// a boolean value to indicate whether the editor should be single line or not.
+// It returns a pointer to the created Editor struct.
 func NewEditor(output io.Writer, history *History, isSingleLine bool) *Editor {
 	return &Editor{
 		History:         history,
@@ -35,6 +39,9 @@ func NewEditor(output io.Writer, history *History, isSingleLine bool) *Editor {
 	}
 }
 
+// EditRequest reads input from the user via a keyboard stream and returns the resulting string.
+// It takes a channel of keyboard events and an initial buffer string as input.
+// It returns the resulting string and an error if any.
 func (ed *Editor) EditRequest(keyStream <-chan keyboard.KeyEvent, initBuffer string) (string, error) {
 	ed.History.ResetPosition()
 	fmt.Fprint(ed.output, ed.content.ReplaceText(initBuffer))
@@ -88,6 +95,9 @@ func (ed *Editor) EditRequest(keyStream <-chan keyboard.KeyEvent, initBuffer str
 	return "", fmt.Errorf("keyboard stream was unexpectably closed")
 }
 
+// done returns the current request and clears the editor content.
+// If the editor content is empty, it returns an empty string.
+// It also adds the request to the editor's history.
 func (ed *Editor) done() (string, error) {
 	req := ed.content.ToRequest()
 
@@ -102,6 +112,8 @@ func (ed *Editor) done() (string, error) {
 	return req, nil
 }
 
+// prevFromHistory retrieves the previous request from the history and replaces the current content with it.
+// If there is no previous request, it prints a bell character and returns.
 func (ed *Editor) prevFromHistory() {
 	req := ed.History.PrevRequst()
 
@@ -113,6 +125,8 @@ func (ed *Editor) prevFromHistory() {
 	fmt.Fprint(ed.output, ed.content.ReplaceText(req))
 }
 
+// nextFromHistory retrieves the next request from the history and replaces the current content with it.
+// If there are no more requests in the history, it prints a bell character and returns.
 func (ed *Editor) nextFromHistory() {
 	req := ed.History.NextRequst()
 
@@ -124,6 +138,10 @@ func (ed *Editor) nextFromHistory() {
 	fmt.Fprint(ed.output, ed.content.ReplaceText(req))
 }
 
+// newLineOrDone returns a boolean indicating whether the editor is done or not.
+// It takes a boolean isPasting as an argument which indicates whether the editor is currently pasting or not.
+// If isSingleLine is true, it returns true. If the previous symbol is not a backslash, it returns true.
+// If isPasting is true, it returns false. Otherwise, it returns true.
 func (ed *Editor) newLineOrDone(isPasting bool) (isDone bool) {
 	prev := ed.content.PrevSymbol()
 
@@ -147,6 +165,7 @@ func (ed *Editor) newLineOrDone(isPasting bool) (isDone bool) {
 	return isDone
 }
 
+// isPasting returns true if the time elapsed since the last key press is less than the pasting timing threshold.
 func (ed *Editor) isPasting() bool {
 	elapsed := time.Since(ed.prevPressedTime)
 	ed.prevPressedTime = time.Now()
