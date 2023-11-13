@@ -1,11 +1,14 @@
 package ws
 
 import (
+	"bytes"
+	"fmt"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/fatih/color"
 	"golang.org/x/net/websocket"
 )
 
@@ -129,5 +132,36 @@ func TestNewWSWithInvalidHeaders(t *testing.T) {
 
 	if !strings.Contains(err.Error(), "invalid header") {
 		t.Errorf("Expected error to contain 'invalid header', but got %v", err)
+	}
+}
+func TestHandleError(t *testing.T) {
+	// Create a new Connection instance
+	ws := &Connection{}
+
+	// Test with EOF error
+	var buf bytes.Buffer
+	color.Output = &buf
+
+	ws.handleError(fmt.Errorf("EOF"))
+
+	if !strings.Contains(buf.String(), "Connection closed by the server") {
+		t.Errorf("Expected 'Connection closed by the server', but got '%v'", buf.String())
+	}
+
+	// Test with other error
+	buf.Reset()
+	ws.handleError(fmt.Errorf("some error"))
+
+	if !strings.Contains(buf.String(), "Fail read from connection: some error\n") {
+		t.Errorf("Expected 'Fail read from connection: some error', but got %v", buf.String())
+	}
+
+	// Test with closed connection
+	ws.isClosed.Store(true)
+	buf.Reset()
+	ws.handleError(fmt.Errorf("some error"))
+
+	if buf.String() != "" {
+		t.Errorf("Expected empty string, but got %v", buf.String())
 	}
 }

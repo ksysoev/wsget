@@ -123,21 +123,25 @@ func (wsInsp *Connection) handleResponses() {
 
 		err := websocket.Message.Receive(wsInsp.ws, &msg)
 		if err != nil {
-			if wsInsp.isClosed.Load() {
-				return
-			}
-
-			if err.Error() == "EOF" {
-				color.New(color.FgRed).Println("Connection closed by the server")
-			} else {
-				color.New(color.FgRed).Println("Fail read from connection: ", err)
-			}
-
+			wsInsp.handleError(err)
 			return
 		}
 
 		wsInsp.Messages <- Message{Type: Response, Data: msg}
 	}
+}
+
+func (wsInsp *Connection) handleError(err error) {
+	if wsInsp.isClosed.Load() {
+		return
+	}
+
+	if err.Error() == "EOF" {
+		color.New(color.FgRed).Println("Connection closed by the server")
+		return
+	}
+
+	color.New(color.FgRed).Println("Fail read from connection:", err)
 }
 
 // Send sends a message to the websocket connection and returns a Message and an error.
