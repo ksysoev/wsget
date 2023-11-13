@@ -17,6 +17,7 @@ type Content struct {
 	pos  int
 }
 
+// NewContent returns a new instance of Content with empty text and position set to 0.
 func NewContent() *Content {
 	return &Content{
 		text: []rune{},
@@ -24,6 +25,7 @@ func NewContent() *Content {
 	}
 }
 
+// ReplaceText replaces the current text with the given text and returns the resulting string.
 func (c *Content) ReplaceText(text string) string {
 	output := c.Clear()
 	c.text = []rune(text)
@@ -32,14 +34,19 @@ func (c *Content) ReplaceText(text string) string {
 	return output + text
 }
 
+// String returns the string representation of the Content.
 func (c *Content) String() string {
 	return string(c.text)
 }
 
+// ToRequest returns the content as a trimmed string.
 func (c *Content) ToRequest() string {
 	return strings.TrimSpace(c.String())
 }
 
+// MovePositionLeft moves the cursor position one character to the left and returns the ANSI escape sequence
+// required to move the cursor to the new position. If the cursor is already at the beginning of the line, it moves
+// the cursor to the end of the previous line. If the cursor is already at the beginning of the content, it returns an empty string.
 func (c *Content) MovePositionLeft() string {
 	if c.pos <= 0 {
 		return ""
@@ -60,6 +67,8 @@ func (c *Content) MovePositionLeft() string {
 	return LineUp + string(c.text[startPrevLine:c.pos])
 }
 
+// MovePositionRight moves the position of the cursor to the right by one character in the content.
+// If the position is already at the end of the content, it returns an empty string.
 func (c *Content) MovePositionRight() string {
 	if c.pos >= len(c.text) {
 		return ""
@@ -70,6 +79,8 @@ func (c *Content) MovePositionRight() string {
 	return string(c.text[c.pos-1])
 }
 
+// Clear clears the content and returns the string representation of the cleared content.
+// If the content is already empty, it returns an empty string.
 func (c *Content) Clear() string {
 	if len(c.text) == 0 {
 		return ""
@@ -90,6 +101,10 @@ func (c *Content) Clear() string {
 	return output
 }
 
+// RemoveSymbol removes the symbol at the current position of the Content object and returns the string representation of the changes made.
+// If the current position is out of bounds, an empty string is returned.
+// If the removed symbol is not a newline character, the function returns the string representation of the changes made, including clearing the current line and moving the cursor to the beginning of the line.
+// If the removed symbol is a newline character, the function returns the string representation of the changes made, including moving the cursor up one line and clearing the current line.
 func (c *Content) RemoveSymbol() string {
 	if c.pos < 1 || c.pos > len(c.text) {
 		return ""
@@ -133,6 +148,10 @@ func (c *Content) RemoveSymbol() string {
 	return output
 }
 
+// InsertSymbol inserts a rune at the current position of the Content object.
+// If the position is invalid, it returns an empty string.
+// If the inserted symbol is not a newline and the next character is a newline, it returns the inserted symbol.
+// If the inserted symbol is a newline, it returns the content of the lines affected by the insertion, with the cursor moved to the beginning of the next line.
 func (c *Content) InsertSymbol(symbol rune) string {
 	if c.pos < 0 || c.pos > len(c.text) {
 		return ""
@@ -182,6 +201,8 @@ func (c *Content) InsertSymbol(symbol rune) string {
 	return output
 }
 
+// MoveToEnd moves the cursor to the end of the content and returns the remaining text.
+// If the cursor is already at the end, it returns an empty string.
 func (c *Content) MoveToEnd() string {
 	if c.pos >= len(c.text) {
 		return ""
@@ -193,6 +214,9 @@ func (c *Content) MoveToEnd() string {
 	return output
 }
 
+// GetLinesAfterPosition returns the start index of the line containing the given position
+// and a slice of strings representing the lines after the given position.
+// If the position is before the first line, the start index is 0.
 func (c *Content) GetLinesAfterPosition(pos int) (startOfLine int, lines []string) {
 	startOfLine = lastIndexOf(c.text, pos-1, NewLine)
 	if startOfLine == -1 {
@@ -204,6 +228,8 @@ func (c *Content) GetLinesAfterPosition(pos int) (startOfLine int, lines []strin
 	return startOfLine, strings.Split(string(c.text[startOfLine:]), string(NewLine))
 }
 
+// PrevSymbol returns the symbol before the current position in the content text.
+// If the current position is at the beginning of the text, it returns 0.
 func (c *Content) PrevSymbol() rune {
 	if c.pos <= 0 {
 		return 0
@@ -212,6 +238,8 @@ func (c *Content) PrevSymbol() rune {
 	return c.text[c.pos-1]
 }
 
+// lastIndexOf returns the index of the last occurrence of the given rune in the buffer, starting from the given position.
+// If the rune is not found, it returns -1.
 func lastIndexOf(buffer []rune, pos int, search rune) int {
 	for i := pos; i >= 0; i-- {
 		if buffer[i] == search {
