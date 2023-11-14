@@ -50,13 +50,6 @@ type Connection struct {
 	isClosed  atomic.Bool
 }
 
-type ConnectionHandler interface {
-	Messages() <-chan Message
-	Hostname() string
-	Send(msg string) (*Message, error)
-	Close()
-}
-
 type Options struct {
 	Headers             []string
 	SkipSSLVerification bool

@@ -9,7 +9,6 @@ import (
 
 	"github.com/eiannone/keyboard"
 	"github.com/fatih/color"
-	"github.com/ksysoev/wsget/pkg/cli"
 	"github.com/ksysoev/wsget/pkg/ws"
 )
 
@@ -17,16 +16,40 @@ const (
 	CommandPartsNumber = 2
 	LineUp             = "\x1b[1A"
 	LineClear          = "\x1b[2K"
+	HideCursor         = "\x1b[?25l"
+	ShowCursor         = "\x1b[?25h"
 )
 
-type ExecutionContext struct {
-	input      <-chan keyboard.KeyEvent
-	cli        *cli.CLI
-	outputFile io.Writer
+type ExecutionContext interface {
+	Input() <-chan keyboard.KeyEvent
+	OutputFile() io.Writer
+	Output() io.Writer
+	Formater() Formater
+	Connection() ConnectionHandler
+	RequestEditor() Editor
+	CmdEditor() Editor
+	Macro() *Macro
+}
+
+type ConnectionHandler interface {
+	Messages() <-chan ws.Message
+	Hostname() string
+	Send(msg string) (*ws.Message, error)
+	Close()
+}
+
+type Formater interface {
+	FormatMessage(wsMsg ws.Message) (string, error)
+	FormatForFile(wsMsg ws.Message) (string, error)
+}
+
+type Editor interface {
+	Edit(keyStream <-chan keyboard.KeyEvent, initBuffer string) (string, error)
+	Close() error
 }
 
 type Executer interface {
-	Execute(*ExecutionContext) (Executer, error)
+	Execute(ExecutionContext) (Executer, error)
 }
 
 // CommandFactory returns an Executer and an error. It takes a string and a Macro pointer as input.
@@ -88,13 +111,14 @@ func NewCommandEdit(content string) *CommandEdit {
 }
 
 // Execute executes the edit command and returns a Send command id editing was successful or an error in other case.
-func (c *CommandEdit) Execute(exCtx *ExecutionContext) (Executer, error) {
-	color.New(color.FgGreen).Fprint(exCtx.cli.output, "->\n")
+func (c *CommandEdit) Execute(exCtx ExecutionContext) (Executer, error) {
+	output := exCtx.Output()
+	color.New(color.FgGreen).Fprint(output, "->\n")
 
-	fmt.Fprint(exCtx.cli.output, ShowCursor)
-	req, err := exCtx.cli.editor.Edit(exCtx.input, c.content)
-	fmt.Fprint(exCtx.cli.output, LineUp+LineClear)
-	fmt.Fprint(exCtx.cli.output, HideCursor)
+	fmt.Fprint(output, ShowCursor)
+	req, err := exCtx.RequestEditor().Edit(exCtx.Input(), c.content)
+	fmt.Fprint(output, LineUp+LineClear)
+	fmt.Fprint(output, HideCursor)
 
 	if err != nil || req == "" {
 		return nil, err
@@ -113,8 +137,8 @@ func NewCommandSend(request string) *CommandSend {
 
 // Execute sends the request using the WebSocket connection and returns a CommandPrintMsg to print the response message.
 // It implements the Execute method of the Executer interface.
-func (c *CommandSend) Execute(exCtx *ExecutionContext) (Executer, error) {
-	msg, err := exCtx.cli.wsConn.Send(c.request)
+func (c *CommandSend) Execute(exCtx ExecutionContext) (Executer, error) {
+	msg, err := exCtx.Connection().Send(c.request)
 	if err != nil {
 		return nil, fmt.Errorf("fail to send request: %s", err)
 	}
@@ -133,9 +157,9 @@ func NewCommandPrintMsg(msg ws.Message) *CommandPrintMsg {
 // Execute executes the CommandPrintMsg command and returns nil and error.
 // It formats the message and prints it to the output file.
 // If an output file is provided, it writes the formatted message to the file.
-func (c *CommandPrintMsg) Execute(exCtx *ExecutionContext) (Executer, error) {
+func (c *CommandPrintMsg) Execute(exCtx ExecutionContext) (Executer, error) {
 	msg := c.msg
-	output, err := exCtx.cli.formater.FormatMessage(msg)
+	output, err := exCtx.Formater().FormatMessage(msg)
 
 	if err != nil {
 		return nil, fmt.Errorf("fail to format for output file: %s, data: %q", err, msg.Data)
@@ -143,22 +167,22 @@ func (c *CommandPrintMsg) Execute(exCtx *ExecutionContext) (Executer, error) {
 
 	switch msg.Type {
 	case ws.Request:
-		color.New(color.FgGreen).Fprint(exCtx.cli.output, "->\n")
+		color.New(color.FgGreen).Fprint(exCtx.Output(), "->\n")
 	case ws.Response:
-		color.New(color.FgRed).Fprint(exCtx.cli.output, "<-\n")
+		color.New(color.FgRed).Fprint(exCtx.Output(), "<-\n")
 	default:
 		return nil, fmt.Errorf("unknown message type: %s, data: %q", msg.Type, msg.Data)
 	}
 
-	fmt.Fprintf(exCtx.cli.output, "%s\n", output)
+	fmt.Fprintf(exCtx.Output(), "%s\n", output)
 
-	if exCtx.outputFile != nil {
-		output, err := exCtx.cli.formater.FormatForFile(msg)
+	if exCtx.OutputFile() != nil {
+		output, err := exCtx.Formater().FormatForFile(msg)
 		if err != nil {
 			return nil, fmt.Errorf("fail to write to output file: %s", err)
 		}
 
-		fmt.Fprintln(exCtx.outputFile, output)
+		fmt.Fprintln(exCtx.OutputFile(), output)
 	}
 
 	return nil, nil
@@ -172,7 +196,7 @@ func NewCommandExit() *CommandExit {
 
 // Execute method implements the Execute method of the Executer interface.
 // It returns an error indicating that the program was interrupted.
-func (c *CommandExit) Execute(_ *ExecutionContext) (Executer, error) {
+func (c *CommandExit) Execute(_ ExecutionContext) (Executer, error) {
 	return nil, fmt.Errorf("interrupted")
 }
 
@@ -188,9 +212,9 @@ func NewCommandWaitForResp(timeout time.Duration) *CommandWaitForResp {
 // If a timeout is set, it will return an error if no response is received within the specified time.
 // If a response is received, it will return a new CommandPrintMsg command with the received message.
 // If the WebSocket connection is closed, it will return an error.
-func (c *CommandWaitForResp) Execute(exCtx *ExecutionContext) (Executer, error) {
+func (c *CommandWaitForResp) Execute(exCtx ExecutionContext) (Executer, error) {
 	if c.timeout.Seconds() == 0 {
-		msg, ok := <-exCtx.cli.wsConn.Messages()
+		msg, ok := <-exCtx.Connection().Messages()
 		if !ok {
 			return nil, fmt.Errorf("connection closed")
 		}
@@ -201,7 +225,7 @@ func (c *CommandWaitForResp) Execute(exCtx *ExecutionContext) (Executer, error) 
 	select {
 	case <-time.After(c.timeout):
 		return nil, fmt.Errorf("timeout")
-	case msg, ok := <-exCtx.cli.wsConn.Messages():
+	case msg, ok := <-exCtx.Connection().Messages():
 		if !ok {
 			return nil, fmt.Errorf("connection closed")
 		}
@@ -218,22 +242,23 @@ func NewCommandCmdEdit() *CommandCmdEdit {
 
 // Execute executes the CommandCmdEdit and returns an Executer and an error.
 // It prompts the user to edit a command and returns the corresponding Command object.
-func (c *CommandCmdEdit) Execute(exCtx *ExecutionContext) (Executer, error) {
-	fmt.Fprint(exCtx.cli.output, ":")
+func (c *CommandCmdEdit) Execute(exCtx ExecutionContext) (Executer, error) {
+	output := exCtx.Output()
 
-	fmt.Fprint(exCtx.cli.output, ShowCursor)
-	rawCmd, err := exCtx.cli.cmdEditor.Edit(exCtx.input, "")
-	fmt.Fprint(exCtx.cli.output, LineClear+"\r")
-	fmt.Fprint(exCtx.cli.output, HideCursor)
+	fmt.Fprint(output, ":")
+	fmt.Fprint(output, ShowCursor)
+	rawCmd, err := exCtx.RequestEditor().Edit(exCtx.Input(), "")
+	fmt.Fprint(output, LineClear+"\r")
+	fmt.Fprint(output, HideCursor)
 
 	if err != nil {
 		return nil, err
 	}
 
-	cmd, err := CommandFactory(rawCmd, exCtx.cli.macro)
+	cmd, err := CommandFactory(rawCmd, exCtx.Macro())
 
 	if err != nil {
-		color.New(color.FgRed).Fprintln(exCtx.cli.output, err)
+		color.New(color.FgRed).Fprintln(output, err)
 		return nil, nil
 	}
 
@@ -250,7 +275,7 @@ func NewCommandSequence(subCommands []Executer) *CommandSequence {
 
 // Execute executes the command sequence by iterating over all sub-commands and executing them recursively.
 // It takes an ExecutionContext as input and returns an Executer and an error.
-func (c *CommandSequence) Execute(exCtx *ExecutionContext) (Executer, error) {
+func (c *CommandSequence) Execute(exCtx ExecutionContext) (Executer, error) {
 	for _, cmd := range c.subCommands {
 		for cmd != nil {
 			var err error

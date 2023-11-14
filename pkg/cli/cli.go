@@ -8,6 +8,7 @@ import (
 
 	"github.com/eiannone/keyboard"
 	"github.com/fatih/color"
+	"github.com/ksysoev/wsget/pkg/cmd"
 	"github.com/ksysoev/wsget/pkg/edit"
 	"github.com/ksysoev/wsget/pkg/formater"
 	"github.com/ksysoev/wsget/pkg/ws"
@@ -30,25 +31,20 @@ const (
 	Bell = "\a"
 )
 
-type Editor interface {
-	Edit(keyStream <-chan keyboard.KeyEvent, initBuffer string) (string, error)
-	Close() error
-}
-
 type CLI struct {
 	formater  *formater.Formater
-	wsConn    ws.ConnectionHandler
-	editor    Editor
-	cmdEditor Editor
+	wsConn    ConnectionHandler
+	editor    *edit.Editor
+	cmdEditor *edit.Editor
 	input     Inputer
 	output    io.Writer
-	commands  chan Executer
-	macro     *Macro
+	commands  chan cmd.Executer
+	macro     *cmd.Macro
 }
 
 type RunOptions struct {
 	OutputFile *os.File
-	Commands   []Executer
+	Commands   []cmd.Executer
 }
 
 type Inputer interface {
@@ -56,10 +52,22 @@ type Inputer interface {
 	Close()
 }
 
+type ConnectionHandler interface {
+	Messages() <-chan ws.Message
+	Hostname() string
+	Send(msg string) (*ws.Message, error)
+	Close()
+}
+
+type Formater interface {
+	FormatMessage(wsMsg ws.Message) (string, error)
+	FormatForFile(wsMsg ws.Message) (string, error)
+}
+
 // NewCLI creates a new CLI instance with the given wsConn, input, and output.
 // It returns an error if it fails to get the current user, create the necessary directories,
 // load the macro for the domain, or initialize the CLI instance.
-func NewCLI(wsConn ws.ConnectionHandler, input Inputer, output io.Writer) (*CLI, error) {
+func NewCLI(wsConn ConnectionHandler, input Inputer, output io.Writer) (*CLI, error) {
 	currentUser, err := user.Current()
 	if err != nil {
 		return nil, fmt.Errorf("fail to get current user: %s", err)
@@ -73,12 +81,12 @@ func NewCLI(wsConn ws.ConnectionHandler, input Inputer, output io.Writer) (*CLI,
 	history := edit.NewHistory(homeDir+"/"+HistoryFilename, HistoryLimit)
 	cmdHistory := edit.NewHistory(homeDir+"/"+HistoryCmdFilename, HistoryLimit)
 
-	macro, err := LoadMacroForDomain(homeDir+"/"+ConfigDir+"/"+MacroDir, wsConn.Hostname())
+	macro, err := cmd.LoadMacroForDomain(homeDir+"/"+ConfigDir+"/"+MacroDir, wsConn.Hostname())
 	if err != nil {
 		return nil, fmt.Errorf("fail to load macro: %s", err)
 	}
 
-	commands := make(chan Executer, CommandsLimit)
+	commands := make(chan cmd.Executer, CommandsLimit)
 
 	return &CLI{
 		formater:  formater.NewFormatter(),
@@ -123,11 +131,7 @@ func (c *CLI) Run(opts RunOptions) error {
 		c.commands <- cmd
 	}
 
-	exCtx := &cmd.ExecutionContext{
-		input:      keysEvents,
-		cli:        c,
-		outputFile: opts.OutputFile,
-	}
+	exCtx := NewExecutionContext(c, keysEvents, opts.OutputFile)
 
 	for {
 		select {
@@ -142,9 +146,9 @@ func (c *CLI) Run(opts RunOptions) error {
 		case event := <-keysEvents:
 			switch event.Key {
 			case keyboard.KeyEsc, keyboard.KeyCtrlC, keyboard.KeyCtrlD:
-				c.commands <- NewCommandExit()
+				c.commands <- cmd.NewCommandExit()
 			case keyboard.KeyEnter:
-				c.commands <- NewCommandEdit("")
+				c.commands <- cmd.NewCommandEdit("")
 			default:
 				if event.Key > 0 {
 					continue
@@ -152,7 +156,7 @@ func (c *CLI) Run(opts RunOptions) error {
 
 				switch event.Rune {
 				case ':':
-					c.commands <- NewCommandCmdEdit()
+					c.commands <- cmd.NewCommandCmdEdit()
 				default:
 					continue
 				}
@@ -163,7 +167,7 @@ func (c *CLI) Run(opts RunOptions) error {
 				return nil
 			}
 
-			c.commands <- NewCommandPrintMsg(msg)
+			c.commands <- cmd.NewCommandPrintMsg(msg)
 		}
 	}
 }
