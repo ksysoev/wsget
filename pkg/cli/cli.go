@@ -123,7 +123,7 @@ func (c *CLI) Run(opts RunOptions) error {
 		c.commands <- cmd
 	}
 
-	exCtx := &ExecutionContext{
+	exCtx := &cmd.ExecutionContext{
 		input:      keysEvents,
 		cli:        c,
 		outputFile: opts.OutputFile,

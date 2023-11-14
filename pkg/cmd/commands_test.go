@@ -1,4 +1,4 @@
-package cli
+package cmd
 
 import (
 	"bytes"
@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ksysoev/wsget/pkg/cli"
 	"github.com/ksysoev/wsget/pkg/formater"
 	"github.com/ksysoev/wsget/pkg/ws"
 )
@@ -230,7 +231,7 @@ func TestCommandPrintMsg_Execute(t *testing.T) {
 				Data: "some request data",
 			},
 			exCtx: &ExecutionContext{
-				cli: &CLI{
+				cli: &cli.CLI{
 					formater: formater.NewFormatter(),
 				},
 			},
@@ -244,7 +245,7 @@ func TestCommandPrintMsg_Execute(t *testing.T) {
 				Data: "some response data",
 			},
 			exCtx: &ExecutionContext{
-				cli: &CLI{
+				cli: &cli.CLI{
 					formater: formater.NewFormatter(),
 				},
 			},

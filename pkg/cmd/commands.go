@@ -1,4 +1,4 @@
-package cli
+package cmd
 
 import (
 	"fmt"
@@ -9,6 +9,7 @@ import (
 
 	"github.com/eiannone/keyboard"
 	"github.com/fatih/color"
+	"github.com/ksysoev/wsget/pkg/cli"
 	"github.com/ksysoev/wsget/pkg/ws"
 )
 
@@ -20,7 +21,7 @@ const (
 
 type ExecutionContext struct {
 	input      <-chan keyboard.KeyEvent
-	cli        *CLI
+	cli        *cli.CLI
 	outputFile io.Writer
 }
 
