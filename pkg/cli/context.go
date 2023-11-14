@@ -5,6 +5,8 @@ import (
 
 	"github.com/eiannone/keyboard"
 	"github.com/ksysoev/wsget/pkg/cmd"
+	"github.com/ksysoev/wsget/pkg/formater"
+	"github.com/ksysoev/wsget/pkg/ws"
 )
 
 type ExecutionContext struct {
@@ -33,19 +35,19 @@ func (ctx *ExecutionContext) Output() io.Writer {
 	return ctx.cli.output
 }
 
-func (ctx *ExecutionContext) Formater() Formater {
+func (ctx *ExecutionContext) Formater() formater.Formater {
 	return ctx.cli.formater
 }
 
-func (ctx *ExecutionContext) Connection() ConnectionHandler {
+func (ctx *ExecutionContext) Connection() ws.ConnectionHandler {
 	return ctx.cli.wsConn
 }
 
-func (ctx *ExecutionContext) RequestEditor() *cmd.Editor {
+func (ctx *ExecutionContext) RequestEditor() cmd.Editor {
 	return ctx.cli.editor
 }
 
-func (ctx *ExecutionContext) CmdEditor() *cmd.Editor {
+func (ctx *ExecutionContext) CmdEditor() cmd.Editor {
 	return ctx.cli.cmdEditor
 }
 

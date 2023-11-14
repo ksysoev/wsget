@@ -9,6 +9,7 @@ import (
 
 	"github.com/eiannone/keyboard"
 	"github.com/fatih/color"
+	"github.com/ksysoev/wsget/pkg/formater"
 	"github.com/ksysoev/wsget/pkg/ws"
 )
 
@@ -24,23 +25,11 @@ type ExecutionContext interface {
 	Input() <-chan keyboard.KeyEvent
 	OutputFile() io.Writer
 	Output() io.Writer
-	Formater() Formater
-	Connection() ConnectionHandler
+	Formater() formater.Formater
+	Connection() ws.ConnectionHandler
 	RequestEditor() Editor
 	CmdEditor() Editor
 	Macro() *Macro
-}
-
-type ConnectionHandler interface {
-	Messages() <-chan ws.Message
-	Hostname() string
-	Send(msg string) (*ws.Message, error)
-	Close()
-}
-
-type Formater interface {
-	FormatMessage(wsMsg ws.Message) (string, error)
-	FormatForFile(wsMsg ws.Message) (string, error)
 }
 
 type Editor interface {

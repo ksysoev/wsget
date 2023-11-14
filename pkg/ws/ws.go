@@ -55,6 +55,13 @@ type Options struct {
 	SkipSSLVerification bool
 }
 
+type ConnectionHandler interface {
+	Messages() <-chan Message
+	Hostname() string
+	Send(msg string) (*Message, error)
+	Close()
+}
+
 // NewWS creates a new WebSocket connection to the specified URL with the given options.
 // It returns a Connection object and an error if any occurred.
 func NewWS(wsURL string, opts Options) (*Connection, error) {

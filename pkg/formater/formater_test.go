@@ -6,13 +6,13 @@ import (
 	"github.com/ksysoev/wsget/pkg/ws"
 )
 
-func TestFormater_FormatMessage(t *testing.T) {
-	formater := NewFormatter()
+func TestFormat_FormatMessage(t *testing.T) {
+	formater := NewFormat()
 
 	// Test text message formatting
 	textMsg := ws.Message{
 		Type: ws.Request,
-		Data: "TestFormater_FormatMessage",
+		Data: "TestFormat_FormatMessage",
 	}
 
 	formattedTextMsg, err := formater.FormatMessage(textMsg)
@@ -20,7 +20,7 @@ func TestFormater_FormatMessage(t *testing.T) {
 		t.Errorf("Unexpected error: %v", err)
 	}
 
-	expectedTextMsg := "TestFormater_FormatMessage"
+	expectedTextMsg := "TestFormat_FormatMessage"
 	if formattedTextMsg != expectedTextMsg {
 		t.Errorf("Unexpected formatted message: %v", formattedTextMsg)
 	}
@@ -28,7 +28,7 @@ func TestFormater_FormatMessage(t *testing.T) {
 	// Test JSON message formatting
 	jsonMsg := ws.Message{
 		Type: ws.Response,
-		Data: `{"status": 200, "body": "TestFormater_FormatMessage"}`,
+		Data: `{"status": 200, "body": "TestFormat_FormatMessage"}`,
 	}
 
 	formattedJSONMsg, err := formater.FormatMessage(jsonMsg)
@@ -36,12 +36,12 @@ func TestFormater_FormatMessage(t *testing.T) {
 		t.Errorf("Unexpected error: %v", err)
 	}
 
-	expectedJSONMsg := "{\n  \"body\": \"TestFormater_FormatMessage\",\n  \"status\": 200\n}"
+	expectedJSONMsg := "{\n  \"body\": \"TestFormat_FormatMessage\",\n  \"status\": 200\n}"
 	if formattedJSONMsg != expectedJSONMsg {
 		t.Errorf("Unexpected formatted message: %v, wanted %v", formattedJSONMsg, expectedJSONMsg)
 	}
 
-	testString := `{"status": 200, "body": "TestFormater_FormatMessage"`
+	testString := `{"status": 200, "body": "TestFormat_FormatMessage"`
 	// Test invalid JSON message formatting
 	invalidJSONMsg := ws.Message{
 		Type: ws.Response,
@@ -73,13 +73,13 @@ func TestFormater_FormatMessage(t *testing.T) {
 	}
 }
 
-func TestFormater_FormatForFile(t *testing.T) {
-	formater := NewFormatter()
+func TestFormat_FormatForFile(t *testing.T) {
+	formater := NewFormat()
 
 	// Test text message formatting for file
 	textMsg := ws.Message{
 		Type: ws.Request,
-		Data: "TestFormater_FormatForFile",
+		Data: "TestFormat_FormatForFile",
 	}
 
 	formattedTextMsg, err := formater.FormatForFile(textMsg)
@@ -87,7 +87,7 @@ func TestFormater_FormatForFile(t *testing.T) {
 		t.Errorf("Unexpected error: %v", err)
 	}
 
-	expectedTextMsg := "TestFormater_FormatForFile"
+	expectedTextMsg := "TestFormat_FormatForFile"
 	if formattedTextMsg != expectedTextMsg {
 		t.Errorf("Unexpected formatted message: %v", formattedTextMsg)
 	}
@@ -95,7 +95,7 @@ func TestFormater_FormatForFile(t *testing.T) {
 	// Test JSON message formatting for file
 	jsonMsg := ws.Message{
 		Type: ws.Response,
-		Data: `{"status": 200, "body": "TestFormater_FormatForFile"}`,
+		Data: `{"status": 200, "body": "TestFormat_FormatForFile"}`,
 	}
 
 	formattedJSONMsg, err := formater.FormatForFile(jsonMsg)
@@ -103,7 +103,7 @@ func TestFormater_FormatForFile(t *testing.T) {
 		t.Errorf("Unexpected error: %v", err)
 	}
 
-	expectedJSONMsg := `{"body":"TestFormater_FormatForFile","status":200}`
+	expectedJSONMsg := `{"body":"TestFormat_FormatForFile","status":200}`
 	if formattedJSONMsg != expectedJSONMsg {
 		t.Errorf("Unexpected formatted message: %v", formattedJSONMsg)
 	}
@@ -111,7 +111,7 @@ func TestFormater_FormatForFile(t *testing.T) {
 	// Test invalid JSON message formatting for file
 	invalidJSONMsg := ws.Message{
 		Type: ws.Response,
-		Data: `{"status": 200, "body": "TestFormater_FormatForFile"`,
+		Data: `{"status": 200, "body": "TestFormat_FormatForFile"`,
 	}
 
 	formattedInvalidJSONMsg, err := formater.FormatForFile(invalidJSONMsg)
@@ -119,14 +119,14 @@ func TestFormater_FormatForFile(t *testing.T) {
 		t.Errorf("Unexpected error: %v", err)
 	}
 
-	expectedInvalidJSONMsg := "{\"status\": 200, \"body\": \"TestFormater_FormatForFile\""
+	expectedInvalidJSONMsg := "{\"status\": 200, \"body\": \"TestFormat_FormatForFile\""
 	if formattedInvalidJSONMsg != expectedInvalidJSONMsg {
 		t.Errorf("Unexpected formatted message: %v", formattedInvalidJSONMsg)
 	}
 }
 
-func TestFormater_formatTextMessage(t *testing.T) {
-	formater := NewFormatter()
+func TestFormat_formatTextMessage(t *testing.T) {
+	formater := NewFormat()
 
 	// Test request message formatting
 	requestMsg := ws.Request
@@ -170,8 +170,8 @@ func TestFormater_formatTextMessage(t *testing.T) {
 	}
 }
 
-func TestFormater_formatJSONMessage(t *testing.T) {
-	formater := NewFormatter()
+func TestFormat_formatJSONMessage(t *testing.T) {
+	formater := NewFormat()
 
 	// Test request message formatting as JSON
 	requestMsg := ws.Request
@@ -222,8 +222,8 @@ func TestFormater_formatJSONMessage(t *testing.T) {
 	}
 }
 
-func TestFormater_parseJSON(t *testing.T) {
-	formater := NewFormatter()
+func TestFormat_parseJSON(t *testing.T) {
+	formater := NewFormat()
 
 	// Test valid JSON parsing
 	validJSON := `{"status": 200, "body": "Hello, world!"}`

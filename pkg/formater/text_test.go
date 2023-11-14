@@ -6,8 +6,8 @@ import (
 	"github.com/fatih/color"
 )
 
-func TestTextFormater_FormatRequest(t *testing.T) {
-	tf := NewTextFormater()
+func TestTextFormat_FormatRequest(t *testing.T) {
+	tf := NewTextFormat()
 	data := "test request data"
 	expectedOutput := color.New(color.FgGreen).Sprintf("test request data")
 
@@ -22,8 +22,8 @@ func TestTextFormater_FormatRequest(t *testing.T) {
 	}
 }
 
-func TestTextFormater_FormatResponse(t *testing.T) {
-	tf := NewTextFormater()
+func TestTextFormat_FormatResponse(t *testing.T) {
+	tf := NewTextFormat()
 	data := "test response data"
 	expectedOutput := color.New(color.FgHiRed).Sprintf("test response data")
 
@@ -38,8 +38,8 @@ func TestTextFormater_FormatResponse(t *testing.T) {
 	}
 }
 
-func TestTextFormater_FormatForFile(t *testing.T) {
-	tf := NewTextFormater()
+func TestTextFormat_FormatForFile(t *testing.T) {
+	tf := NewTextFormat()
 	data := "test data"
 
 	expectedOutput := "test data"

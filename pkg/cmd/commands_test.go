@@ -287,8 +287,8 @@ func (c *mockContext) OutputFile() io.Writer {
 	return nil
 }
 
-func (c *mockContext) Formater() Formater {
-	return formater.NewFormatter()
+func (c *mockContext) Formater() formater.Formater {
+	return formater.NewFormat()
 }
 
 func (c *mockContext) RequestEditor() Editor {
@@ -299,7 +299,7 @@ func (c *mockContext) CmdEditor() Editor {
 	return &mockEditor{}
 }
 
-func (c *mockContext) Connection() ConnectionHandler {
+func (c *mockContext) Connection() ws.ConnectionHandler {
 	return &ws.Connection{}
 }
 
