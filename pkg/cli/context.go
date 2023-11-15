@@ -4,7 +4,7 @@ import (
 	"io"
 
 	"github.com/eiannone/keyboard"
-	"github.com/ksysoev/wsget/pkg/cmd"
+	"github.com/ksysoev/wsget/pkg/command"
 	"github.com/ksysoev/wsget/pkg/formater"
 	"github.com/ksysoev/wsget/pkg/ws"
 )
@@ -43,14 +43,14 @@ func (ctx *ExecutionContext) Connection() ws.ConnectionHandler {
 	return ctx.cli.wsConn
 }
 
-func (ctx *ExecutionContext) RequestEditor() cmd.Editor {
+func (ctx *ExecutionContext) RequestEditor() command.Editor {
 	return ctx.cli.editor
 }
 
-func (ctx *ExecutionContext) CmdEditor() cmd.Editor {
+func (ctx *ExecutionContext) CmdEditor() command.Editor {
 	return ctx.cli.cmdEditor
 }
 
-func (ctx *ExecutionContext) Macro() *cmd.Macro {
+func (ctx *ExecutionContext) Macro() *command.Macro {
 	return ctx.cli.macro
 }

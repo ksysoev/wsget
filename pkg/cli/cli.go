@@ -8,7 +8,7 @@ import (
 
 	"github.com/eiannone/keyboard"
 	"github.com/fatih/color"
-	"github.com/ksysoev/wsget/pkg/cmd"
+	"github.com/ksysoev/wsget/pkg/command"
 	"github.com/ksysoev/wsget/pkg/edit"
 	"github.com/ksysoev/wsget/pkg/formater"
 	"github.com/ksysoev/wsget/pkg/ws"
@@ -38,13 +38,13 @@ type CLI struct {
 	cmdEditor *edit.Editor
 	input     Inputer
 	output    io.Writer
-	commands  chan cmd.Executer
-	macro     *cmd.Macro
+	commands  chan command.Executer
+	macro     *command.Macro
 }
 
 type RunOptions struct {
 	OutputFile *os.File
-	Commands   []cmd.Executer
+	Commands   []command.Executer
 }
 
 type Inputer interface {
@@ -81,12 +81,12 @@ func NewCLI(wsConn ws.ConnectionHandler, input Inputer, output io.Writer) (*CLI,
 	history := edit.NewHistory(homeDir+"/"+HistoryFilename, HistoryLimit)
 	cmdHistory := edit.NewHistory(homeDir+"/"+HistoryCmdFilename, HistoryLimit)
 
-	macro, err := cmd.LoadMacroForDomain(homeDir+"/"+ConfigDir+"/"+MacroDir, wsConn.Hostname())
+	macro, err := command.LoadMacroForDomain(homeDir+"/"+ConfigDir+"/"+MacroDir, wsConn.Hostname())
 	if err != nil {
 		return nil, fmt.Errorf("fail to load macro: %s", err)
 	}
 
-	commands := make(chan cmd.Executer, CommandsLimit)
+	commands := make(chan command.Executer, CommandsLimit)
 
 	return &CLI{
 		formater:  formater.NewFormat(),
@@ -146,9 +146,9 @@ func (c *CLI) Run(opts RunOptions) error {
 		case event := <-keysEvents:
 			switch event.Key {
 			case keyboard.KeyEsc, keyboard.KeyCtrlC, keyboard.KeyCtrlD:
-				c.commands <- cmd.NewCommandExit()
+				c.commands <- command.NewExit()
 			case keyboard.KeyEnter:
-				c.commands <- cmd.NewCommandEdit("")
+				c.commands <- command.NewEdit("")
 			default:
 				if event.Key > 0 {
 					continue
@@ -156,7 +156,7 @@ func (c *CLI) Run(opts RunOptions) error {
 
 				switch event.Rune {
 				case ':':
-					c.commands <- cmd.NewCommandCmdEdit()
+					c.commands <- command.NewCmdEdit()
 				default:
 					continue
 				}
@@ -167,7 +167,7 @@ func (c *CLI) Run(opts RunOptions) error {
 				return nil
 			}
 
-			c.commands <- cmd.NewCommandPrintMsg(msg)
+			c.commands <- command.NewPrintMsg(msg)
 		}
 	}
 }

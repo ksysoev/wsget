@@ -1,4 +1,4 @@
-package cmd
+package command
 
 import (
 	"fmt"
@@ -41,11 +41,11 @@ type Executer interface {
 	Execute(ExecutionContext) (Executer, error)
 }
 
-// CommandFactory returns an Executer and an error. It takes a string and a Macro pointer as input.
+// Factory returns an Executer and an error. It takes a string and a Macro pointer as input.
 // The string is split into parts and the first part is used to determine which command to execute.
 // Depending on the command, different arguments are passed to the corresponding constructor.
 // If the command is not recognized, an error is returned.
-func CommandFactory(raw string, macro *Macro) (Executer, error) {
+func Factory(raw string, macro *Macro) (Executer, error) {
 	if raw == "" {
 		return nil, fmt.Errorf("empty command")
 	}
@@ -55,20 +55,20 @@ func CommandFactory(raw string, macro *Macro) (Executer, error) {
 
 	switch cmd {
 	case "exit":
-		return NewCommandExit(), nil
+		return NewExit(), nil
 	case "edit":
 		content := ""
 		if len(parts) > 1 {
 			content = parts[1]
 		}
 
-		return NewCommandEdit(content), nil
+		return NewEdit(content), nil
 	case "send":
 		if len(parts) == 1 {
 			return nil, fmt.Errorf("empty request")
 		}
 
-		return NewCommandSend(parts[1]), nil
+		return NewSend(parts[1]), nil
 	case "wait":
 		timeout := time.Duration(0)
 
@@ -81,7 +81,7 @@ func CommandFactory(raw string, macro *Macro) (Executer, error) {
 			timeout = time.Duration(sec) * time.Second
 		}
 
-		return NewCommandWaitForResp(timeout), nil
+		return NewWaitForResp(timeout), nil
 	default:
 		if macro != nil {
 			return macro.Get(cmd)
@@ -91,21 +91,22 @@ func CommandFactory(raw string, macro *Macro) (Executer, error) {
 	}
 }
 
-type CommandEdit struct {
+type Edit struct {
 	content string
 }
 
-func NewCommandEdit(content string) *CommandEdit {
-	return &CommandEdit{content}
+func NewEdit(content string) *Edit {
+	return &Edit{content}
 }
 
 // Execute executes the edit command and returns a Send command id editing was successful or an error in other case.
-func (c *CommandEdit) Execute(exCtx ExecutionContext) (Executer, error) {
+func (c *Edit) Execute(exCtx ExecutionContext) (Executer, error) {
 	output := exCtx.Output()
 	color.New(color.FgGreen).Fprint(output, "->\n")
-
 	fmt.Fprint(output, ShowCursor)
+
 	req, err := exCtx.RequestEditor().Edit(exCtx.Input(), c.content)
+
 	fmt.Fprint(output, LineUp+LineClear)
 	fmt.Fprint(output, HideCursor)
 
@@ -113,40 +114,40 @@ func (c *CommandEdit) Execute(exCtx ExecutionContext) (Executer, error) {
 		return nil, err
 	}
 
-	return NewCommandSend(req), nil
+	return NewSend(req), nil
 }
 
-type CommandSend struct {
+type Send struct {
 	request string
 }
 
-func NewCommandSend(request string) *CommandSend {
-	return &CommandSend{request}
+func NewSend(request string) *Send {
+	return &Send{request}
 }
 
-// Execute sends the request using the WebSocket connection and returns a CommandPrintMsg to print the response message.
+// Execute sends the request using the WebSocket connection and returns a PrintMsg to print the response message.
 // It implements the Execute method of the Executer interface.
-func (c *CommandSend) Execute(exCtx ExecutionContext) (Executer, error) {
+func (c *Send) Execute(exCtx ExecutionContext) (Executer, error) {
 	msg, err := exCtx.Connection().Send(c.request)
 	if err != nil {
 		return nil, fmt.Errorf("fail to send request: %s", err)
 	}
 
-	return NewCommandPrintMsg(*msg), nil
+	return NewPrintMsg(*msg), nil
 }
 
-type CommandPrintMsg struct {
+type PrintMsg struct {
 	msg ws.Message
 }
 
-func NewCommandPrintMsg(msg ws.Message) *CommandPrintMsg {
-	return &CommandPrintMsg{msg}
+func NewPrintMsg(msg ws.Message) *PrintMsg {
+	return &PrintMsg{msg}
 }
 
-// Execute executes the CommandPrintMsg command and returns nil and error.
+// Execute executes the PrintMsg command and returns nil and error.
 // It formats the message and prints it to the output file.
 // If an output file is provided, it writes the formatted message to the file.
-func (c *CommandPrintMsg) Execute(exCtx ExecutionContext) (Executer, error) {
+func (c *PrintMsg) Execute(exCtx ExecutionContext) (Executer, error) {
 	msg := c.msg
 	output, err := exCtx.Formater().FormatMessage(msg)
 
@@ -177,38 +178,38 @@ func (c *CommandPrintMsg) Execute(exCtx ExecutionContext) (Executer, error) {
 	return nil, nil
 }
 
-type CommandExit struct{}
+type Exit struct{}
 
-func NewCommandExit() *CommandExit {
-	return &CommandExit{}
+func NewExit() *Exit {
+	return &Exit{}
 }
 
 // Execute method implements the Execute method of the Executer interface.
 // It returns an error indicating that the program was interrupted.
-func (c *CommandExit) Execute(_ ExecutionContext) (Executer, error) {
+func (c *Exit) Execute(_ ExecutionContext) (Executer, error) {
 	return nil, fmt.Errorf("interrupted")
 }
 
-type CommandWaitForResp struct {
+type WaitForResp struct {
 	timeout time.Duration
 }
 
-func NewCommandWaitForResp(timeout time.Duration) *CommandWaitForResp {
-	return &CommandWaitForResp{timeout}
+func NewWaitForResp(timeout time.Duration) *WaitForResp {
+	return &WaitForResp{timeout}
 }
 
-// Execute executes the CommandWaitForResp command and waits for a response from the WebSocket connection.
+// Execute executes the WaitForResp command and waits for a response from the WebSocket connection.
 // If a timeout is set, it will return an error if no response is received within the specified time.
-// If a response is received, it will return a new CommandPrintMsg command with the received message.
+// If a response is received, it will return a new PrintMsg command with the received message.
 // If the WebSocket connection is closed, it will return an error.
-func (c *CommandWaitForResp) Execute(exCtx ExecutionContext) (Executer, error) {
+func (c *WaitForResp) Execute(exCtx ExecutionContext) (Executer, error) {
 	if c.timeout.Seconds() == 0 {
 		msg, ok := <-exCtx.Connection().Messages()
 		if !ok {
 			return nil, fmt.Errorf("connection closed")
 		}
 
-		return NewCommandPrintMsg(msg), nil
+		return NewPrintMsg(msg), nil
 	}
 
 	select {
@@ -219,24 +220,26 @@ func (c *CommandWaitForResp) Execute(exCtx ExecutionContext) (Executer, error) {
 			return nil, fmt.Errorf("connection closed")
 		}
 
-		return NewCommandPrintMsg(msg), nil
+		return NewPrintMsg(msg), nil
 	}
 }
 
-type CommandCmdEdit struct{}
+type CmdEdit struct{}
 
-func NewCommandCmdEdit() *CommandCmdEdit {
-	return &CommandCmdEdit{}
+func NewCmdEdit() *CmdEdit {
+	return &CmdEdit{}
 }
 
-// Execute executes the CommandCmdEdit and returns an Executer and an error.
+// Execute executes the CmdEdit and returns an Executer and an error.
 // It prompts the user to edit a command and returns the corresponding Command object.
-func (c *CommandCmdEdit) Execute(exCtx ExecutionContext) (Executer, error) {
+func (c *CmdEdit) Execute(exCtx ExecutionContext) (Executer, error) {
 	output := exCtx.Output()
 
 	fmt.Fprint(output, ":")
 	fmt.Fprint(output, ShowCursor)
+
 	rawCmd, err := exCtx.RequestEditor().Edit(exCtx.Input(), "")
+
 	fmt.Fprint(output, LineClear+"\r")
 	fmt.Fprint(output, HideCursor)
 
@@ -244,7 +247,7 @@ func (c *CommandCmdEdit) Execute(exCtx ExecutionContext) (Executer, error) {
 		return nil, err
 	}
 
-	cmd, err := CommandFactory(rawCmd, exCtx.Macro())
+	cmd, err := Factory(rawCmd, exCtx.Macro())
 
 	if err != nil {
 		color.New(color.FgRed).Fprintln(output, err)
@@ -254,17 +257,17 @@ func (c *CommandCmdEdit) Execute(exCtx ExecutionContext) (Executer, error) {
 	return cmd, nil
 }
 
-type CommandSequence struct {
+type Sequence struct {
 	subCommands []Executer
 }
 
-func NewCommandSequence(subCommands []Executer) *CommandSequence {
-	return &CommandSequence{subCommands}
+func NewSequence(subCommands []Executer) *Sequence {
+	return &Sequence{subCommands}
 }
 
 // Execute executes the command sequence by iterating over all sub-commands and executing them recursively.
 // It takes an ExecutionContext as input and returns an Executer and an error.
-func (c *CommandSequence) Execute(exCtx ExecutionContext) (Executer, error) {
+func (c *Sequence) Execute(exCtx ExecutionContext) (Executer, error) {
 	for _, cmd := range c.subCommands {
 		for cmd != nil {
 			var err error
