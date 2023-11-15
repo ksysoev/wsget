@@ -126,6 +126,11 @@ func LoadMacroForDomain(macroDir, domain string) (*Macro, error) {
 	var macro *Macro
 
 	for _, file := range files {
+		if file.IsDir() || (!strings.HasSuffix(file.Name(), ".yaml") && !strings.HasSuffix(file.Name(), ".yml")) {
+			fmt.Println("skip file", file.Name())
+			continue
+		}
+
 		fileMacro, err := LoadFromFile(macroDir + "/" + file.Name())
 
 		if err != nil {
