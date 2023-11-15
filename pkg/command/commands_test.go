@@ -1,17 +1,19 @@
-package cli
+package command
 
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/eiannone/keyboard"
 	"github.com/ksysoev/wsget/pkg/formater"
 	"github.com/ksysoev/wsget/pkg/ws"
 )
 
-func TestCommandFactory(t *testing.T) {
+func TestFactory(t *testing.T) {
 	tests := []struct {
 		macro   *Macro
 		want    Executer
@@ -30,28 +32,28 @@ func TestCommandFactory(t *testing.T) {
 			name:    "exit command",
 			raw:     "exit",
 			macro:   nil,
-			want:    NewCommandExit(),
+			want:    NewExit(),
 			wantErr: false,
 		},
 		{
 			name:    "edit command with content",
 			raw:     "edit some content",
 			macro:   nil,
-			want:    NewCommandEdit("some content"),
+			want:    NewEdit("some content"),
 			wantErr: false,
 		},
 		{
 			name:    "edit command without content",
 			raw:     "edit",
 			macro:   nil,
-			want:    NewCommandEdit(""),
+			want:    NewEdit(""),
 			wantErr: false,
 		},
 		{
 			name:    "send command with request",
 			raw:     "send some request",
 			macro:   nil,
-			want:    NewCommandSend("some request"),
+			want:    NewSend("some request"),
 			wantErr: false,
 		},
 		{
@@ -65,14 +67,14 @@ func TestCommandFactory(t *testing.T) {
 			name:    "wait command without timeout",
 			raw:     "wait",
 			macro:   nil,
-			want:    NewCommandWaitForResp(time.Duration(0)),
+			want:    NewWaitForResp(time.Duration(0)),
 			wantErr: false,
 		},
 		{
 			name:    "wait command with timeout",
 			raw:     "wait 5",
 			macro:   nil,
-			want:    NewCommandWaitForResp(time.Duration(5) * time.Second),
+			want:    NewWaitForResp(time.Duration(5) * time.Second),
 			wantErr: false,
 		},
 		{
@@ -100,35 +102,35 @@ func TestCommandFactory(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := CommandFactory(tt.raw, tt.macro)
+			got, err := Factory(tt.raw, tt.macro)
 
 			if (err != nil) != tt.wantErr {
-				t.Errorf("CommandFactory() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Factory() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 
 			if got == nil && !tt.wantErr {
-				t.Errorf("CommandFactory() got = %v, want non-nil", got)
+				t.Errorf("Factory() got = %v, want non-nil", got)
 				return
 			}
 
 			if got != nil && !strings.Contains(fmt.Sprintf("%T", got), fmt.Sprintf("%T", tt.want)) {
-				t.Errorf("CommandFactory() got = %T, want %T", got, tt.want)
+				t.Errorf("Factory() got = %T, want %T", got, tt.want)
 			}
 
 			if got != nil && tt.want != nil {
 				switch gotType := got.(type) {
-				case *CommandEdit:
-					if got.(*CommandEdit).content != tt.want.(*CommandEdit).content {
-						t.Errorf("CommandFactory() type %v,  got = %v, want %v", gotType, got, tt.want)
+				case *Edit:
+					if got.(*Edit).content != tt.want.(*Edit).content {
+						t.Errorf("Factory() type %v,  got = %v, want %v", gotType, got, tt.want)
 					}
-				case *CommandSend:
-					if got.(*CommandSend).request != tt.want.(*CommandSend).request {
-						t.Errorf("CommandFactory() type %v, got = %v, want %v", gotType, got, tt.want)
+				case *Send:
+					if got.(*Send).request != tt.want.(*Send).request {
+						t.Errorf("Factory() type %v, got = %v, want %v", gotType, got, tt.want)
 					}
-				case *CommandWaitForResp:
-					if got.(*CommandWaitForResp).timeout != tt.want.(*CommandWaitForResp).timeout {
-						t.Errorf("CommandFactory() type %v, got = %v, want %v", gotType, got, tt.want)
+				case *WaitForResp:
+					if got.(*WaitForResp).timeout != tt.want.(*WaitForResp).timeout {
+						t.Errorf("Factory() type %v, got = %v, want %v", gotType, got, tt.want)
 					}
 				}
 			}
@@ -140,13 +142,13 @@ type mockCommand struct {
 	err error
 }
 
-func (c *mockCommand) Execute(_ *ExecutionContext) (Executer, error) {
+func (c *mockCommand) Execute(_ ExecutionContext) (Executer, error) {
 	return nil, c.err
 }
 
-func TestCommandSequence_Execute(t *testing.T) {
+func TestSequence_Execute(t *testing.T) {
 	tests := []struct {
-		exCtx       *ExecutionContext
+		exCtx       *mockContext
 		name        string
 		subCommands []Executer
 		wantErr     bool
@@ -154,7 +156,7 @@ func TestCommandSequence_Execute(t *testing.T) {
 		{
 			name:        "empty command sequence",
 			subCommands: []Executer{},
-			exCtx:       &ExecutionContext{},
+			exCtx:       &mockContext{},
 			wantErr:     false,
 		},
 		{
@@ -162,7 +164,7 @@ func TestCommandSequence_Execute(t *testing.T) {
 			subCommands: []Executer{
 				&mockCommand{},
 			},
-			exCtx:   &ExecutionContext{},
+			exCtx:   &mockContext{},
 			wantErr: false,
 		},
 		{
@@ -172,7 +174,7 @@ func TestCommandSequence_Execute(t *testing.T) {
 				&mockCommand{},
 				&mockCommand{},
 			},
-			exCtx:   &ExecutionContext{},
+			exCtx:   &mockContext{},
 			wantErr: false,
 		},
 		{
@@ -182,42 +184,42 @@ func TestCommandSequence_Execute(t *testing.T) {
 				&mockCommand{err: fmt.Errorf("error")},
 				&mockCommand{},
 			},
-			exCtx:   &ExecutionContext{},
+			exCtx:   &mockContext{},
 			wantErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cs := &CommandSequence{
+			cs := &Sequence{
 				subCommands: tt.subCommands,
 			}
 
 			_, err := cs.Execute(tt.exCtx)
 
 			if (err != nil) != tt.wantErr {
-				t.Errorf("CommandSequence.Execute() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Sequence.Execute() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
 }
 
-func TestCommandExit_Execute(t *testing.T) {
-	c := &CommandExit{}
+func TestExit_Execute(t *testing.T) {
+	c := &Exit{}
 	_, err := c.Execute(nil)
 
 	if err == nil {
-		t.Errorf("CommandExit.Execute() error = %v, wantErr %v", err, true)
+		t.Errorf("Exit.Execute() error = %v, wantErr %v", err, true)
 	}
 
 	if err.Error() != "interrupted" {
-		t.Errorf("CommandExit.Execute() error = %v, wantErr %v", err, "interrupted")
+		t.Errorf("Exit.Execute() error = %v, wantErr %v", err, "interrupted")
 	}
 }
 
-func TestCommandPrintMsg_Execute(t *testing.T) {
+func TestPrintMsg_Execute(t *testing.T) {
 	tests := []struct {
-		exCtx       *ExecutionContext
+		exCtx       *mockContext
 		name        string
 		expectedOut string
 		msg         ws.Message
@@ -229,11 +231,7 @@ func TestCommandPrintMsg_Execute(t *testing.T) {
 				Type: ws.Request,
 				Data: "some request data",
 			},
-			exCtx: &ExecutionContext{
-				cli: &CLI{
-					formater: formater.NewFormatter(),
-				},
-			},
+			exCtx:       &mockContext{},
 			wantErr:     false,
 			expectedOut: "->\n" + "some request data\n",
 		},
@@ -243,11 +241,7 @@ func TestCommandPrintMsg_Execute(t *testing.T) {
 				Type: ws.Response,
 				Data: "some response data",
 			},
-			exCtx: &ExecutionContext{
-				cli: &CLI{
-					formater: formater.NewFormatter(),
-				},
-			},
+			exCtx:       &mockContext{},
 			wantErr:     false,
 			expectedOut: "<-\n" + "some response data\n",
 		},
@@ -255,27 +249,73 @@ func TestCommandPrintMsg_Execute(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &CommandPrintMsg{
+			c := &PrintMsg{
 				msg: tt.msg,
 			}
 
-			var buf bytes.Buffer
 			exCtx := tt.exCtx
-			exCtx.cli.output = &buf
 
 			_, err := c.Execute(exCtx)
 
 			if (err != nil) != tt.wantErr {
-				t.Errorf("CommandPrintMsg.Execute() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("PrintMsg.Execute() error = %v, wantErr %v", err, tt.wantErr)
 			}
 
 			if tt.wantErr {
 				return
 			}
 
-			if buf.String() != tt.expectedOut {
-				t.Errorf("CommandPrintMsg.Execute() output = %q, want %q", buf.String(), tt.expectedOut)
+			if exCtx.buf.String() != tt.expectedOut {
+				t.Errorf("PrintMsg.Execute() output = %q, want %q", exCtx.buf.String(), tt.expectedOut)
 			}
 		})
 	}
+}
+
+type mockContext struct {
+	buf bytes.Buffer
+}
+
+func (c *mockContext) Input() <-chan keyboard.KeyEvent {
+	return make(<-chan keyboard.KeyEvent)
+}
+func (c *mockContext) Output() io.Writer {
+	return &c.buf
+}
+
+func (c *mockContext) OutputFile() io.Writer {
+	return nil
+}
+
+func (c *mockContext) Formater() formater.Formater {
+	return formater.NewFormat()
+}
+
+func (c *mockContext) RequestEditor() Editor {
+	return &mockEditor{}
+}
+
+func (c *mockContext) CmdEditor() Editor {
+	return &mockEditor{}
+}
+
+func (c *mockContext) Connection() ws.ConnectionHandler {
+	return &ws.Connection{}
+}
+
+func (c *mockContext) Macro() *Macro {
+	return nil
+}
+
+type mockEditor struct {
+	err     error
+	content string
+}
+
+func (e *mockEditor) Edit(_ <-chan keyboard.KeyEvent, _ string) (string, error) {
+	return e.content, e.err
+}
+
+func (e *mockEditor) Close() error {
+	return nil
 }

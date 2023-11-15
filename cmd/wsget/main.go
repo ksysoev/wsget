@@ -7,6 +7,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/ksysoev/wsget/pkg/cli"
+	"github.com/ksysoev/wsget/pkg/command"
 	"github.com/ksysoev/wsget/pkg/ws"
 	"github.com/spf13/cobra"
 )
@@ -65,10 +66,10 @@ func main() {
 	}
 }
 
-func run(cmd *cobra.Command, args []string) {
+func run(cmnd *cobra.Command, args []string) {
 	wsURL := args[0]
 	if wsURL == "" {
-		_ = cmd.Help()
+		_ = cmnd.Help()
 		return
 	}
 
@@ -103,17 +104,17 @@ func run(cmd *cobra.Command, args []string) {
 	}
 
 	if request != "" {
-		opts.Commands = []cli.Executer{cli.NewCommandSend(request)}
+		opts.Commands = []command.Executer{command.NewSend(request)}
 
 		if waitResponse >= 0 {
 			opts.Commands = append(
 				opts.Commands,
-				cli.NewCommandWaitForResp(time.Duration(waitResponse)*time.Second),
-				cli.NewCommandExit(),
+				command.NewWaitForResp(time.Duration(waitResponse)*time.Second),
+				command.NewExit(),
 			)
 		}
 	} else {
-		opts.Commands = []cli.Executer{cli.NewCommandEdit("")}
+		opts.Commands = []command.Executer{command.NewEdit("")}
 	}
 
 	if err = client.Run(opts); err != nil {

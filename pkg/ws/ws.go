@@ -50,16 +50,16 @@ type Connection struct {
 	isClosed  atomic.Bool
 }
 
+type Options struct {
+	Headers             []string
+	SkipSSLVerification bool
+}
+
 type ConnectionHandler interface {
 	Messages() <-chan Message
 	Hostname() string
 	Send(msg string) (*Message, error)
 	Close()
-}
-
-type Options struct {
-	Headers             []string
-	SkipSSLVerification bool
 }
 
 // NewWS creates a new WebSocket connection to the specified URL with the given options.

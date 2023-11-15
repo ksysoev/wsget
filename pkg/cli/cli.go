@@ -8,6 +8,7 @@ import (
 
 	"github.com/eiannone/keyboard"
 	"github.com/fatih/color"
+	"github.com/ksysoev/wsget/pkg/command"
 	"github.com/ksysoev/wsget/pkg/edit"
 	"github.com/ksysoev/wsget/pkg/formater"
 	"github.com/ksysoev/wsget/pkg/ws"
@@ -30,30 +31,37 @@ const (
 	Bell = "\a"
 )
 
-type Editor interface {
-	Edit(keyStream <-chan keyboard.KeyEvent, initBuffer string) (string, error)
-	Close() error
-}
-
 type CLI struct {
-	formater  *formater.Formater
+	formater  *formater.Format
 	wsConn    ws.ConnectionHandler
-	editor    Editor
-	cmdEditor Editor
+	editor    *edit.Editor
+	cmdEditor *edit.Editor
 	input     Inputer
 	output    io.Writer
-	commands  chan Executer
-	macro     *Macro
+	commands  chan command.Executer
+	macro     *command.Macro
 }
 
 type RunOptions struct {
 	OutputFile *os.File
-	Commands   []Executer
+	Commands   []command.Executer
 }
 
 type Inputer interface {
 	GetKeys() (<-chan keyboard.KeyEvent, error)
 	Close()
+}
+
+type ConnectionHandler interface {
+	Messages() <-chan ws.Message
+	Hostname() string
+	Send(msg string) (*ws.Message, error)
+	Close()
+}
+
+type Formater interface {
+	FormatMessage(wsMsg ws.Message) (string, error)
+	FormatForFile(wsMsg ws.Message) (string, error)
 }
 
 // NewCLI creates a new CLI instance with the given wsConn, input, and output.
@@ -73,15 +81,15 @@ func NewCLI(wsConn ws.ConnectionHandler, input Inputer, output io.Writer) (*CLI,
 	history := edit.NewHistory(homeDir+"/"+HistoryFilename, HistoryLimit)
 	cmdHistory := edit.NewHistory(homeDir+"/"+HistoryCmdFilename, HistoryLimit)
 
-	macro, err := LoadMacroForDomain(homeDir+"/"+ConfigDir+"/"+MacroDir, wsConn.Hostname())
+	macro, err := command.LoadMacroForDomain(homeDir+"/"+ConfigDir+"/"+MacroDir, wsConn.Hostname())
 	if err != nil {
 		return nil, fmt.Errorf("fail to load macro: %s", err)
 	}
 
-	commands := make(chan Executer, CommandsLimit)
+	commands := make(chan command.Executer, CommandsLimit)
 
 	return &CLI{
-		formater:  formater.NewFormatter(),
+		formater:  formater.NewFormat(),
 		editor:    edit.NewEditor(output, history, false),
 		cmdEditor: edit.NewEditor(output, cmdHistory, true),
 		wsConn:    wsConn,
@@ -123,11 +131,7 @@ func (c *CLI) Run(opts RunOptions) error {
 		c.commands <- cmd
 	}
 
-	exCtx := &ExecutionContext{
-		input:      keysEvents,
-		cli:        c,
-		outputFile: opts.OutputFile,
-	}
+	exCtx := NewExecutionContext(c, keysEvents, opts.OutputFile)
 
 	for {
 		select {
@@ -142,9 +146,9 @@ func (c *CLI) Run(opts RunOptions) error {
 		case event := <-keysEvents:
 			switch event.Key {
 			case keyboard.KeyEsc, keyboard.KeyCtrlC, keyboard.KeyCtrlD:
-				c.commands <- NewCommandExit()
+				c.commands <- command.NewExit()
 			case keyboard.KeyEnter:
-				c.commands <- NewCommandEdit("")
+				c.commands <- command.NewEdit("")
 			default:
 				if event.Key > 0 {
 					continue
@@ -152,7 +156,7 @@ func (c *CLI) Run(opts RunOptions) error {
 
 				switch event.Rune {
 				case ':':
-					c.commands <- NewCommandCmdEdit()
+					c.commands <- command.NewCmdEdit()
 				default:
 					continue
 				}
@@ -163,7 +167,7 @@ func (c *CLI) Run(opts RunOptions) error {
 				return nil
 			}
 
-			c.commands <- NewCommandPrintMsg(msg)
+			c.commands <- command.NewPrintMsg(msg)
 		}
 	}
 }

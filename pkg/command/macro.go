@@ -1,4 +1,4 @@
-package cli
+package command
 
 import (
 	"fmt"
@@ -34,7 +34,7 @@ func NewMacro(domains []string) *Macro {
 // If a macro with the same name already exists, it returns an error.
 // If the rawCommands slice is empty, it returns an error.
 // If the rawCommands slice has only one command, it adds the command directly to the macro.
-// Otherwise, it creates a new CommandSequence with the commands and adds it to the macro.
+// Otherwise, it creates a new Sequence with the commands and adds it to the macro.
 func (m *Macro) AddCommands(name string, rawCommands []string) error {
 	if _, ok := m.macro[name]; ok {
 		return fmt.Errorf("macro already exists: %s", name)
@@ -43,7 +43,7 @@ func (m *Macro) AddCommands(name string, rawCommands []string) error {
 	commands := []Executer{}
 
 	for _, rawCommand := range rawCommands {
-		cmd, err := CommandFactory(rawCommand, nil)
+		cmd, err := Factory(rawCommand, nil)
 		if err != nil {
 			return err
 		}
@@ -57,7 +57,7 @@ func (m *Macro) AddCommands(name string, rawCommands []string) error {
 	case 1:
 		m.macro[name] = commands[0]
 	default:
-		m.macro[name] = NewCommandSequence(commands)
+		m.macro[name] = NewSequence(commands)
 	}
 
 	return nil
