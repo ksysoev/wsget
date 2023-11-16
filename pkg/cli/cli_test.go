@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/eiannone/keyboard"
+	"github.com/ksysoev/wsget/pkg/command"
 	"github.com/ksysoev/wsget/pkg/ws"
 	"golang.org/x/net/websocket"
 )
@@ -73,5 +74,39 @@ func TestNewCLI(t *testing.T) {
 	case <-done:
 	case <-time.After(time.Millisecond * 10):
 		t.Error("Expected cli to stop")
+	}
+}
+
+func TestNewCLIRunWithCommands(t *testing.T) {
+	server := httptest.NewServer(websocket.Handler(func(ws *websocket.Conn) {
+		var msg string
+		_ = websocket.Message.Receive(ws, &msg) // wait for request
+		_, _ = ws.Write([]byte(msg))
+		time.Sleep(time.Second) // to keep the connection open
+	}))
+	defer server.Close()
+
+	url := "ws://" + server.Listener.Addr().String()
+	wsConn, err := ws.NewWS(url, ws.Options{})
+
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	output := os.Stdout
+	cli, err := NewCLI(wsConn, &mockInput{}, output)
+
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	err = cli.Run(RunOptions{Commands: []command.Executer{command.NewExit()}})
+
+	if err == nil {
+		t.Fatalf("Expected error, but got nothing")
+	}
+
+	if err.Error() != "interrupted" {
+		t.Errorf("Exit.Execute() error = %v, wantErr %v", err, "interrupted")
 	}
 }
