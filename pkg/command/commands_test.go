@@ -273,7 +273,8 @@ func TestPrintMsg_Execute(t *testing.T) {
 }
 
 type mockContext struct {
-	buf bytes.Buffer
+	requestEditor Editor
+	buf           bytes.Buffer
 }
 
 func (c *mockContext) Input() <-chan keyboard.KeyEvent {
@@ -292,11 +293,11 @@ func (c *mockContext) Formater() formater.Formater {
 }
 
 func (c *mockContext) RequestEditor() Editor {
-	return &mockEditor{}
+	return c.requestEditor
 }
 
 func (c *mockContext) CmdEditor() Editor {
-	return &mockEditor{}
+	return c.requestEditor
 }
 
 func (c *mockContext) Connection() ws.ConnectionHandler {
@@ -318,4 +319,34 @@ func (e *mockEditor) Edit(_ <-chan keyboard.KeyEvent, _ string) (string, error) 
 
 func (e *mockEditor) Close() error {
 	return nil
+}
+func TestCmdEdit_Execute(t *testing.T) {
+	exCtx := &mockContext{}
+	output, _ := exCtx.Output().(*bytes.Buffer)
+	input := make(chan keyboard.KeyEvent)
+	editor := &mockEditor{}
+	editor.content = "edit command"
+	exCtx.requestEditor = editor
+
+	c := &CmdEdit{}
+
+	go func() {
+		input <- keyboard.KeyEvent{}
+		close(input)
+	}()
+
+	_, err := c.Execute(exCtx)
+
+	if err != nil {
+		t.Errorf("CmdEdit.Execute() error = %v, want nil", err)
+	}
+
+	expectedOutput := ":"
+	expectedOutput += ShowCursor
+	expectedOutput += LineClear + "\r"
+	expectedOutput += HideCursor
+
+	if output.String() != expectedOutput {
+		t.Errorf("CmdEdit.Execute() output = %q, want %q", output.String(), expectedOutput)
+	}
 }
