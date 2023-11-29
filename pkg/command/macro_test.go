@@ -1,6 +1,7 @@
 package command
 
 import (
+	"os"
 	"testing"
 )
 
@@ -248,5 +249,128 @@ func TestMacro_Get(t *testing.T) {
 				t.Errorf("Macro.Get() cmd = %v, want %v", cmd, tt.wantCmd)
 			}
 		})
+	}
+}
+func TestLoadFromFile(t *testing.T) {
+	macroDir := os.TempDir()
+	domain := "example.com"
+
+	// Create temporary test file
+	tempFile, err := os.CreateTemp(macroDir, "macro.yaml")
+	if err != nil {
+		t.Fatalf("Failed to create temporary test file: %v", err)
+	}
+
+	defer os.Remove(tempFile.Name())
+
+	// Write test data to the temporary test file
+	_, err = tempFile.WriteString(`
+version: 1
+domains:
+  - example.com
+macro:
+  test:
+    - send hello
+    - wait 5
+`)
+
+	if err != nil {
+		t.Fatalf("Failed to write to temporary test file: %v", err)
+	}
+
+	// Load macro from temporary test file
+	macro, err := LoadFromFile(tempFile.Name())
+	if err != nil {
+		t.Fatalf("Failed to load macro from temporary test file: %v", err)
+	}
+
+	// Check if macro was loaded correctly
+	if len(macro.macro) != 1 {
+		t.Errorf("LoadFromFile() macro length = %d, want %d", len(macro.macro), 1)
+	}
+
+	if len(macro.domains) != 1 {
+		t.Errorf("LoadFromFile() domains length = %d, want %d", len(macro.domains), 1)
+	}
+
+	if macro.domains[0] != domain {
+		t.Errorf("LoadFromFile() domain = %s, want %s", macro.domains[0], domain)
+	}
+
+	cmd, err := macro.Get("test")
+
+	if err != nil {
+		t.Errorf("LoadFromFile() error = %v, want nil", err)
+	}
+
+	if cmd == nil {
+		t.Errorf("LoadFromFile() cmd = %v, want non-nil", cmd)
+	}
+}
+
+func TestLoadFromFile_InvalidFile(t *testing.T) {
+	macroDir := os.TempDir()
+
+	// Create temporary test file
+	tempFile, err := os.CreateTemp(macroDir, "macro.yaml")
+	if err != nil {
+		t.Fatalf("Failed to create temporary test file: %v", err)
+	}
+
+	defer os.Remove(tempFile.Name())
+
+	// Write test data to the temporary test file
+	_, err = tempFile.WriteString("Some\n  - invalid\n    data")
+	if err != nil {
+		t.Fatalf("Failed to write to temporary test file: %v", err)
+	}
+
+	// Load macro from temporary test file
+	_, err = LoadFromFile(tempFile.Name())
+	if err == nil {
+		t.Fatalf("LoadFromFile() error = %v, want non-nil", err)
+	}
+}
+
+func TestLoadFromFile_InvalidVersion(t *testing.T) {
+	macroDir := os.TempDir()
+
+	// Create temporary test file
+	tempFile, err := os.CreateTemp(macroDir, "macro.yaml")
+	if err != nil {
+		t.Fatalf("Failed to create temporary test file: %v", err)
+	}
+
+	defer os.Remove(tempFile.Name())
+
+	// Write test data to the temporary test file
+	_, err = tempFile.WriteString(`
+version: 2
+domains:
+  - example.com
+macro:
+  test:
+    - send hello
+    - wait 5
+`)
+	if err != nil {
+		t.Fatalf("Failed to write to temporary test file: %v", err)
+	}
+
+	// Load macro from temporary test file
+	_, err = LoadFromFile(tempFile.Name())
+	if err == nil {
+		t.Fatalf("LoadFromFile() error = %v, want non-nil", err)
+	}
+
+	if err.Error() != "unsupported macro file version: "+tempFile.Name() {
+		t.Errorf("LoadFromFile() error = %v, want %v", err.Error(), "unsupported macro file version: "+tempFile.Name())
+	}
+}
+
+func TestLoadFromFile_NotExists(t *testing.T) {
+	_, err := LoadFromFile("/tmp/TestLoadFromFile_NotExists.yaml")
+	if err == nil {
+		t.Fatalf("LoadFromFile() error = %v, want non-nil", err)
 	}
 }
