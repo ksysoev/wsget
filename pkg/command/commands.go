@@ -238,7 +238,7 @@ func (c *CmdEdit) Execute(exCtx ExecutionContext) (Executer, error) {
 	fmt.Fprint(output, ":")
 	fmt.Fprint(output, ShowCursor)
 
-	rawCmd, err := exCtx.RequestEditor().Edit(exCtx.Input(), "")
+	rawCmd, err := exCtx.CmdEditor().Edit(exCtx.Input(), "")
 
 	fmt.Fprint(output, LineClear+"\r")
 	fmt.Fprint(output, HideCursor)

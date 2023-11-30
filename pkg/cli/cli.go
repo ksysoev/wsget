@@ -88,10 +88,16 @@ func NewCLI(wsConn ws.ConnectionHandler, input Inputer, output io.Writer) (*CLI,
 
 	commands := make(chan command.Executer, CommandsLimit)
 
+	cmdEditor := edit.NewEditor(output, cmdHistory, true)
+
+	if macro != nil {
+		cmdEditor.Dictionary = edit.NewDictionary(macro.GetNames())
+	}
+
 	return &CLI{
 		formater:  formater.NewFormat(),
 		editor:    edit.NewEditor(output, history, false),
-		cmdEditor: edit.NewEditor(output, cmdHistory, true),
+		cmdEditor: cmdEditor,
 		wsConn:    wsConn,
 		input:     input,
 		output:    output,

@@ -86,6 +86,16 @@ func (m *Macro) Get(name string) (Executer, error) {
 	return nil, fmt.Errorf("unknown command: %s", name)
 }
 
+func (m *Macro) GetNames() []string {
+	names := []string{}
+
+	for name := range m.macro {
+		names = append(names, name)
+	}
+
+	return names
+}
+
 // LoadFromFile loads a macro configuration from a file at the given path.
 // It returns a Macro instance and an error if the file cannot be read or parsed.
 func LoadFromFile(path string) (*Macro, error) {

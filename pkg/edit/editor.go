@@ -18,6 +18,7 @@ const (
 type Editor struct {
 	History         *History
 	content         *Content
+	Dictionary      *Dictionary
 	output          io.Writer
 	prevPressedTime time.Time
 	buffer          []rune
@@ -68,7 +69,7 @@ func (ed *Editor) Edit(keyStream <-chan keyboard.KeyEvent, initBuffer string) (s
 		case keyboard.KeySpace:
 			fmt.Fprint(ed.output, ed.content.InsertSymbol(' '))
 		case keyboard.KeyEnter:
-			if isDone := ed.newLineOrDone(isPasting); isDone {
+			if ed.newLineOrDone(isPasting) {
 				return ed.done()
 			}
 		case keyboard.KeyBackspace, keyboard.KeyDelete, MacOSDeleteKey:
@@ -81,6 +82,22 @@ func (ed *Editor) Edit(keyStream <-chan keyboard.KeyEvent, initBuffer string) (s
 			ed.prevFromHistory()
 		case keyboard.KeyArrowDown:
 			ed.nextFromHistory()
+		case keyboard.KeyTab:
+			content := ed.content.String()
+			if ed.Dictionary == nil || content == "" {
+				continue
+			}
+
+			match := ed.Dictionary.Search(content)
+			if match == "" || match == content {
+				continue
+			}
+
+			diff := match[len(content):]
+
+			for _, r := range diff {
+				fmt.Fprint(ed.output, ed.content.InsertSymbol(r))
+			}
 		default:
 			if e.Key > 0 {
 				continue
