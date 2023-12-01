@@ -26,11 +26,14 @@ func NewDictionary(words []string) *Dictionary {
 // It performs a search to find all matching words.
 // The function returns the longest common prefix among the matching words.
 func (d *Dictionary) Search(prefix string) string {
-	// For now, we'll just do a linear search.
-	// later, we can implement a binary search to find the first match.
+	startPos := sort.Search(len(d.words), func(i int) bool {
+		return d.words[i] >= prefix
+	})
+
 	match := []string{}
 
-	for _, word := range d.words {
+	for i := startPos; i < len(d.words); i++ {
+		word := d.words[i]
 		if len(prefix) > len(word) {
 			continue
 		}
