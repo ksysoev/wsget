@@ -9,6 +9,9 @@ type Dictionary struct {
 	words []string
 }
 
+// NewDictionary creates a new instance of Dictionary with the given list of words.
+// The words are sorted in ascending order before being stored in the dictionary.
+// It returns a pointer to the created Dictionary.
 func NewDictionary(words []string) *Dictionary {
 	sortedWords := make([]string, len(words))
 	copy(sortedWords, words)
@@ -19,6 +22,9 @@ func NewDictionary(words []string) *Dictionary {
 	}
 }
 
+// Search searches for words in the dictionary that have the given prefix.
+// It performs a search to find all matching words.
+// The function returns the longest common prefix among the matching words.
 func (d *Dictionary) Search(prefix string) string {
 	// For now, we'll just do a linear search.
 	// later, we can implement a binary search to find the first match.
@@ -39,6 +45,8 @@ func (d *Dictionary) Search(prefix string) string {
 	return longestCommonPrefix(match)
 }
 
+// longestCommonPrefix finds the longest common prefix among an array of strings.
+// It returns the longest common prefix found or an empty string if there is no common prefix.
 func longestCommonPrefix(strs []string) string {
 	if len(strs) == 0 {
 		return ""
