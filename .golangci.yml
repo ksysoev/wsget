@@ -57,5 +57,11 @@ linters:
     - whitespace
     - wsl
 
+issues:
+  exclude-rules:
+    - path: _test\.go$
+      linters:
+        - goconst
+
 run:
   issues-exit-code: 1
