@@ -1,12 +1,14 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"time"
 
 	"github.com/fatih/color"
 	"github.com/ksysoev/wsget/pkg/cli"
+	"github.com/ksysoev/wsget/pkg/clierrors"
 	"github.com/ksysoev/wsget/pkg/command"
 	"github.com/ksysoev/wsget/pkg/ws"
 	"github.com/spf13/cobra"
@@ -118,11 +120,10 @@ func run(cmnd *cobra.Command, args []string) {
 	}
 
 	if err = client.Run(opts); err != nil {
-		switch err.Error() {
-		case "interrupted":
+		if errors.As(err, &clierrors.Interrupted{}) {
 			return
-		default:
-			color.New(color.FgRed).Println(err)
 		}
+
+		color.New(color.FgRed).Println(err)
 	}
 }

@@ -9,6 +9,7 @@ import (
 
 	"github.com/eiannone/keyboard"
 	"github.com/fatih/color"
+	"github.com/ksysoev/wsget/pkg/clierrors"
 	"github.com/ksysoev/wsget/pkg/formater"
 	"github.com/ksysoev/wsget/pkg/ws"
 )
@@ -187,7 +188,7 @@ func NewExit() *Exit {
 // Execute method implements the Execute method of the Executer interface.
 // It returns an error indicating that the program was interrupted.
 func (c *Exit) Execute(_ ExecutionContext) (Executer, error) {
-	return nil, fmt.Errorf("interrupted")
+	return nil, clierrors.Interrupted{}
 }
 
 type WaitForResp struct {

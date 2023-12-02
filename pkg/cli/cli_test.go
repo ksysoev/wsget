@@ -1,12 +1,14 @@
 package cli
 
 import (
+	"errors"
 	"net/http/httptest"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/eiannone/keyboard"
+	"github.com/ksysoev/wsget/pkg/clierrors"
 	"github.com/ksysoev/wsget/pkg/command"
 	"github.com/ksysoev/wsget/pkg/ws"
 	"golang.org/x/net/websocket"
@@ -106,7 +108,7 @@ func TestNewCLIRunWithCommands(t *testing.T) {
 		t.Fatalf("Expected error, but got nothing")
 	}
 
-	if err.Error() != "interrupted" {
-		t.Errorf("Exit.Execute() error = %v, wantErr %v", err, "interrupted")
+	if !errors.As(err, &clierrors.Interrupted{}) {
+		t.Errorf("Exit.Execute() error = %v, wantErr interupted", err)
 	}
 }

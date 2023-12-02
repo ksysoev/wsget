@@ -2,10 +2,12 @@ package edit
 
 import (
 	"bytes"
+	"errors"
 	"os"
 	"testing"
 
 	"github.com/eiannone/keyboard"
+	"github.com/ksysoev/wsget/pkg/clierrors"
 )
 
 func TestNewEditor(t *testing.T) {
@@ -103,7 +105,7 @@ func TestEditInterrupted(t *testing.T) {
 
 	req, err = editor.Edit(keyStream, "")
 
-	if err == nil {
+	if !errors.As(err, &clierrors.Interrupted{}) {
 		t.Error("Expected error")
 	}
 

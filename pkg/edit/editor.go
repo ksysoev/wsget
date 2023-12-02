@@ -6,11 +6,11 @@ import (
 	"time"
 
 	"github.com/eiannone/keyboard"
+	"github.com/ksysoev/wsget/pkg/clierrors"
 )
 
 const (
 	PastingTimingThresholdInMicrosec = 250
-	ErrInterrupted                   = "interrupted"
 	MacOSDeleteKey                   = 127
 	Bell                             = "\a"
 )
@@ -58,7 +58,7 @@ func (ed *Editor) Edit(keyStream <-chan keyboard.KeyEvent, initBuffer string) (s
 
 		switch e.Key {
 		case keyboard.KeyCtrlC, keyboard.KeyCtrlD:
-			return "", fmt.Errorf(ErrInterrupted)
+			return "", clierrors.Interrupted{}
 		case keyboard.KeyCtrlS:
 			return ed.done()
 		case keyboard.KeyEsc:

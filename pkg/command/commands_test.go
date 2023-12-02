@@ -2,6 +2,7 @@ package command
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"github.com/eiannone/keyboard"
+	"github.com/ksysoev/wsget/pkg/clierrors"
 	"github.com/ksysoev/wsget/pkg/formater"
 	"github.com/ksysoev/wsget/pkg/ws"
 )
@@ -212,8 +214,8 @@ func TestExit_Execute(t *testing.T) {
 		t.Errorf("Exit.Execute() error = %v, wantErr %v", err, true)
 	}
 
-	if err.Error() != "interrupted" {
-		t.Errorf("Exit.Execute() error = %v, wantErr %v", err, "interrupted")
+	if !errors.As(err, &clierrors.Interrupted{}) {
+		t.Errorf("Exit.Execute() error = %v, wantErr interrupted", err)
 	}
 }
 
