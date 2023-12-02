@@ -48,7 +48,7 @@ type Executer interface {
 // If the command is not recognized, an error is returned.
 func Factory(raw string, macro *Macro) (Executer, error) {
 	if raw == "" {
-		return nil, fmt.Errorf("empty command")
+		return nil, &ErrEmptyCommand{}
 	}
 
 	parts := strings.SplitN(raw, " ", CommandPartsNumber)
@@ -66,7 +66,7 @@ func Factory(raw string, macro *Macro) (Executer, error) {
 		return NewEdit(content), nil
 	case "send":
 		if len(parts) == 1 {
-			return nil, fmt.Errorf("empty request")
+			return nil, &ErrEmptyRequest{}
 		}
 
 		return NewSend(parts[1]), nil
@@ -76,7 +76,7 @@ func Factory(raw string, macro *Macro) (Executer, error) {
 		if len(parts) > 1 {
 			sec, err := strconv.Atoi(parts[1])
 			if err != nil || sec < 0 {
-				return nil, fmt.Errorf("invalid timeout: %s", err)
+				return nil, &ErrInvalidTimeout{parts[1]}
 			}
 
 			timeout = time.Duration(sec) * time.Second
@@ -88,7 +88,7 @@ func Factory(raw string, macro *Macro) (Executer, error) {
 			return macro.Get(cmd)
 		}
 
-		return nil, fmt.Errorf("unknown command: %s", cmd)
+		return nil, &ErrUnknownCommand{cmd}
 	}
 }
 
@@ -131,7 +131,7 @@ func NewSend(request string) *Send {
 func (c *Send) Execute(exCtx ExecutionContext) (Executer, error) {
 	msg, err := exCtx.Connection().Send(c.request)
 	if err != nil {
-		return nil, fmt.Errorf("fail to send request: %s", err)
+		return nil, err
 	}
 
 	return NewPrintMsg(*msg), nil
@@ -153,16 +153,16 @@ func (c *PrintMsg) Execute(exCtx ExecutionContext) (Executer, error) {
 	output, err := exCtx.Formater().FormatMessage(msg)
 
 	if err != nil {
-		return nil, fmt.Errorf("fail to format for output file: %s, data: %q", err, msg.Data)
+		return nil, err
 	}
 
 	switch msg.Type {
 	case ws.Request:
-		color.New(color.FgGreen).Fprint(exCtx.Output(), "->\n")
+		color.New(color.FgGreen).Fprintln(exCtx.Output(), "->")
 	case ws.Response:
-		color.New(color.FgRed).Fprint(exCtx.Output(), "<-\n")
+		color.New(color.FgRed).Fprintln(exCtx.Output(), "<-")
 	default:
-		return nil, fmt.Errorf("unknown message type: %s, data: %q", msg.Type, msg.Data)
+		return nil, &ErrUnsupportedMessageType{msg.Type.String()}
 	}
 
 	fmt.Fprintf(exCtx.Output(), "%s\n", output)
@@ -170,10 +170,13 @@ func (c *PrintMsg) Execute(exCtx ExecutionContext) (Executer, error) {
 	if exCtx.OutputFile() != nil {
 		output, err := exCtx.Formater().FormatForFile(msg)
 		if err != nil {
-			return nil, fmt.Errorf("fail to write to output file: %s", err)
+			return nil, err
 		}
 
-		fmt.Fprintln(exCtx.OutputFile(), output)
+		_, err = fmt.Fprintln(exCtx.OutputFile(), output)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return nil, nil
@@ -207,7 +210,7 @@ func (c *WaitForResp) Execute(exCtx ExecutionContext) (Executer, error) {
 	if c.timeout.Seconds() == 0 {
 		msg, ok := <-exCtx.Connection().Messages()
 		if !ok {
-			return nil, fmt.Errorf("connection closed")
+			return nil, &ErrConnectionClosed{}
 		}
 
 		return NewPrintMsg(msg), nil
@@ -215,10 +218,10 @@ func (c *WaitForResp) Execute(exCtx ExecutionContext) (Executer, error) {
 
 	select {
 	case <-time.After(c.timeout):
-		return nil, fmt.Errorf("timeout")
+		return nil, &ErrTimeout{}
 	case msg, ok := <-exCtx.Connection().Messages():
 		if !ok {
-			return nil, fmt.Errorf("connection closed")
+			return nil, &ErrConnectionClosed{}
 		}
 
 		return NewPrintMsg(msg), nil
