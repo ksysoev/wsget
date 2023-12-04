@@ -52,9 +52,20 @@ nfpms:
     homepage: "https://github.com/ksysoev/wsget"
     maintainer: "Kirill Sysoev <k.sysoev@me.com>"
     description: "CLI client for WebSocket"
-    license: "MIT"
+    license: MIT
     bindir: "/usr/bin"
     formats:
       - apk
       - deb
       - rpm
+snapcrafts:
+  - name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    summary: "CLI client for WebSocket"
+    description: "wsget is a command-line tool for interacting with a WebSocket server."
+    license: MIT
+    base: "core18"
+    grade: devel
+    confinement: strict
+    apps:
+      wsget:
+        plugs: ["network", "network-bind"]
