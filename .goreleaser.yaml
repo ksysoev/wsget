@@ -46,3 +46,15 @@ brews:
       system "#{bin}/wsget"
     install: |
       bin.install 'wsget'
+nfpms:
+  - id: wsget
+    vendor: "ksysoev"
+    homepage: "https://github.com/ksysoev/wsget"
+    maintainer: "Kirill Sysoev <k.sysoev@me.com>"
+    description: "CLI client for WebSocket"
+    license: "MIT"
+    bindir: "/usr/bin"
+    formats:
+      - apk
+      - deb
+      - rpm
