@@ -5,7 +5,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/ksysoev/wsget)](https://goreportcard.com/report/github.com/ksysoev/wsget)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-wsget is a command-line tool for interacting with a WebSocket server. It supports plain text and  json messages, and can save the output of the session into a file.
+wsget is a command-line tool for interacting with a WebSocket server. It supports plain text and JSON messages and can save the output of the session into a file.
 
 ## Installation
 
