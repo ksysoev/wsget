@@ -3,6 +3,7 @@ package command
 import (
 	"fmt"
 	"io"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -167,7 +168,7 @@ func (c *PrintMsg) Execute(exCtx ExecutionContext) (Executer, error) {
 
 	fmt.Fprintf(exCtx.Output(), "%s\n", output)
 
-	if exCtx.OutputFile() != nil {
+	if !reflect.ValueOf(exCtx.OutputFile()).IsNil() {
 		output, err := exCtx.Formater().FormatForFile(msg)
 		if err != nil {
 			return nil, err
