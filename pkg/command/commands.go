@@ -168,13 +168,14 @@ func (c *PrintMsg) Execute(exCtx ExecutionContext) (Executer, error) {
 
 	fmt.Fprintf(exCtx.Output(), "%s\n", output)
 
-	if !reflect.ValueOf(exCtx.OutputFile()).IsNil() {
+	outputFile := exCtx.OutputFile()
+	if outputFile != nil && !reflect.ValueOf(outputFile).IsNil() {
 		output, err := exCtx.Formater().FormatForFile(msg)
 		if err != nil {
 			return nil, err
 		}
 
-		_, err = fmt.Fprintln(exCtx.OutputFile(), output)
+		_, err = fmt.Fprintln(outputFile, output)
 		if err != nil {
 			return nil, err
 		}
