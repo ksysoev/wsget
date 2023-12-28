@@ -3,6 +3,7 @@ package command
 import (
 	"fmt"
 	"io"
+	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -13,6 +14,7 @@ import (
 	"github.com/ksysoev/wsget/pkg/clierrors"
 	"github.com/ksysoev/wsget/pkg/formater"
 	"github.com/ksysoev/wsget/pkg/ws"
+	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -284,4 +286,39 @@ func (c *Sequence) Execute(exCtx ExecutionContext) (Executer, error) {
 	}
 
 	return nil, nil
+}
+
+type InputFileCommand struct {
+	filePath string
+}
+
+func NewInputFileCommand(filePath string) *InputFileCommand {
+	return &InputFileCommand{filePath}
+}
+
+// Execute executes the InputFileCommand and returns an Executer and an error.
+// It reads the file and executes the commands in the file.
+func (c *InputFileCommand) Execute(exCtx ExecutionContext) (Executer, error) {
+	data, err := os.ReadFile(c.filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	var rawCommands []string
+	if err := yaml.Unmarshal(data, &rawCommands); err != nil {
+		return nil, err
+	}
+
+	cmds := make([]Executer, 0, len(rawCommands))
+
+	for _, rawCommand := range rawCommands {
+		cmd, err := Factory(rawCommand, exCtx.Macro())
+		if err != nil {
+			return nil, err
+		}
+
+		cmds = append(cmds, cmd)
+	}
+
+	return NewSequence(cmds), nil
 }

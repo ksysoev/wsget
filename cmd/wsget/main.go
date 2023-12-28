@@ -17,6 +17,7 @@ import (
 var insecure bool
 var request string
 var outputFile string
+var inputFile string
 var headers []string
 var waitResponse int
 var Version = "dev"
@@ -60,6 +61,7 @@ func main() {
 	cmd.Flags().StringVarP(&outputFile, "output", "o", "", "Output file for saving all request and responses")
 	cmd.Flags().IntVarP(&waitResponse, "wait-resp", "w", -1, "Timeout for single response in seconds, 0 means no timeout. If this option is set, the tool will exit after receiving the first response")
 	cmd.Flags().StringSliceVarP(&headers, "header", "H", []string{}, "HTTP headers to attach to the request")
+	cmd.Flags().StringVarP(&inputFile, "input", "i", "", "Input YAML file with list of requests to send to the server")
 
 	err := cmd.Execute()
 	if err != nil {
@@ -105,7 +107,8 @@ func run(cmnd *cobra.Command, args []string) {
 		}
 	}
 
-	if request != "" {
+	switch {
+	case request != "":
 		opts.Commands = []command.Executer{command.NewSend(request)}
 
 		if waitResponse >= 0 {
@@ -115,7 +118,9 @@ func run(cmnd *cobra.Command, args []string) {
 				command.NewExit(),
 			)
 		}
-	} else {
+	case inputFile != "":
+		opts.Commands = []command.Executer{command.NewInputFileCommand(inputFile)}
+	default:
 		opts.Commands = []command.Executer{command.NewEdit("")}
 	}
 
