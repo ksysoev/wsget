@@ -110,6 +110,17 @@ func Factory(raw string, macro *Macro) (Executer, error) {
 
 		return NewRepeatCommand(times, subCommand), nil
 
+	case "sleep":
+		if len(parts) < CommandPartsNumber {
+			return nil, fmt.Errorf("not enough arguments for sleep command: %s", raw)
+		}
+
+		sec, err := strconv.Atoi(parts[1])
+		if err != nil || sec < 0 {
+			return nil, fmt.Errorf("invalid sleep duration: %s", parts[1])
+		}
+
+		return NewSleepCommand(time.Duration(sec) * time.Second), nil
 	default:
 		if macro != nil {
 			return macro.Get(cmd)
@@ -368,6 +379,22 @@ func (c *RepeatCommand) Execute(exCtx ExecutionContext) (Executer, error) {
 			}
 		}
 	}
+
+	return nil, nil
+}
+
+type SleepCommand struct {
+	duration time.Duration
+}
+
+func NewSleepCommand(duration time.Duration) *SleepCommand {
+	return &SleepCommand{duration}
+}
+
+// Execute executes the SleepCommand and returns an Executer and an error.
+// It sleeps for the specified duration.
+func (c *SleepCommand) Execute(exCtx ExecutionContext) (Executer, error) {
+	time.Sleep(c.duration)
 
 	return nil, nil
 }

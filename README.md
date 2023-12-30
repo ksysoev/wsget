@@ -91,6 +91,7 @@ macro:
 - `wait 5` waits for responses or provided time out, whatever comes first. If the timeout is reached then an error will be returned. if `0` is provided command will wait response without a time limit
 - `exit` interrupts the program execution
 - `repeat 5 send {"ping": 1}` repeat provided command or macro defined number of times
+- `sleep 1` sleeps for the provided number of seconds
 
 ### Macros presets
 
