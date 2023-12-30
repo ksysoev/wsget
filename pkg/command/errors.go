@@ -71,3 +71,9 @@ type ErrUnsupportedVersion struct {
 func (e ErrUnsupportedVersion) Error() string {
 	return "unsupported version: " + e.Version
 }
+
+type ErrInvalidRepeatCommand struct{}
+
+func (e ErrInvalidRepeatCommand) Error() string {
+	return "invalid repeat command"
+}

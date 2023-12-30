@@ -86,6 +86,30 @@ func Factory(raw string, macro *Macro) (Executer, error) {
 		}
 
 		return NewWaitForResp(timeout), nil
+
+	case "repeat":
+		if len(parts) < CommandPartsNumber {
+			return nil, fmt.Errorf("not enough arguments for repeat command: %s", raw)
+		}
+
+		repeatParts := strings.SplitN(parts[1], " ", CommandPartsNumber)
+
+		if len(parts) < CommandPartsNumber {
+			return nil, fmt.Errorf("not enough arguments for repeat command: %s", raw)
+		}
+
+		times, err := strconv.Atoi(repeatParts[0])
+		if err != nil || times <= 0 {
+			return nil, fmt.Errorf("invalid repeat times: %s", repeatParts[0])
+		}
+
+		subCommand, err := Factory(repeatParts[1], macro)
+		if err != nil {
+			return nil, err
+		}
+
+		return NewRepeatCommand(times, subCommand), nil
+
 	default:
 		if macro != nil {
 			return macro.Get(cmd)
@@ -321,4 +345,29 @@ func (c *InputFileCommand) Execute(exCtx ExecutionContext) (Executer, error) {
 	}
 
 	return NewSequence(cmds), nil
+}
+
+type RepeatCommand struct {
+	subCommand Executer
+	times      int
+}
+
+func NewRepeatCommand(times int, subCommand Executer) *RepeatCommand {
+	return &RepeatCommand{subCommand, times}
+}
+
+// Execute executes the RepeatCommand and returns an Executer and an error.
+// It executes the sub-command the specified number of times.
+func (c *RepeatCommand) Execute(exCtx ExecutionContext) (Executer, error) {
+	for i := 0; i < c.times; i++ {
+		cmd := c.subCommand
+		for cmd != nil {
+			var err error
+			if cmd, err = cmd.Execute(exCtx); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return nil, nil
 }
