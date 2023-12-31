@@ -93,6 +93,23 @@ macro:
 - `repeat 5 send {"ping": 1}` repeat provided command or macro defined number of times
 - `sleep 1` sleeps for the provided number of seconds
 
+### Macros arguments
+
+Macro support [Go template language](https://pkg.go.dev/text/template). It provides a possibility to pass arguments to your macro command and substitute or adjust the behavior of your macro commands.
+
+```
+version: "1"
+domains:
+    - example.com
+macro:
+    authorize:
+        - |-
+          send {
+              "authorize": "{{index .Args 0}}",
+          }
+        - wait 2
+```
+
 ### Macros presets
 
 - [Deriv API](https://github.com/ksysoev/wsget-deriv-api)
