@@ -393,7 +393,7 @@ func NewSleepCommand(duration time.Duration) *SleepCommand {
 
 // Execute executes the SleepCommand and returns an Executer and an error.
 // It sleeps for the specified duration.
-func (c *SleepCommand) Execute(exCtx ExecutionContext) (Executer, error) {
+func (c *SleepCommand) Execute(_ ExecutionContext) (Executer, error) {
 	time.Sleep(c.duration)
 
 	return nil, nil
