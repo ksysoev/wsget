@@ -15,7 +15,7 @@ func TestNewMacro(t *testing.T) {
 			name:    "empty domains",
 			domains: []string{},
 			want: &Macro{
-				macro:   make(map[string]Executer),
+				macro:   make(map[string]*MacroTemplates),
 				domains: []string{},
 			},
 		},
@@ -23,7 +23,7 @@ func TestNewMacro(t *testing.T) {
 			name:    "non-empty domains",
 			domains: []string{"example.com", "google.com"},
 			want: &Macro{
-				macro:   make(map[string]Executer),
+				macro:   make(map[string]*MacroTemplates),
 				domains: []string{"example.com", "google.com"},
 			},
 		},
@@ -58,7 +58,7 @@ func TestMacro_AddCommands(t *testing.T) {
 		},
 		{
 			name:        "add existing macro",
-			macro:       &Macro{macro: map[string]Executer{"test": nil}},
+			macro:       &Macro{macro: map[string]*MacroTemplates{"test": nil}},
 			commandName: "test",
 			commands:    []string{"send hello"},
 			wantErr:     true,
@@ -106,11 +106,11 @@ func TestMacro_Merge(t *testing.T) {
 		{
 			name: "merge empty macro with empty macro",
 			macro: &Macro{
-				macro:   make(map[string]Executer),
+				macro:   make(map[string]*MacroTemplates),
 				domains: []string{},
 			},
 			otherMacro: &Macro{
-				macro:   make(map[string]Executer),
+				macro:   make(map[string]*MacroTemplates),
 				domains: []string{},
 			},
 			wantErr:     false,
@@ -119,13 +119,13 @@ func TestMacro_Merge(t *testing.T) {
 		{
 			name: "merge non-empty macro with empty macro",
 			macro: &Macro{
-				macro: map[string]Executer{
+				macro: map[string]*MacroTemplates{
 					"test": nil,
 				},
 				domains: []string{},
 			},
 			otherMacro: &Macro{
-				macro:   make(map[string]Executer),
+				macro:   make(map[string]*MacroTemplates),
 				domains: []string{},
 			},
 			wantErr:     false,
@@ -134,11 +134,11 @@ func TestMacro_Merge(t *testing.T) {
 		{
 			name: "merge empty macro with non-empty macro",
 			macro: &Macro{
-				macro:   make(map[string]Executer),
+				macro:   make(map[string]*MacroTemplates),
 				domains: []string{},
 			},
 			otherMacro: &Macro{
-				macro: map[string]Executer{
+				macro: map[string]*MacroTemplates{
 					"test": nil,
 				},
 				domains: []string{},
@@ -149,13 +149,13 @@ func TestMacro_Merge(t *testing.T) {
 		{
 			name: "merge non-empty macro with non-empty macro",
 			macro: &Macro{
-				macro: map[string]Executer{
+				macro: map[string]*MacroTemplates{
 					"test": nil,
 				},
 				domains: []string{},
 			},
 			otherMacro: &Macro{
-				macro: map[string]Executer{
+				macro: map[string]*MacroTemplates{
 					"test2": nil,
 				},
 				domains: []string{},
@@ -166,13 +166,13 @@ func TestMacro_Merge(t *testing.T) {
 		{
 			name: "merge macro with duplicate macro name",
 			macro: &Macro{
-				macro: map[string]Executer{
+				macro: map[string]*MacroTemplates{
 					"test": nil,
 				},
 				domains: []string{},
 			},
 			otherMacro: &Macro{
-				macro: map[string]Executer{
+				macro: map[string]*MacroTemplates{
 					"test": nil,
 				},
 				domains: []string{},
@@ -194,6 +194,7 @@ func TestMacro_Merge(t *testing.T) {
 	}
 }
 func TestMacro_Get(t *testing.T) {
+	testTemplate, _ := NewMacroTemplates([]string{"exit"})
 	tests := []struct {
 		name    string
 		macro   *Macro
@@ -204,7 +205,7 @@ func TestMacro_Get(t *testing.T) {
 	}{
 		{
 			name:    "get existing command",
-			macro:   &Macro{macro: map[string]Executer{"test": NewExit()}},
+			macro:   &Macro{macro: map[string]*MacroTemplates{"test": testTemplate}},
 			cmdName: "test",
 			wantCmd: NewExit(),
 			wantErr: false,
@@ -212,7 +213,7 @@ func TestMacro_Get(t *testing.T) {
 		},
 		{
 			name:    "get non-existing command",
-			macro:   &Macro{macro: map[string]Executer{}},
+			macro:   &Macro{macro: map[string]*MacroTemplates{}},
 			cmdName: "test",
 			wantCmd: nil,
 			wantErr: true,
@@ -220,7 +221,7 @@ func TestMacro_Get(t *testing.T) {
 		},
 		{
 			name:    "get command with empty macro",
-			macro:   &Macro{macro: map[string]Executer{}},
+			macro:   &Macro{macro: map[string]*MacroTemplates{}},
 			cmdName: "",
 			wantCmd: nil,
 			wantErr: true,
@@ -228,7 +229,7 @@ func TestMacro_Get(t *testing.T) {
 		},
 		{
 			name:    "get command with non-empty macro",
-			macro:   &Macro{macro: map[string]Executer{"test": nil}},
+			macro:   &Macro{macro: map[string]*MacroTemplates{"test": nil}},
 			cmdName: "",
 			wantCmd: nil,
 			wantErr: true,
@@ -238,7 +239,7 @@ func TestMacro_Get(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cmd, err := tt.macro.Get(tt.cmdName)
+			cmd, err := tt.macro.Get(tt.cmdName, "")
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Macro.Get() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -297,7 +298,7 @@ macro:
 		t.Errorf("LoadFromFile() domain = %s, want %s", macro.domains[0], domain)
 	}
 
-	cmd, err := macro.Get("test")
+	cmd, err := macro.Get("test", "")
 
 	if err != nil {
 		t.Errorf("LoadFromFile() error = %v, want nil", err)

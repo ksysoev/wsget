@@ -1,10 +1,12 @@
 package command
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"os"
 	"strings"
+	"text/template"
 
 	"gopkg.in/yaml.v3"
 )
@@ -16,7 +18,7 @@ type Config struct {
 }
 
 type Macro struct {
-	macro   map[string]Executer
+	macro   map[string]*MacroTemplates
 	domains []string
 }
 
@@ -25,7 +27,7 @@ type Macro struct {
 // Returns a pointer to the newly created Macro instance.
 func NewMacro(domains []string) *Macro {
 	return &Macro{
-		macro:   make(map[string]Executer),
+		macro:   make(map[string]*MacroTemplates),
 		domains: domains,
 	}
 }
@@ -40,25 +42,17 @@ func (m *Macro) AddCommands(name string, rawCommands []string) error {
 		return &ErrDuplicateMacro{name}
 	}
 
-	commands := []Executer{}
-
-	for _, rawCommand := range rawCommands {
-		cmd, err := Factory(rawCommand, nil)
-		if err != nil {
-			return err
-		}
-
-		commands = append(commands, cmd)
-	}
-
-	switch len(commands) {
-	case 0:
+	if len(rawCommands) == 0 {
 		return ErrEmptyMacro{name}
-	case 1:
-		m.macro[name] = commands[0]
-	default:
-		m.macro[name] = NewSequence(commands)
 	}
+
+	templs, err := NewMacroTemplates(rawCommands)
+
+	if err != nil {
+		return err
+	}
+
+	m.macro[name] = templs
 
 	return nil
 }
@@ -78,9 +72,10 @@ func (m *Macro) merge(macro *Macro) error {
 }
 
 // Get returns the Executer associated with the given name, or an error if the name is not found.
-func (m *Macro) Get(name string) (Executer, error) {
+func (m *Macro) Get(name, argString string) (Executer, error) {
 	if cmd, ok := m.macro[name]; ok {
-		return cmd, nil
+		args := strings.Fields(argString)
+		return cmd.GetExecuter(args)
 	}
 
 	return nil, &ErrUnknownCommand{name}
@@ -171,4 +166,51 @@ func LoadMacroForDomain(macroDir, domain string) (*Macro, error) {
 	}
 
 	return macro, nil
+}
+
+type MacroTemplates struct {
+	list []*template.Template
+}
+
+func NewMacroTemplates(templates []string) (*MacroTemplates, error) {
+	tmpls := &MacroTemplates{}
+	tmpls.list = make([]*template.Template, len(templates))
+
+	for i, rawTempl := range templates {
+		tmpl, err := template.New("macro").Parse(rawTempl)
+		if err != nil {
+			return nil, err
+		}
+
+		tmpls.list[i] = tmpl
+	}
+
+	return tmpls, nil
+}
+
+func (t *MacroTemplates) GetExecuter(args []string) (Executer, error) {
+	data := struct {
+		Args []string
+	}{args}
+	cmds := make([]Executer, len(t.list))
+
+	for i, tmpl := range t.list {
+		var output bytes.Buffer
+		if err := tmpl.Execute(&output, data); err != nil {
+			return nil, err
+		}
+
+		cmd, err := Factory(output.String(), nil)
+		if err != nil {
+			return nil, err
+		}
+
+		cmds[i] = cmd
+	}
+
+	if len(cmds) == 1 {
+		return cmds[0], nil
+	}
+
+	return NewSequence(cmds), nil
 }

@@ -122,8 +122,13 @@ func Factory(raw string, macro *Macro) (Executer, error) {
 
 		return NewSleepCommand(time.Duration(sec) * time.Second), nil
 	default:
+		args := ""
+		if len(parts) > 1 {
+			args = parts[1]
+		}
+
 		if macro != nil {
-			return macro.Get(cmd)
+			return macro.Get(cmd, args)
 		}
 
 		return nil, &ErrUnknownCommand{cmd}
