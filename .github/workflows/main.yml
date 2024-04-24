@@ -1,4 +1,4 @@
-name: WSGet 
+name: WSGet
 
 on: [push]
 
@@ -7,10 +7,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Setup Go 1.21
+      - name: Setup Go 1.22
         uses: actions/setup-go@v3
         with:
-          go-version: '1.21.x'
+          go-version: "1.22.x"
       - name: Display Go version
         run: go version
       - name: Code Lint
