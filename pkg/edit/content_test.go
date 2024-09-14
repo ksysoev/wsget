@@ -190,6 +190,7 @@ func TestContent_MovePositionLeft(t *testing.T) {
 			if actual != tt.expected {
 				t.Errorf("expected %q, but got %q", tt.expected, actual)
 			}
+
 			if tt.content.pos != tt.expectedPos {
 				t.Errorf("expected position %d, but got %d", tt.expectedPos, tt.content.pos)
 			}
@@ -244,6 +245,7 @@ func TestContent_MovePositionRight(t *testing.T) {
 			if actual != tt.expected {
 				t.Errorf("expected %q, but got %q", tt.expected, actual)
 			}
+
 			if tt.content.pos != tt.expectedPos {
 				t.Errorf("expected position %d, but got %d", tt.expectedPos, tt.content.pos)
 			}
@@ -487,6 +489,7 @@ func TestContent_MoveToEnd(t *testing.T) {
 			if actual != tc.expected {
 				t.Errorf("expected %q but got %q", tc.expected, actual)
 			}
+
 			if tc.content.pos != len(tc.content.text) {
 				t.Errorf("expected cursor to be at the end of the text")
 			}

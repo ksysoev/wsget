@@ -77,9 +77,8 @@ func NewWS(wsURL string, opts Options) (*Connection, error) {
 
 	// This option could be useful for testing and development purposes.
 	// Default value is false.
-	// #nosec G402
 	tlsConfig := &tls.Config{
-		InsecureSkipVerify: opts.SkipSSLVerification,
+		InsecureSkipVerify: opts.SkipSSLVerification, // #nosec G402 - skip SSL verification
 	}
 	cfg.TlsConfig = tlsConfig
 

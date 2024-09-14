@@ -25,8 +25,10 @@ func (m *mockInput) Close() {}
 func TestNewCLI(t *testing.T) {
 	server := httptest.NewServer(websocket.Handler(func(ws *websocket.Conn) {
 		var msg string
+
 		_ = websocket.Message.Receive(ws, &msg) // wait for request
 		_, _ = ws.Write([]byte(msg))
+
 		time.Sleep(time.Second) // to keep the connection open
 	}))
 	defer server.Close()
@@ -82,8 +84,10 @@ func TestNewCLI(t *testing.T) {
 func TestNewCLIRunWithCommands(t *testing.T) {
 	server := httptest.NewServer(websocket.Handler(func(ws *websocket.Conn) {
 		var msg string
+
 		_ = websocket.Message.Receive(ws, &msg) // wait for request
 		_, _ = ws.Write([]byte(msg))
+
 		time.Sleep(time.Second) // to keep the connection open
 	}))
 	defer server.Close()

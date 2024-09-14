@@ -243,9 +243,11 @@ func TestMacro_Get(t *testing.T) {
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Macro.Get() error = %v, wantErr %v", err, tt.wantErr)
 			}
+
 			if err != nil && err.Error() != tt.errMsg {
 				t.Errorf("Macro.Get() error message = %v, want %v", err.Error(), tt.errMsg)
 			}
+
 			if cmd != tt.wantCmd {
 				t.Errorf("Macro.Get() cmd = %v, want %v", cmd, tt.wantCmd)
 			}

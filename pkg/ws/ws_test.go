@@ -15,8 +15,10 @@ import (
 func TestNewWS(t *testing.T) {
 	server := httptest.NewServer(websocket.Handler(func(ws *websocket.Conn) {
 		var msg string
+
 		_ = websocket.Message.Receive(ws, &msg) // wait for request
 		_, _ = ws.Write([]byte(msg))
+
 		time.Sleep(time.Second) // to keep the connection open
 	}))
 	defer server.Close()
@@ -61,8 +63,10 @@ func TestNewWSFailToConnect(t *testing.T) {
 func TestNewWSDisconnect(t *testing.T) {
 	server := httptest.NewServer(websocket.Handler(func(ws *websocket.Conn) {
 		var msg string
+
 		_ = websocket.Message.Receive(ws, &msg) // wait for request
 		_, _ = ws.Write([]byte(msg))
+
 		time.Sleep(time.Second) // to keep the connection open
 	}))
 	defer server.Close()
@@ -98,8 +102,10 @@ func TestNewWSWithHeaders(t *testing.T) {
 		}
 
 		var msg string
+
 		_ = websocket.Message.Receive(ws, &msg) // wait for request
 		_, _ = ws.Write([]byte(msg))
+
 		time.Sleep(time.Second) // to keep the connection open
 	}))
 	defer server.Close()
@@ -117,8 +123,10 @@ func TestNewWSWithHeaders(t *testing.T) {
 func TestNewWSWithInvalidHeaders(t *testing.T) {
 	server := httptest.NewServer(websocket.Handler(func(ws *websocket.Conn) {
 		var msg string
+
 		_ = websocket.Message.Receive(ws, &msg) // wait for request
 		_, _ = ws.Write([]byte(msg))
+
 		time.Sleep(time.Second) // to keep the connection open
 	}))
 	defer server.Close()

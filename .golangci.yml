@@ -14,7 +14,6 @@ linters-settings:
       - performance
       - style
   govet:
-    check-shadowing: true
     enable:
       - fieldalignment
   nolintlint:
@@ -34,7 +33,7 @@ linters:
     - gocritic
     - gofmt
     - goimports
-    - gomnd
+    - mnd
     - gocyclo
     - gosec
     - gosimple
