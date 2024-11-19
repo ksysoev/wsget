@@ -58,6 +58,7 @@ func (ed *Editor) Edit(keyStream <-chan keyboard.KeyEvent, initBuffer string) (s
 
 		if keyboard.KeyEsc == e.Key && e.Rune == 98 {
 			// Alt + Left
+			fmt.Fprint(ed.output, ed.content.MoveToPrevWord())
 			continue
 		}
 

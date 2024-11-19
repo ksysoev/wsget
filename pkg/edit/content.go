@@ -80,13 +80,10 @@ func (c *Content) MovePositionRight() string {
 	return string(c.text[c.pos-1])
 }
 
+// MoveToNextWord moves the cursor to the beginning of the next word in the content and returns the word.
 func (c *Content) MoveToNextWord() string {
 	if c.pos >= len(c.text) {
 		return ""
-	}
-
-	isWord := func(r rune) bool {
-		return unicode.IsDigit(r) || unicode.IsLetter(r)
 	}
 
 	pos := c.pos
@@ -107,6 +104,37 @@ func (c *Content) MoveToNextWord() string {
 
 	output := string(c.text[c.pos:pos])
 	c.pos = pos
+
+	return output
+}
+
+// MoveToPrevWord moves the cursor to the beginning of the previous word in the content and returns the word.
+func (c *Content) MoveToPrevWord() string {
+	if c.pos <= 0 {
+		return ""
+	}
+
+	pos := c.pos - 1
+
+	// Handle case where case in the beginning of the word
+	if pos > 0 && isWord(c.text[pos]) {
+		pos--
+	}
+
+	// Move to the end of previous word
+	for pos > 0 && !isWord(c.text[pos]) {
+		pos--
+	}
+
+	// Move to the beginning of the previous word
+	for pos > 0 && isWord(c.text[pos-1]) {
+		pos--
+	}
+
+	output := ""
+	for i := c.pos - 1; pos <= i; i-- {
+		output = output + c.MovePositionLeft()
+	}
 
 	return output
 }
@@ -280,4 +308,9 @@ func lastIndexOf(buffer []rune, pos int, search rune) int {
 	}
 
 	return -1
+}
+
+// isWord returns true if the given rune is a digit or a letter.
+func isWord(r rune) bool {
+	return unicode.IsDigit(r) || unicode.IsLetter(r)
 }
