@@ -56,6 +56,16 @@ func (ed *Editor) Edit(keyStream <-chan keyboard.KeyEvent, initBuffer string) (s
 			return "", e.Err
 		}
 
+		if keyboard.KeyEsc == e.Key && e.Rune == 98 {
+			// Alt + Left
+			continue
+		}
+
+		if keyboard.KeyEsc == e.Key && e.Rune == 102 {
+			// Alt + Right
+			continue
+		}
+
 		switch e.Key {
 		case keyboard.KeyCtrlC, keyboard.KeyCtrlD:
 			return "", clierrors.Interrupted{}
