@@ -1,4 +1,4 @@
-version: 1
+version: 2
 
 project_name: wsget
 before:
@@ -22,8 +22,6 @@ archives:
       {{- else }}{{ .Arch }}{{ end }}
 checksum:
   name_template: "checksums.txt"
-snapshot:
-  name_template: "{{ incpatch .Version }}-next"
 changelog:
   sort: asc
 release:
@@ -39,7 +37,6 @@ brews:
       owner: ksysoev
       name: homebrew-wsget
     skip_upload: auto
-    folder: Formula
     homepage: "https://gihub.com/ksysoev/wsget"
     description: "wsget binary"
     test: |
