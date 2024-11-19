@@ -1,6 +1,8 @@
 package edit
 
 import (
+	"bytes"
+	"fmt"
 	"strings"
 	"unicode"
 )
@@ -131,12 +133,12 @@ func (c *Content) MoveToPrevWord() string {
 		pos--
 	}
 
-	output := ""
+	buf := bytes.NewBufferString("")
 	for i := c.pos - 1; pos <= i; i-- {
-		output = output + c.MovePositionLeft()
+		fmt.Fprint(buf, c.MovePositionLeft())
 	}
 
-	return output
+	return buf.String()
 }
 
 // Clear clears the content and returns the string representation of the cleared content.
