@@ -2,6 +2,7 @@ package edit
 
 import (
 	"strings"
+	"unicode"
 )
 
 const (
@@ -77,6 +78,37 @@ func (c *Content) MovePositionRight() string {
 	c.pos++
 
 	return string(c.text[c.pos-1])
+}
+
+func (c *Content) MoveToNextWord() string {
+	if c.pos >= len(c.text) {
+		return ""
+	}
+
+	isWord := func(r rune) bool {
+		return unicode.IsDigit(r) || unicode.IsLetter(r)
+	}
+
+	pos := c.pos
+
+	// move to the end of the current word
+	for pos < len(c.text) && isWord(c.text[pos]) {
+		pos++
+	}
+
+	// move to the beginning of the next word
+	for pos < len(c.text) && !isWord(c.text[pos]) {
+		pos++
+	}
+
+	if pos == c.pos {
+		return ""
+	}
+
+	output := string(c.text[c.pos:pos])
+	c.pos = pos
+
+	return output
 }
 
 // Clear clears the content and returns the string representation of the cleared content.

@@ -63,6 +63,7 @@ func (ed *Editor) Edit(keyStream <-chan keyboard.KeyEvent, initBuffer string) (s
 
 		if keyboard.KeyEsc == e.Key && e.Rune == 102 {
 			// Alt + Right
+			fmt.Fprint(ed.output, ed.content.MoveToNextWord())
 			continue
 		}
 
