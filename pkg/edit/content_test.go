@@ -496,3 +496,182 @@ func TestContent_MoveToEnd(t *testing.T) {
 		})
 	}
 }
+
+func TestContent_MoveToNextWord(t *testing.T) {
+	tests := []struct {
+		name        string
+		content     *Content
+		expected    string
+		expectedPos int
+	}{
+		{
+			name: "move to next word when cursor is at the beginning",
+			content: &Content{
+				text: []rune("hello world"),
+				pos:  0,
+			},
+			expected:    "hello ",
+			expectedPos: 6,
+		},
+		{
+			name: "move to next word when cursor is in the middle of a word",
+			content: &Content{
+				text: []rune("hello world"),
+				pos:  2,
+			},
+			expected:    "llo ",
+			expectedPos: 6,
+		},
+		{
+			name: "move to next word when cursor is at the end of a word",
+			content: &Content{
+				text: []rune("hello world"),
+				pos:  5,
+			},
+			expected:    " ",
+			expectedPos: 6,
+		},
+		{
+			name: "move to next word when cursor is at the beginning of a word",
+			content: &Content{
+				text: []rune("hello world"),
+				pos:  6,
+			},
+			expected:    "world",
+			expectedPos: 11,
+		},
+		{
+			name: "move to next word when cursor is at the end of the content",
+			content: &Content{
+				text: []rune("hello world"),
+				pos:  11,
+			},
+			expected:    "",
+			expectedPos: 11,
+		},
+		{
+			name: "move to next word when there are multiple spaces",
+			content: &Content{
+				text: []rune("hello   world"),
+				pos:  5,
+			},
+			expected:    "   ",
+			expectedPos: 8,
+		},
+		{
+			name: "move to next word when there are no more words",
+			content: &Content{
+				text: []rune("hello"),
+				pos:  5,
+			},
+			expected:    "",
+			expectedPos: 5,
+		},
+		{
+			name: "move to next word when cursor is at the beginning of an empty content",
+			content: &Content{
+				text: []rune(""),
+				pos:  0,
+			},
+			expected:    "",
+			expectedPos: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := tt.content.MoveToNextWord()
+			if actual != tt.expected {
+				t.Errorf("expected %q, but got %q", tt.expected, actual)
+			}
+
+			if tt.content.pos != tt.expectedPos {
+				t.Errorf("expected position %d, but got %d", tt.expectedPos, tt.content.pos)
+			}
+		})
+	}
+}
+
+func TestContent_MoveToPrevWord(t *testing.T) {
+	tests := []struct {
+		name        string
+		content     *Content
+		expected    string
+		expectedPos int
+	}{
+		{
+			name: "move to previous word when cursor is at the end of a word",
+			content: &Content{
+				text: []rune("hello world"),
+				pos:  11,
+			},
+			expectedPos: 6,
+		},
+		{
+			name: "move to previous word when cursor is in the middle of a word",
+			content: &Content{
+				text: []rune("hello world"),
+				pos:  8,
+			},
+			expectedPos: 6,
+		},
+		{
+			name: "move to previous word when cursor is at the beginning of a word",
+			content: &Content{
+				text: []rune("hello world"),
+				pos:  6,
+			},
+			expectedPos: 0,
+		},
+		{
+			name: "move to previous word when cursor is at the beginning of the content",
+			content: &Content{
+				text: []rune("hello world"),
+				pos:  0,
+			},
+			expectedPos: 0,
+		},
+		{
+			name: "move to previous word when there are multiple spaces",
+			content: &Content{
+				text: []rune("hello   world"),
+				pos:  11,
+			},
+			expectedPos: 8,
+		},
+		{
+			name: "move to previous word when there are no more words",
+			content: &Content{
+				text: []rune("hello"),
+				pos:  5,
+			},
+			expectedPos: 0,
+		},
+		{
+			name: "move to previous word when cursor is at the beginning of an empty content",
+			content: &Content{
+				text: []rune(""),
+				pos:  0,
+			},
+			expectedPos: 0,
+		},
+		{
+			name: "move to previous word when cursor is at the end of a single word",
+			content: &Content{
+				text: []rune("word"),
+				pos:  4,
+			},
+			expectedPos: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_ = tt.content.MoveToPrevWord()
+
+			if tt.content.pos != tt.expectedPos {
+				t.Errorf("expected position %d, but got %d", tt.expectedPos, tt.content.pos)
+			}
+		})
+	}
+}
