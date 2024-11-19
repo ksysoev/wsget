@@ -1,7 +1,10 @@
 package edit
 
 import (
+	"bytes"
+	"fmt"
 	"strings"
+	"unicode"
 )
 
 const (
@@ -77,6 +80,65 @@ func (c *Content) MovePositionRight() string {
 	c.pos++
 
 	return string(c.text[c.pos-1])
+}
+
+// MoveToNextWord moves the cursor to the beginning of the next word in the content and returns the word.
+func (c *Content) MoveToNextWord() string {
+	if c.pos >= len(c.text) {
+		return ""
+	}
+
+	pos := c.pos
+
+	// move to the end of the current word
+	for pos < len(c.text) && isWord(c.text[pos]) {
+		pos++
+	}
+
+	// move to the beginning of the next word
+	for pos < len(c.text) && !isWord(c.text[pos]) {
+		pos++
+	}
+
+	if pos == c.pos {
+		return ""
+	}
+
+	output := string(c.text[c.pos:pos])
+	c.pos = pos
+
+	return output
+}
+
+// MoveToPrevWord moves the cursor to the beginning of the previous word in the content and returns the word.
+func (c *Content) MoveToPrevWord() string {
+	if c.pos <= 0 {
+		return ""
+	}
+
+	pos := c.pos - 1
+
+	// Handle case where case in the beginning of the word
+	if pos > 0 && isWord(c.text[pos]) {
+		pos--
+	}
+
+	// Move to the end of previous word
+	for pos > 0 && !isWord(c.text[pos]) {
+		pos--
+	}
+
+	// Move to the beginning of the previous word
+	for pos > 0 && isWord(c.text[pos-1]) {
+		pos--
+	}
+
+	buf := bytes.NewBufferString("")
+	for i := c.pos - 1; pos <= i; i-- {
+		fmt.Fprint(buf, c.MovePositionLeft())
+	}
+
+	return buf.String()
 }
 
 // Clear clears the content and returns the string representation of the cleared content.
@@ -248,4 +310,9 @@ func lastIndexOf(buffer []rune, pos int, search rune) int {
 	}
 
 	return -1
+}
+
+// isWord returns true if the given rune is a digit or a letter.
+func isWord(r rune) bool {
+	return unicode.IsDigit(r) || unicode.IsLetter(r)
 }

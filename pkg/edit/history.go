@@ -14,14 +14,14 @@ const (
 type History struct {
 	fileName string
 	requests []string
-	limit    uint
+	limit    int
 	pos      int
 }
 
 // NewHistory creates a new History instance with the given file name and limit.
 // The History instance stores a list of requests made by the user and loads them from the file if it exists.
 // The limit parameter specifies the maximum number of requests to store in the history.
-func NewHistory(fileName string, limit uint) *History {
+func NewHistory(fileName string, limit int) *History {
 	h := &History{
 		fileName: fileName,
 		limit:    limit,
@@ -88,10 +88,10 @@ func (h *History) SaveToFile() error {
 	writer := bufio.NewWriter(fileHandler)
 
 	var pos int
-	if uint(len(h.requests)) < h.limit {
+	if len(h.requests) < h.limit {
 		pos = 0
 	} else {
-		pos = len(h.requests) - int(h.limit)
+		pos = len(h.requests) - h.limit
 	}
 
 	for _, request := range h.requests[pos:] {
