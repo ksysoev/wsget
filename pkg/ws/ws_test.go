@@ -3,24 +3,54 @@ package ws
 import (
 	"bytes"
 	"fmt"
+	"io"
+	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/coder/websocket"
 	"github.com/fatih/color"
-	"golang.org/x/net/websocket"
 )
 
+func createEchoWSHandler() http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		c, err := websocket.Accept(w, r, nil)
+		if err != nil {
+			return
+		}
+
+		defer c.Close(websocket.StatusNormalClosure, "")
+
+		for {
+			_, wsr, err := c.Reader(r.Context())
+			if err != nil {
+				if err == io.EOF {
+					return
+				}
+
+				return
+			}
+
+			wsw, err := c.Writer(r.Context(), websocket.MessageText)
+			if err != nil {
+				return
+			}
+
+			if _, err := io.Copy(wsw, wsr); err != nil {
+				return
+			}
+
+			if err := wsw.Close(); err != nil {
+				return
+			}
+		}
+	})
+}
+
 func TestNewWS(t *testing.T) {
-	server := httptest.NewServer(websocket.Handler(func(ws *websocket.Conn) {
-		var msg string
-
-		_ = websocket.Message.Receive(ws, &msg) // wait for request
-		_, _ = ws.Write([]byte(msg))
-
-		time.Sleep(time.Second) // to keep the connection open
-	}))
+	server := httptest.NewServer(createEchoWSHandler())
 	defer server.Close()
 
 	url := "ws://" + server.Listener.Addr().String()
@@ -61,14 +91,7 @@ func TestNewWSFailToConnect(t *testing.T) {
 }
 
 func TestNewWSDisconnect(t *testing.T) {
-	server := httptest.NewServer(websocket.Handler(func(ws *websocket.Conn) {
-		var msg string
-
-		_ = websocket.Message.Receive(ws, &msg) // wait for request
-		_, _ = ws.Write([]byte(msg))
-
-		time.Sleep(time.Second) // to keep the connection open
-	}))
+	server := httptest.NewServer(createEchoWSHandler())
 	defer server.Close()
 
 	url := "ws://" + server.Listener.Addr().String()
@@ -94,19 +117,18 @@ func TestNewWSDisconnect(t *testing.T) {
 }
 
 func TestNewWSWithHeaders(t *testing.T) {
-	server := httptest.NewServer(websocket.Handler(func(ws *websocket.Conn) {
-		headerValue := ws.Request().Header.Get("X-Test")
-
-		if headerValue != "Test" {
-			t.Errorf("Expected header value to be 'Test', but got %v", headerValue)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("X-Test") != "Test" {
+			t.Errorf("Expected header X-Test to be 'Test', but got %v", r.Header.Get("X-Test"))
 		}
 
-		var msg string
+		c, err := websocket.Accept(w, r, nil)
 
-		_ = websocket.Message.Receive(ws, &msg) // wait for request
-		_, _ = ws.Write([]byte(msg))
+		if err != nil {
+			return
+		}
 
-		time.Sleep(time.Second) // to keep the connection open
+		c.Close(websocket.StatusNormalClosure, "")
 	}))
 	defer server.Close()
 
@@ -121,14 +143,7 @@ func TestNewWSWithHeaders(t *testing.T) {
 }
 
 func TestNewWSWithInvalidHeaders(t *testing.T) {
-	server := httptest.NewServer(websocket.Handler(func(ws *websocket.Conn) {
-		var msg string
-
-		_ = websocket.Message.Receive(ws, &msg) // wait for request
-		_, _ = ws.Write([]byte(msg))
-
-		time.Sleep(time.Second) // to keep the connection open
-	}))
+	server := httptest.NewServer(createEchoWSHandler())
 	defer server.Close()
 
 	url := "ws://" + server.Listener.Addr().String()
