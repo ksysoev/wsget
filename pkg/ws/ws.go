@@ -36,9 +36,10 @@ func (mt MessageType) String() string {
 }
 
 const (
-	WSMessageBufferSize = 100
-	HeaderPartsNumber   = 2
-	DialTimeout         = 15 * time.Second
+	wsMessageBufferSize   = 100
+	headerPartsNumber     = 2
+	dialTimeout           = 15 * time.Second
+	defaultMaxMessageSize = 1024 * 1024
 )
 
 type Message struct {
@@ -78,7 +79,7 @@ func NewWS(wsURL string, opts Options) (*Connection, error) {
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: opts.SkipSSLVerification}, //nolint:gosec // Skip SSL verification
 		},
-		Timeout: DialTimeout,
+		Timeout: dialTimeout,
 	}
 
 	wsOpts := &websocket.DialOptions{
@@ -89,7 +90,7 @@ func NewWS(wsURL string, opts Options) (*Connection, error) {
 		Headers := make(http.Header)
 		for _, headerInput := range opts.Headers {
 			splited := strings.Split(headerInput, ":")
-			if len(splited) != HeaderPartsNumber {
+			if len(splited) != headerPartsNumber {
 				return nil, fmt.Errorf("invalid header: %s", headerInput)
 			}
 
@@ -111,9 +112,11 @@ func NewWS(wsURL string, opts Options) (*Connection, error) {
 		resp.Body.Close()
 	}
 
+	ws.SetReadLimit(defaultMaxMessageSize)
+
 	var waitGroup sync.WaitGroup
 
-	messages := make(chan Message, WSMessageBufferSize)
+	messages := make(chan Message, wsMessageBufferSize)
 
 	wsInsp := &Connection{ws: ws, messages: messages, waitGroup: &waitGroup, hostname: parsedURL.Hostname()}
 
