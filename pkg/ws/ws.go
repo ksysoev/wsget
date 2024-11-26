@@ -38,6 +38,7 @@ func (mt MessageType) String() string {
 const (
 	WSMessageBufferSize = 100
 	HeaderPartsNumber   = 2
+	DialTimeout         = 15 * time.Second
 )
 
 type Message struct {
@@ -75,9 +76,9 @@ func NewWS(wsURL string, opts Options) (*Connection, error) {
 
 	httpCli := &http.Client{
 		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: opts.SkipSSLVerification},
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: opts.SkipSSLVerification}, //nolint:gosec // Skip SSL verification
 		},
-		Timeout: 15 * time.Second,
+		Timeout: DialTimeout,
 	}
 
 	wsOpts := &websocket.DialOptions{
@@ -101,9 +102,13 @@ func NewWS(wsURL string, opts Options) (*Connection, error) {
 		wsOpts.HTTPHeader = Headers
 	}
 
-	ws, _, err := websocket.Dial(context.TODO(), wsURL, wsOpts)
+	ws, resp, err := websocket.Dial(context.TODO(), wsURL, wsOpts)
 	if err != nil {
 		return nil, err
+	}
+
+	if resp.Body != nil {
+		resp.Body.Close()
 	}
 
 	var waitGroup sync.WaitGroup
@@ -148,6 +153,10 @@ func (wsInsp *Connection) handleResponses() {
 		}
 
 		data, err := io.ReadAll(reader)
+		if err != nil {
+			wsInsp.handleError(err)
+			return
+		}
 
 		wsInsp.messages <- Message{Type: Response, Data: string(data)}
 	}
