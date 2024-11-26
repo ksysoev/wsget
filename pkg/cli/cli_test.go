@@ -2,17 +2,54 @@ package cli
 
 import (
 	"errors"
+	"io"
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
 	"time"
 
+	"github.com/coder/websocket"
 	"github.com/eiannone/keyboard"
 	"github.com/ksysoev/wsget/pkg/clierrors"
 	"github.com/ksysoev/wsget/pkg/command"
 	"github.com/ksysoev/wsget/pkg/ws"
-	"golang.org/x/net/websocket"
 )
+
+func createEchoWSHandler() http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		c, err := websocket.Accept(w, r, nil)
+		if err != nil {
+			return
+		}
+
+		defer c.Close(websocket.StatusNormalClosure, "")
+
+		for {
+			_, wsr, err := c.Reader(r.Context())
+			if err != nil {
+				if err == io.EOF {
+					return
+				}
+
+				return
+			}
+
+			wsw, err := c.Writer(r.Context(), websocket.MessageText)
+			if err != nil {
+				return
+			}
+
+			if _, err := io.Copy(wsw, wsr); err != nil {
+				return
+			}
+
+			if err := wsw.Close(); err != nil {
+				return
+			}
+		}
+	})
+}
 
 type mockInput struct{}
 
@@ -23,14 +60,7 @@ func (m *mockInput) GetKeys() (<-chan keyboard.KeyEvent, error) {
 func (m *mockInput) Close() {}
 
 func TestNewCLI(t *testing.T) {
-	server := httptest.NewServer(websocket.Handler(func(ws *websocket.Conn) {
-		var msg string
-
-		_ = websocket.Message.Receive(ws, &msg) // wait for request
-		_, _ = ws.Write([]byte(msg))
-
-		time.Sleep(time.Second) // to keep the connection open
-	}))
+	server := httptest.NewServer(createEchoWSHandler())
 	defer server.Close()
 
 	url := "ws://" + server.Listener.Addr().String()
@@ -82,14 +112,7 @@ func TestNewCLI(t *testing.T) {
 }
 
 func TestNewCLIRunWithCommands(t *testing.T) {
-	server := httptest.NewServer(websocket.Handler(func(ws *websocket.Conn) {
-		var msg string
-
-		_ = websocket.Message.Receive(ws, &msg) // wait for request
-		_, _ = ws.Write([]byte(msg))
-
-		time.Sleep(time.Second) // to keep the connection open
-	}))
+	server := httptest.NewServer(createEchoWSHandler())
 	defer server.Close()
 
 	url := "ws://" + server.Listener.Addr().String()

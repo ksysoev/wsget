@@ -1,16 +1,19 @@
 package ws
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
+	"github.com/coder/websocket"
 	"github.com/fatih/color"
-	"golang.org/x/net/websocket"
 )
 
 type MessageType uint8
@@ -35,6 +38,7 @@ func (mt MessageType) String() string {
 const (
 	WSMessageBufferSize = 100
 	HeaderPartsNumber   = 2
+	DialTimeout         = 15 * time.Second
 )
 
 type Message struct {
@@ -70,17 +74,16 @@ func NewWS(wsURL string, opts Options) (*Connection, error) {
 		return nil, err
 	}
 
-	cfg, err := websocket.NewConfig(wsURL, "http://localhost")
-	if err != nil {
-		return nil, err
+	httpCli := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: opts.SkipSSLVerification}, //nolint:gosec // Skip SSL verification
+		},
+		Timeout: DialTimeout,
 	}
 
-	// This option could be useful for testing and development purposes.
-	// Default value is false.
-	tlsConfig := &tls.Config{
-		InsecureSkipVerify: opts.SkipSSLVerification, // #nosec G402 - skip SSL verification
+	wsOpts := &websocket.DialOptions{
+		HTTPClient: httpCli,
 	}
-	cfg.TlsConfig = tlsConfig
 
 	if len(opts.Headers) > 0 {
 		Headers := make(http.Header)
@@ -96,13 +99,16 @@ func NewWS(wsURL string, opts Options) (*Connection, error) {
 			Headers.Add(header, value)
 		}
 
-		cfg.Header = Headers
+		wsOpts.HTTPHeader = Headers
 	}
 
-	ws, err := websocket.DialConfig(cfg)
-
+	ws, resp, err := websocket.Dial(context.TODO(), wsURL, wsOpts)
 	if err != nil {
 		return nil, err
+	}
+
+	if resp.Body != nil {
+		resp.Body.Close()
 	}
 
 	var waitGroup sync.WaitGroup
@@ -135,15 +141,24 @@ func (wsInsp *Connection) handleResponses() {
 	}()
 
 	for {
-		var msg string
-
-		err := websocket.Message.Receive(wsInsp.ws, &msg)
+		msgType, reader, err := wsInsp.ws.Reader(context.TODO())
 		if err != nil {
 			wsInsp.handleError(err)
 			return
 		}
 
-		wsInsp.messages <- Message{Type: Response, Data: msg}
+		if msgType == websocket.MessageBinary {
+			wsInsp.handleError(fmt.Errorf("unexpected binary message"))
+			return
+		}
+
+		data, err := io.ReadAll(reader)
+		if err != nil {
+			wsInsp.handleError(err)
+			return
+		}
+
+		wsInsp.messages <- Message{Type: Response, Data: string(data)}
 	}
 }
 
@@ -167,9 +182,7 @@ func (wsInsp *Connection) Send(msg string) (*Message, error) {
 	wsInsp.waitGroup.Add(1)
 	defer wsInsp.waitGroup.Done()
 
-	err := websocket.Message.Send(wsInsp.ws, msg)
-
-	if err != nil {
+	if err := wsInsp.ws.Write(context.TODO(), websocket.MessageText, []byte(msg)); err != nil {
 		return nil, err
 	}
 
@@ -185,5 +198,5 @@ func (wsInsp *Connection) Close() {
 
 	wsInsp.isClosed.Store(true)
 
-	wsInsp.ws.Close()
+	wsInsp.ws.Close(websocket.StatusNormalClosure, "closing connection")
 }
