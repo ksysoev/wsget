@@ -23,6 +23,7 @@ var outputFile string
 var inputFile string
 var headers []string
 var waitResponse int
+var verbose bool
 var Version = "dev"
 
 const (
@@ -67,6 +68,7 @@ func main() {
 	cmd.Flags().IntVarP(&waitResponse, "wait-resp", "w", -1, "Timeout for single response in seconds, 0 means no timeout. If this option is set, the tool will exit after receiving the first response")
 	cmd.Flags().StringSliceVarP(&headers, "header", "H", []string{}, "HTTP headers to attach to the request")
 	cmd.Flags().StringVarP(&inputFile, "input", "i", "", "Input YAML file with list of requests to send to the server")
+	cmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Verbose output")
 
 	if err := cmd.ExecuteContext(ctx); err != nil {
 		fmt.Println(err)
@@ -89,7 +91,15 @@ func run(cmnd *cobra.Command, args []string) {
 		return
 	}
 
-	wsConn, err := ws.NewWS(cmnd.Context(), wsURL, ws.Options{SkipSSLVerification: insecure, Headers: headers})
+	wsConn, err := ws.NewWS(
+		cmnd.Context(),
+		wsURL,
+		ws.Options{
+			SkipSSLVerification: insecure,
+			Headers:             headers,
+			Verbose:             verbose,
+		},
+	)
 	if err != nil {
 		color.New(color.FgRed).Println("Unable to connect to the server: ", err)
 		return
