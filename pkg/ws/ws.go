@@ -101,7 +101,7 @@ func (t *requestLogger) RoundTrip(req *http.Request) (*http.Response, error) {
 // printHeaders prints the headers to the output with the given prefix.
 func printHeaders(headers http.Header, out *color.Color, prefix string) {
 	// Sort headers for consistent output
-	var headerNames []string
+	headerNames := make([]string, 0, len(headers))
 	for header := range headers {
 		headerNames = append(headerNames, header)
 	}
