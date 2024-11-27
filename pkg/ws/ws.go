@@ -98,6 +98,10 @@ func NewWS(ctx context.Context, wsURL string, opts Options) (*Connection, error)
 			header := strings.TrimSpace(splited[0])
 			value := strings.TrimSpace(splited[1])
 
+			if opts.Verbose {
+				color.New(color.FgYellow).Printf("> %s: %s\n", header, value)
+			}
+
 			Headers.Add(header, value)
 		}
 
@@ -107,6 +111,14 @@ func NewWS(ctx context.Context, wsURL string, opts Options) (*Connection, error)
 	ws, resp, err := websocket.Dial(ctx, wsURL, wsOpts)
 	if err != nil {
 		return nil, err
+	}
+
+	if opts.Verbose {
+		for header, values := range resp.Header {
+			for _, value := range values {
+				color.New(color.FgYellow).Printf("< %s: %s\n", header, value)
+			}
+		}
 	}
 
 	if resp.Body != nil {
