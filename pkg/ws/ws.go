@@ -69,7 +69,7 @@ type ConnectionHandler interface {
 
 // NewWS creates a new WebSocket connection to the specified URL with the given options.
 // It returns a Connection object and an error if any occurred.
-func NewWS(wsURL string, opts Options) (*Connection, error) {
+func NewWS(ctx context.Context, wsURL string, opts Options) (*Connection, error) {
 	parsedURL, err := url.Parse(wsURL)
 	if err != nil {
 		return nil, err
@@ -103,7 +103,7 @@ func NewWS(wsURL string, opts Options) (*Connection, error) {
 		wsOpts.HTTPHeader = Headers
 	}
 
-	ws, resp, err := websocket.Dial(context.TODO(), wsURL, wsOpts)
+	ws, resp, err := websocket.Dial(ctx, wsURL, wsOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +120,7 @@ func NewWS(wsURL string, opts Options) (*Connection, error) {
 
 	wsInsp := &Connection{ws: ws, messages: messages, waitGroup: &waitGroup, hostname: parsedURL.Hostname()}
 
-	go wsInsp.handleResponses()
+	go wsInsp.handleResponses(ctx)
 
 	return wsInsp, nil
 }
@@ -137,14 +137,14 @@ func (wsInsp *Connection) Hostname() string {
 
 // handleResponses reads messages from the websocket connection and sends them to the Messages channel.
 // It runs in a loop until the connection is closed or an error occurs.
-func (wsInsp *Connection) handleResponses() {
+func (wsInsp *Connection) handleResponses(ctx context.Context) {
 	defer func() {
 		wsInsp.waitGroup.Wait()
 		close(wsInsp.messages)
 	}()
 
-	for {
-		msgType, reader, err := wsInsp.ws.Reader(context.TODO())
+	for ctx.Err() == nil {
+		msgType, reader, err := wsInsp.ws.Reader(ctx)
 		if err != nil {
 			wsInsp.handleError(err)
 			return
