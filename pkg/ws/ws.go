@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -73,17 +74,12 @@ type requestLogger struct {
 	verbose   bool
 }
 
+// RoundTrip logs the request and response details.
 func (t *requestLogger) RoundTrip(req *http.Request) (*http.Response, error) {
 	tx := color.New(color.FgGreen)
 
 	tx.Printf("> %s %s %s\n", req.Method, req.URL.String(), req.Proto)
-
-	for header, values := range req.Header {
-		for _, value := range values {
-			tx.Printf("> %s: %s\n", header, value)
-		}
-	}
-
+	printHeaders(req.Header, tx, ">")
 	tx.Println()
 
 	resp, err := t.transport.RoundTrip(req)
@@ -96,16 +92,28 @@ func (t *requestLogger) RoundTrip(req *http.Request) (*http.Response, error) {
 	rx := color.New(color.FgYellow)
 
 	rx.Printf("< %s %s\n", resp.Proto, resp.Status)
-
-	for header, values := range resp.Header {
-		for _, value := range values {
-			rx.Printf("< %s: %s\n", header, value)
-		}
-	}
-
+	printHeaders(resp.Header, rx, "<")
 	rx.Println()
 
 	return resp, nil
+}
+
+// printHeaders prints the headers to the output with the given prefix.
+func printHeaders(headers http.Header, out *color.Color, prefix string) {
+	// Sort headers for consistent output
+	var headerNames []string
+	for header := range headers {
+		headerNames = append(headerNames, header)
+	}
+
+	sort.Strings(headerNames)
+
+	for _, header := range headerNames {
+		values := headers[header]
+		for _, value := range values {
+			out.Printf("%s %s: %s\n", prefix, header, value)
+		}
+	}
 }
 
 // NewWS creates a new WebSocket connection to the specified URL with the given options.
