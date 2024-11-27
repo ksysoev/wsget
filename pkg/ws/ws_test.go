@@ -2,6 +2,7 @@ package ws
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -54,7 +55,7 @@ func TestNewWS(t *testing.T) {
 	defer server.Close()
 
 	url := "ws://" + server.Listener.Addr().String()
-	ws, err := NewWS(url, Options{})
+	ws, err := NewWS(context.Background(), url, Options{})
 
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
@@ -75,7 +76,7 @@ func TestNewWS(t *testing.T) {
 }
 
 func TestNewWSWithInvalidURL(t *testing.T) {
-	_, err := NewWS("invalid", Options{})
+	_, err := NewWS(context.Background(), "invalid", Options{})
 
 	if err == nil {
 		t.Fatalf("Expected error, but got nil")
@@ -83,7 +84,7 @@ func TestNewWSWithInvalidURL(t *testing.T) {
 }
 
 func TestNewWSFailToConnect(t *testing.T) {
-	_, err := NewWS("ws://localhost:12345", Options{})
+	_, err := NewWS(context.Background(), "ws://localhost:12345", Options{})
 
 	if err == nil {
 		t.Fatalf("Expected error, but got nil")
@@ -95,7 +96,7 @@ func TestNewWSDisconnect(t *testing.T) {
 	defer server.Close()
 
 	url := "ws://" + server.Listener.Addr().String()
-	ws, err := NewWS(url, Options{})
+	ws, err := NewWS(context.Background(), url, Options{})
 
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
@@ -133,7 +134,7 @@ func TestNewWSWithHeaders(t *testing.T) {
 	defer server.Close()
 
 	url := "ws://" + server.Listener.Addr().String()
-	ws, err := NewWS(url, Options{Headers: []string{"X-Test: Test"}})
+	ws, err := NewWS(context.Background(), url, Options{Headers: []string{"X-Test: Test"}})
 
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
@@ -147,7 +148,7 @@ func TestNewWSWithInvalidHeaders(t *testing.T) {
 	defer server.Close()
 
 	url := "ws://" + server.Listener.Addr().String()
-	_, err := NewWS(url, Options{Headers: []string{"X-Test"}})
+	_, err := NewWS(context.Background(), url, Options{Headers: []string{"X-Test"}})
 
 	if err == nil {
 		t.Fatalf("Expected error, but got nil")

@@ -1,9 +1,12 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/fatih/color"
@@ -45,6 +48,8 @@ In this request mode the tool will send the request to the server and print resp
 )
 
 func main() {
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+
 	cmd := &cobra.Command{
 		Use:        "wsget url [flags]",
 		Short:      "A command-line tool for interacting with WebSocket servers",
@@ -63,11 +68,13 @@ func main() {
 	cmd.Flags().StringSliceVarP(&headers, "header", "H", []string{}, "HTTP headers to attach to the request")
 	cmd.Flags().StringVarP(&inputFile, "input", "i", "", "Input YAML file with list of requests to send to the server")
 
-	err := cmd.Execute()
-	if err != nil {
+	if err := cmd.ExecuteContext(ctx); err != nil {
 		fmt.Println(err)
+		cancel()
 		os.Exit(1)
 	}
+
+	cancel()
 }
 
 func run(cmnd *cobra.Command, args []string) {
@@ -82,7 +89,7 @@ func run(cmnd *cobra.Command, args []string) {
 		return
 	}
 
-	wsConn, err := ws.NewWS(wsURL, ws.Options{SkipSSLVerification: insecure, Headers: headers})
+	wsConn, err := ws.NewWS(cmnd.Context(), wsURL, ws.Options{SkipSSLVerification: insecure, Headers: headers})
 	if err != nil {
 		color.New(color.FgRed).Println("Unable to connect to the server: ", err)
 		return

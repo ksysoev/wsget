@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"errors"
 	"io"
 	"net/http"
@@ -64,7 +65,7 @@ func TestNewCLI(t *testing.T) {
 	defer server.Close()
 
 	url := "ws://" + server.Listener.Addr().String()
-	wsConn, err := ws.NewWS(url, ws.Options{})
+	wsConn, err := ws.NewWS(context.Background(), url, ws.Options{})
 
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
@@ -116,7 +117,7 @@ func TestNewCLIRunWithCommands(t *testing.T) {
 	defer server.Close()
 
 	url := "ws://" + server.Listener.Addr().String()
-	wsConn, err := ws.NewWS(url, ws.Options{})
+	wsConn, err := ws.NewWS(context.Background(), url, ws.Options{})
 
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
