@@ -69,18 +69,22 @@ type ConnectionHandler interface {
 }
 
 type requestLogger struct {
+	transport *http.Transport
 	verbose   bool
-	transport http.Transport
 }
 
-func (t requestLogger) RoundTrip(req *http.Request) (*http.Response, error) {
-	color.New(color.FgGreen).Printf("> %s %s %s\n", req.Method, req.URL.String(), req.Proto)
+func (t *requestLogger) RoundTrip(req *http.Request) (*http.Response, error) {
+	tx := color.New(color.FgGreen)
+
+	tx.Printf("> %s %s %s\n", req.Method, req.URL.String(), req.Proto)
+
 	for header, values := range req.Header {
 		for _, value := range values {
-			color.New(color.FgGreen).Printf("> %s: %s\n", header, value)
+			tx.Printf("> %s: %s\n", header, value)
 		}
 	}
-	color.New(color.FgGreen).Println()
+
+	tx.Println()
 
 	resp, err := t.transport.RoundTrip(req)
 
@@ -89,13 +93,17 @@ func (t requestLogger) RoundTrip(req *http.Request) (*http.Response, error) {
 		return nil, err
 	}
 
-	color.New(color.FgYellow).Printf("< %s %s\n", resp.Proto, resp.Status)
+	rx := color.New(color.FgYellow)
+
+	rx.Printf("< %s %s\n", resp.Proto, resp.Status)
+
 	for header, values := range resp.Header {
 		for _, value := range values {
-			color.New(color.FgYellow).Printf("< %s: %s\n", header, value)
+			rx.Printf("< %s: %s\n", header, value)
 		}
 	}
-	color.New(color.FgYellow).Println()
+
+	rx.Println()
 
 	return resp, nil
 }
@@ -110,7 +118,7 @@ func NewWS(ctx context.Context, wsURL string, opts Options) (*Connection, error)
 
 	httpCli := &http.Client{
 		Transport: &requestLogger{
-			transport: http.Transport{
+			transport: &http.Transport{
 				TLSClientConfig: &tls.Config{InsecureSkipVerify: opts.SkipSSLVerification}, //nolint:gosec // Skip SSL verification
 			},
 			verbose: opts.Verbose,
