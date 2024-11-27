@@ -58,6 +58,7 @@ type Connection struct {
 type Options struct {
 	Headers             []string
 	SkipSSLVerification bool
+	Verbose             bool
 }
 
 type ConnectionHandler interface {
