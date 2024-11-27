@@ -76,24 +76,27 @@ type requestLogger struct {
 
 // RoundTrip logs the request and response details.
 func (t *requestLogger) RoundTrip(req *http.Request) (*http.Response, error) {
-	tx := color.New(color.FgGreen)
+	if t.verbose {
+		tx := color.New(color.FgGreen)
 
-	tx.Printf("> %s %s %s\n", req.Method, req.URL.String(), req.Proto)
-	printHeaders(req.Header, tx, ">")
-	tx.Println()
+		tx.Printf("> %s %s %s\n", req.Method, req.URL.String(), req.Proto)
+		printHeaders(req.Header, tx, ">")
+		tx.Println()
+	}
 
 	resp, err := t.transport.RoundTrip(req)
 
 	if err != nil {
-		color.New(color.FgRed).Println("Fail to send request:", err)
 		return nil, err
 	}
 
-	rx := color.New(color.FgYellow)
+	if t.verbose {
+		rx := color.New(color.FgYellow)
 
-	rx.Printf("< %s %s\n", resp.Proto, resp.Status)
-	printHeaders(resp.Header, rx, "<")
-	rx.Println()
+		rx.Printf("< %s %s\n", resp.Proto, resp.Status)
+		printHeaders(resp.Header, rx, "<")
+		rx.Println()
+	}
 
 	return resp, nil
 }
