@@ -285,5 +285,13 @@ func TestRunConnectCmd_SuccessConnect(t *testing.T) {
 		request: "test request",
 	}
 
-	_ = runConnectCmd(ctx, args, []string{url})
+	//tty is not available in the test environment
+	// so the test will fail in some cases and be successful in others
+	err := runConnectCmd(ctx, args, []string{url})
+
+	if err != nil {
+		assert.ErrorContains(t, err, "failed to run client: open /dev/tty: device not configured")
+	} else {
+		assert.NoError(t, err)
+	}
 }
