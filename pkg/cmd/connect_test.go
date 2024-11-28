@@ -286,5 +286,5 @@ func TestRunConnectCmd_SuccessConnect(t *testing.T) {
 	}
 
 	err := runConnectCmd(ctx, args, []string{url})
-	assert.Error(t, err)
+	assert.NoError(t, err)
 }
