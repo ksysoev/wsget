@@ -27,15 +27,18 @@ In this request mode the tool will send the request to the server and print resp
 )
 
 type flags struct {
-	insecure     bool
 	request      string
 	outputFile   string
 	inputFile    string
 	headers      []string
 	waitResponse int
+	insecure     bool
 	verbose      bool
 }
 
+// InitCommands initializes and returns a new cobra.Command for the wsget tool.
+// It takes a version string which sets the version of the command.
+// It returns a pointer to a cobra.Command configured with various flags for interacting with WebSocket servers.
 func InitCommands(version string) *cobra.Command {
 	args := &flags{}
 
