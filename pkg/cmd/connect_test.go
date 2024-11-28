@@ -285,7 +285,7 @@ func TestRunConnectCmd_SuccessConnect(t *testing.T) {
 		request: "test request",
 	}
 
-	//tty is not available in the test environment
+	// tty is not available in the test environment
 	// so the test will fail in some cases and be successful in others
 	err := runConnectCmd(ctx, args, []string{url})
 
