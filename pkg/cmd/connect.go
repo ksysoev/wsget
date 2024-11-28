@@ -66,6 +66,11 @@ func runConnectCmd(args *flags) func(cmd *cobra.Command, args []string) error {
 	}
 }
 
+// validateArgs checks the validity of the provided WebSocket URL and flags.
+// It takes wsURL of type string and args of type *flags.
+// It returns an error if the wsURL is empty or if the single response timeout is set without a request.
+// If wsURL is an empty string, it returns an error indicating that the URL is required.
+// If args.waitResponse is non-negative and args.request is an empty string, it returns an error indicating that the single response timeout can only be used with a request.
 func validateArgs(wsURL string, args *flags) error {
 	if wsURL == "" {
 		return fmt.Errorf("url is required")
@@ -78,6 +83,10 @@ func validateArgs(wsURL string, args *flags) error {
 	return nil
 }
 
+// initRunOptions initializes and returns a RunOptions struct based on the provided flags.
+// It takes a single parameter args of type *flags which contains the command-line arguments.
+// It returns a pointer to cli.RunOptions and an error.
+// It returns an error if it fails to open the specified output file.
 func initRunOptions(args *flags) (opts *cli.RunOptions, err error) {
 	opts = &cli.RunOptions{}
 
@@ -92,6 +101,12 @@ func initRunOptions(args *flags) (opts *cli.RunOptions, err error) {
 	return opts, nil
 }
 
+// createCommands generates a slice of command.Executer based on the provided flags.
+// It takes a single parameter args of type *flags, which contains the command-line arguments.
+// It returns a slice of command.Executer, which represents the sequence of commands to be executed.
+// If args.request is not empty, it creates a Send command and optionally adds WaitForResp and Exit commands if args.waitResponse is non-negative.
+// If args.inputFile is not empty, it creates an InputFileCommand.
+// If neither args.request nor args.inputFile is provided, it defaults to creating an Edit command.
 func createCommands(args *flags) []command.Executer {
 	var executers []command.Executer
 
