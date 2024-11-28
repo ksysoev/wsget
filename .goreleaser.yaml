@@ -12,7 +12,7 @@ builds:
       - linux
       - darwin
     ldflags:
-      - -s -w -X main.Version={{.Version}}
+      - -s -w -X main.version={{.Version}}
 archives:
   - name_template: >-
       {{ .ProjectName }}_
