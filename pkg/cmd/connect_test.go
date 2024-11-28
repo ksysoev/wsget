@@ -110,9 +110,9 @@ func TestInitRunOptions(t *testing.T) {
 	tmpDir := os.TempDir()
 
 	tests := []struct {
-		name        string
 		args        *flags
 		expected    *cli.RunOptions
+		name        string
 		expectError bool
 	}{
 		{
@@ -188,6 +188,7 @@ func TestInitRunOptions(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				assert.Equal(t, tt.expected.Commands, opts.Commands)
+
 				if tt.expected.OutputFile != nil {
 					assert.NotNil(t, opts.OutputFile)
 					opts.OutputFile.Close()
@@ -274,7 +275,6 @@ func TestRunConnectCmd_NoURL(t *testing.T) {
 }
 
 func TestRunConnectCmd_SuccessConnect(t *testing.T) {
-
 	server := httptest.NewServer(createEchoWSHandler())
 	defer server.Close()
 
