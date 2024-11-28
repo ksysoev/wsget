@@ -50,7 +50,7 @@ func InitCommands(version string) *cobra.Command {
 		Args:       cobra.ExactArgs(1),
 		ArgAliases: []string{"url"},
 		Version:    version,
-		RunE:       runConnectCmd(args),
+		RunE:       createConnectRunner(args),
 	}
 
 	cmd.Flags().BoolVarP(&args.insecure, "insecure", "k", false, "Skip SSL certificate verification")

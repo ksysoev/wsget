@@ -1,14 +1,54 @@
 package cmd
 
 import (
+	"context"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"testing"
 	"time"
 
+	"github.com/coder/websocket"
 	"github.com/ksysoev/wsget/pkg/cli"
 	"github.com/ksysoev/wsget/pkg/command"
 	"github.com/stretchr/testify/assert"
 )
+
+func createEchoWSHandler() http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		c, err := websocket.Accept(w, r, nil)
+		if err != nil {
+			return
+		}
+
+		defer c.Close(websocket.StatusNormalClosure, "")
+
+		for {
+			_, wsr, err := c.Reader(r.Context())
+			if err != nil {
+				if err == io.EOF {
+					return
+				}
+
+				return
+			}
+
+			wsw, err := c.Writer(r.Context(), websocket.MessageText)
+			if err != nil {
+				return
+			}
+
+			if _, err := io.Copy(wsw, wsr); err != nil {
+				return
+			}
+
+			if err := wsw.Close(); err != nil {
+				return
+			}
+		}
+	})
+}
 
 func TestCreateCommands(t *testing.T) {
 	tmpDir := os.TempDir()
@@ -209,4 +249,42 @@ func TestValidateArgs(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCreateConnectRunner(t *testing.T) {
+	runner := createConnectRunner(&flags{})
+	assert.NotNil(t, runner)
+}
+func TestRunConnectCmd_FailToConnect(t *testing.T) {
+	ctx := context.Background()
+	args := &flags{
+		request: "test request",
+	}
+	err := runConnectCmd(ctx, args, []string{"ws://localhost:0"})
+	assert.Error(t, err)
+}
+
+func TestRunConnectCmd_NoURL(t *testing.T) {
+	ctx := context.Background()
+	args := &flags{
+		request: "test request",
+	}
+	err := runConnectCmd(ctx, args, []string{""})
+	assert.Error(t, err)
+}
+
+func TestRunConnectCmd_SuccessConnect(t *testing.T) {
+
+	server := httptest.NewServer(createEchoWSHandler())
+	defer server.Close()
+
+	url := "ws://" + server.Listener.Addr().String()
+
+	ctx := context.Background()
+	args := &flags{
+		request: "test request",
+	}
+
+	err := runConnectCmd(ctx, args, []string{url})
+	assert.Error(t, err)
 }

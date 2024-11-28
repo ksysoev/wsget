@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -13,57 +14,64 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// runConnectCmd creates and returns a function to execute the connect command.
-// It takes a pointer to flags as an argument.
-// It returns a function that takes a *cobra.Command and a slice of strings as arguments and returns an error.
-// The returned function connects to a WebSocket server, initializes a CLI client, and runs it with the specified options.
-// It returns an error if the URL is empty, the single response timeout is used without a request, the connection to the server fails, the CLI client fails to start, or the client fails to run.
-// If the error is of type clierrors.Interrupted, it returns nil.
-func runConnectCmd(args *flags) func(cmd *cobra.Command, args []string) error {
+// createConnectRunner creates a runner function for the connect command.
+// It takes a single parameter args of type *flags.
+// It returns a function that takes a *cobra.Command and a slice of strings, and returns an error.
+// The returned function calls runConnectCmd with the provided command, args, and unnamedArgs.
+// It returns an error if runConnectCmd encounters any issues.
+func createConnectRunner(args *flags) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, unnamedArgs []string) error {
-		wsURL := unnamedArgs[0]
-
-		if err := validateArgs(wsURL, args); err != nil {
-			return err
-		}
-
-		wsConn, err := ws.NewWS(
-			cmd.Context(),
-			wsURL,
-			ws.Options{
-				SkipSSLVerification: args.insecure,
-				Headers:             args.headers,
-				Verbose:             args.verbose,
-			},
-		)
-		if err != nil {
-			return fmt.Errorf("unable to connect to the server: %w", err)
-		}
-
-		defer wsConn.Close()
-
-		input := cli.NewKeyboard()
-
-		client, err := cli.NewCLI(wsConn, input, os.Stdout)
-		if err != nil {
-			return fmt.Errorf("unable to start CLI: %w", err)
-		}
-
-		opts, err := initRunOptions(args)
-		if err != nil {
-			return err
-		}
-
-		if err = client.Run(*opts); err != nil {
-			if errors.As(err, &clierrors.Interrupted{}) {
-				return nil
-			}
-
-			return fmt.Errorf("failed to run client: %w", err)
-		}
-
-		return nil
+		return runConnectCmd(cmd.Context(), args, unnamedArgs)
 	}
+}
+
+// runConnectCmd establishes a WebSocket connection and starts a CLI client session.
+// It takes ctx of type context.Context, args of type *flags, and unnamedArgs of type []string.
+// It returns an error if the WebSocket connection cannot be established, the CLI cannot be started, or the client fails to run.
+// It returns nil if the client is interrupted gracefully.
+func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error {
+	wsURL := unnamedArgs[0]
+
+	if err := validateArgs(wsURL, args); err != nil {
+		return err
+	}
+
+	wsConn, err := ws.NewWS(
+		ctx,
+		wsURL,
+		ws.Options{
+			SkipSSLVerification: args.insecure,
+			Headers:             args.headers,
+			Verbose:             args.verbose,
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("unable to connect to the server: %w", err)
+	}
+
+	defer wsConn.Close()
+
+	input := cli.NewKeyboard()
+
+	client, err := cli.NewCLI(wsConn, input, os.Stdout)
+	if err != nil {
+		return fmt.Errorf("unable to start CLI: %w", err)
+	}
+
+	opts, err := initRunOptions(args)
+	if err != nil {
+		return err
+	}
+
+	if err = client.Run(*opts); err != nil {
+		if errors.As(err, &clierrors.Interrupted{}) {
+			return nil
+		}
+
+		return fmt.Errorf("failed to run client: %w", err)
+	}
+
+	return nil
 }
 
 // validateArgs checks the validity of the provided WebSocket URL and flags.
