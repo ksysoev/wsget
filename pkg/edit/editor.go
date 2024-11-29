@@ -110,6 +110,10 @@ func (ed *Editor) Edit(keyStream <-chan keyboard.KeyEvent, initBuffer string) (s
 			for _, r := range diff {
 				fmt.Fprint(ed.output, ed.content.InsertSymbol(r))
 			}
+		case keyboard.KeyHome:
+			fmt.Fprint(ed.output, ed.content.MoveToRowStart())
+		case keyboard.KeyEnd:
+			fmt.Fprint(ed.output, ed.content.MoveToRowEnd())
 		default:
 			if e.Key > 0 {
 				continue

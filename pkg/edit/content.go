@@ -163,6 +163,37 @@ func (c *Content) Clear() string {
 	return output
 }
 
+// MoveToStart moves the cursor to the beginning of the current line
+func (c *Content) MoveToRowStart() string {
+	if c.pos == 0 {
+		return ""
+	}
+
+	output := ""
+
+	for c.pos > 0 && c.text[c.pos-1] != NewLine {
+		output += Backspace
+		c.pos--
+	}
+
+	return output
+}
+
+// MoveToEnd moves the cursor to the end of current line
+func (c *Content) MoveToRowEnd() string {
+	if c.pos >= len(c.text) {
+		return ""
+	}
+
+	init := c.pos
+
+	for c.pos < len(c.text) && c.text[c.pos] != NewLine {
+		c.pos++
+	}
+
+	return string(c.text[init:c.pos])
+}
+
 // RemoveSymbol removes the symbol at the current position of the Content object and returns the string representation of the changes made.
 // If the current position is out of bounds, an empty string is returned.
 // If the removed symbol is not a newline character, the function returns the string representation of the changes made, including clearing the current line and moving the cursor to the beginning of the line.
