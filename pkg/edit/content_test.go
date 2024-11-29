@@ -675,3 +675,71 @@ func TestContent_MoveToPrevWord(t *testing.T) {
 		})
 	}
 }
+
+func TestContent_MoveToRowStart(t *testing.T) {
+	tests := []struct {
+		name        string
+		content     *Content
+		expected    string
+		expectedPos int
+	}{
+		{
+			name: "cursor at the beginning of the content",
+			content: &Content{
+				text: []rune("hello world"),
+				pos:  0,
+			},
+			expected:    "",
+			expectedPos: 0,
+		},
+		{
+			name: "cursor at the beginning of a line",
+			content: &Content{
+				text: []rune("hello\nworld"),
+				pos:  6,
+			},
+			expected:    "",
+			expectedPos: 6,
+		},
+		{
+			name: "cursor in the middle of a line",
+			content: &Content{
+				text: []rune("hello\nworld"),
+				pos:  8,
+			},
+			expected:    "\b\b",
+			expectedPos: 6,
+		},
+		{
+			name: "cursor at the end of a line",
+			content: &Content{
+				text: []rune("hello world"),
+				pos:  11,
+			},
+			expected:    "\b\b\b\b\b\b\b\b\b\b\b",
+			expectedPos: 0,
+		},
+		{
+			name: "cursor in the middle of a multiline content",
+			content: &Content{
+				text: []rune("hello\nworld\nfoo"),
+				pos:  11,
+			},
+			expected:    "\b\b\b\b\b",
+			expectedPos: 6,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := tt.content.MoveToRowStart()
+			if actual != tt.expected {
+				t.Errorf("expected %q, but got %q", tt.expected, actual)
+			}
+
+			if tt.content.pos != tt.expectedPos {
+				t.Errorf("expected position %d, but got %d", tt.expectedPos, tt.content.pos)
+			}
+		})
+	}
+}
