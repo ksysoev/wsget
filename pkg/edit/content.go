@@ -163,7 +163,11 @@ func (c *Content) Clear() string {
 	return output
 }
 
-// MoveToStart moves the cursor to the beginning of the current line
+// MoveToRowStart moves the cursor position to the start of the current row.
+// It updates the cursor position and returns a string of backspace characters
+// needed to move the cursor to the start of the row.
+// It takes no parameters and returns a string.
+// If the cursor is already at the start of the row (position 0), it returns an empty string.
 func (c *Content) MoveToRowStart() string {
 	if c.pos == 0 {
 		return ""
@@ -179,7 +183,9 @@ func (c *Content) MoveToRowStart() string {
 	return output
 }
 
-// MoveToEnd moves the cursor to the end of current line
+// MoveToRowEnd moves the position within the text to the end of the current row.
+// It returns the substring from the initial position to the end of the row.
+// If the current position is already at or beyond the end of the text, it returns an empty string.
 func (c *Content) MoveToRowEnd() string {
 	if c.pos >= len(c.text) {
 		return ""
