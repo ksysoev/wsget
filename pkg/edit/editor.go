@@ -70,6 +70,7 @@ func (ed *Editor) Edit(keyStream <-chan keyboard.KeyEvent, initBuffer string) (s
 
 		if keyboard.KeyCtrlW == e.Key {
 			// Alt + Backspace
+			fmt.Fprint(ed.output, ed.content.DeleteToPrevWord())
 			continue
 		}
 
