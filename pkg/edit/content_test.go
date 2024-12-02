@@ -326,7 +326,7 @@ func TestContent_RemoveSymbol(t *testing.T) {
 				pos:  tt.pos,
 			}
 
-			output := content.RemoveSymbol()
+			output := content.RemovePrevSymbol()
 
 			if output != tt.output {
 				t.Errorf("expected output %q, but got %q", tt.output, output)
@@ -842,6 +842,422 @@ func TestContent_MoveToRowEnd(t *testing.T) {
 
 			if tt.content.pos != tt.expectedPos {
 				t.Errorf("expected position %d, but got %d", tt.expectedPos, tt.content.pos)
+			}
+		})
+	}
+}
+
+func TestContent_RemoveNextSymbol(t *testing.T) {
+	tests := []struct {
+		name         string
+		input        string
+		output       string
+		expectedText string
+		pos          int
+		expectedPos  int
+	}{
+		{
+			name:         "remove symbol in the middle of the text",
+			input:        "hello world",
+			pos:          5,
+			output:       "\x1b[2K\rhelloworld\rhello",
+			expectedText: "helloworld",
+			expectedPos:  5,
+		},
+		{
+			name:         "remove symbol at the beginning of the text",
+			input:        "hello world",
+			pos:          0,
+			output:       "\x1b[2K\rello world\r",
+			expectedText: "ello world",
+			expectedPos:  0,
+		},
+		{
+			name:         "remove symbol at the end of the text",
+			input:        "hello world",
+			pos:          11,
+			output:       "",
+			expectedText: "hello world",
+			expectedPos:  11,
+		},
+		{
+			name:         "remove newline character in the middle of the text",
+			input:        "hello\nworld",
+			pos:          5,
+			output:       "world\n\x1b[2K\r\x1b[1A\rhello",
+			expectedText: "helloworld",
+			expectedPos:  5,
+		},
+		{
+			name:         "remove symbol when pos is out of bounds (negative)",
+			input:        "hello world",
+			pos:          -1,
+			output:       "",
+			expectedText: "hello world",
+			expectedPos:  -1,
+		},
+		{
+			name:         "remove symbol when pos is out of bounds (exceeds length)",
+			input:        "hello world",
+			pos:          12,
+			output:       "",
+			expectedText: "hello world",
+			expectedPos:  12,
+		},
+		{
+			name:         "remove symbol from empty content",
+			input:        "",
+			pos:          0,
+			output:       "",
+			expectedText: "",
+			expectedPos:  0,
+		},
+		{
+			name:         "remove newline at the end of the text",
+			input:        "hello world\n",
+			pos:          11,
+			output:       "\n\x1b[2K\r\x1b[1A\rhello world",
+			expectedText: "hello world",
+			expectedPos:  11,
+		},
+		{
+			name:         "remove symbol at the end when cursor is before newline",
+			input:        "hello\n",
+			pos:          5,
+			output:       "\n\x1b[2K\r\x1b[1A\rhello",
+			expectedText: "hello",
+			expectedPos:  5,
+		},
+		{
+			name:         "remove symbol when next symbol is newline",
+			input:        "hello\nworld",
+			pos:          5,
+			output:       "world\n\x1b[2K\r\x1b[1A\rhello",
+			expectedText: "helloworld",
+			expectedPos:  5,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Content{
+				text: []rune(tt.input),
+				pos:  tt.pos,
+			}
+
+			output := c.RemoveNextSymbol()
+
+			if output != tt.output {
+				t.Errorf("expected output %q, but got %q", tt.output, output)
+			}
+
+			if string(c.text) != tt.expectedText {
+				t.Errorf("expected text %q, but got %q", tt.expectedText, string(c.text))
+			}
+
+			if c.pos != tt.expectedPos {
+				t.Errorf("expected position %d, but got %d", tt.expectedPos, c.pos)
+			}
+		})
+	}
+}
+
+func TestContent_DeleteToPrevWord(t *testing.T) {
+	tests := []struct {
+		name           string
+		inputText      string
+		expectedOutput string
+		expectedText   string
+		inputPos       int
+		expectedPos    int
+	}{
+		{
+			name:           "Delete previous word when cursor is at the end",
+			inputText:      "hello world",
+			inputPos:       11,
+			expectedOutput: "\b \b\b \b\b \b\b \b\b \b",
+			expectedText:   "hello ",
+			expectedPos:    6,
+		},
+		{
+			name:           "Delete to previous word when cursor is in the middle of a word",
+			inputText:      "hello world",
+			inputPos:       8,
+			expectedOutput: "\x1b[2K\rhello wrld\rhello w\x1b[2K\rhello rld\rhello ",
+			expectedText:   "hello rld",
+			expectedPos:    6,
+		},
+		{
+			name:           "Delete to previous word when cursor is at the beginning of a word",
+			inputText:      "hello world",
+			inputPos:       6,
+			expectedOutput: "\x1b[2K\rhelloworld\rhello\x1b[2K\rhellworld\rhell\x1b[2K\rhelworld\rhel\x1b[2K\rheworld\rhe\x1b[2K\rhworld\rh\x1b[2K\rworld\r",
+			expectedText:   "world",
+			expectedPos:    0,
+		},
+		{
+			name:           "Delete to previous word when there is no previous word",
+			inputText:      "hello world",
+			inputPos:       0,
+			expectedOutput: "",
+			expectedText:   "hello world",
+			expectedPos:    0,
+		},
+		{
+			name:           "Delete to previous word when there are multiple spaces",
+			inputText:      "hello   world",
+			inputPos:       13,
+			expectedOutput: "\b \b\b \b\b \b\b \b\b \b",
+			expectedText:   "hello   ",
+			expectedPos:    8,
+		},
+		{
+			name:           "Delete to previous word when there is only one word",
+			inputText:      "world",
+			inputPos:       5,
+			expectedOutput: "\b \b\b \b\b \b\b \b\b \b",
+			expectedText:   "",
+			expectedPos:    0,
+		},
+		{
+			name:           "Delete to previous word in empty content",
+			inputText:      "",
+			inputPos:       0,
+			expectedOutput: "",
+			expectedText:   "",
+			expectedPos:    0,
+		},
+		{
+			name:           "Delete to previous word with punctuation",
+			inputText:      "hello, world!",
+			inputPos:       13,
+			expectedOutput: "\b \b\b \b\b \b\b \b\b \b\b \b",
+			expectedText:   "hello, ",
+			expectedPos:    7,
+		},
+		{
+			name:           "Delete to previous word with cursor in whitespace",
+			inputText:      "hello    ",
+			inputPos:       9,
+			expectedOutput: "\b \b\b \b\b \b\b \b\b \b\b \b\b \b\b \b\b \b",
+			expectedText:   "",
+			expectedPos:    0,
+		},
+		{
+			name:           "Delete to previous word with multiple non-word characters",
+			inputText:      "hello---world",
+			inputPos:       13,
+			expectedOutput: "\b \b\b \b\b \b\b \b\b \b",
+			expectedText:   "hello---",
+			expectedPos:    8,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Content{
+				text: []rune(tt.inputText),
+				pos:  tt.inputPos,
+			}
+
+			output := c.DeleteToPrevWord()
+
+			if output != tt.expectedOutput {
+				t.Errorf("expected output %q, but got %q", tt.expectedOutput, output)
+			}
+
+			if string(c.text) != tt.expectedText {
+				t.Errorf("expected text %q, but got %q", tt.expectedText, string(c.text))
+			}
+
+			if c.pos != tt.expectedPos {
+				t.Errorf("expected position %d, but got %d", tt.expectedPos, c.pos)
+			}
+		})
+	}
+}
+
+func TestContent_DeleteToNextWord(t *testing.T) {
+	tests := []struct {
+		name           string
+		inputText      string
+		expectedOutput string
+		expectedText   string
+		inputPos       int
+		expectedPos    int
+	}{
+		{
+			name:           "Delete to next word when cursor is at the beginning of a word",
+			inputText:      "hello world",
+			inputPos:       0,
+			expectedOutput: "\x1b[2K\rello world\r\x1b[2K\rllo world\r\x1b[2K\rlo world\r\x1b[2K\ro world\r\x1b[2K\r world\r\x1b[2K\rworld\r",
+			expectedText:   "world",
+			expectedPos:    0,
+		},
+		{
+			name:           "Delete to next word when cursor is in the middle of a word",
+			inputText:      "hello world",
+			inputPos:       2,
+			expectedOutput: "\x1b[2K\rhelo world\rhe\x1b[2K\rheo world\rhe\x1b[2K\rhe world\rhe\x1b[2K\rheworld\rhe",
+			expectedText:   "heworld",
+			expectedPos:    2,
+		},
+		{
+			name:           "Delete to next word when cursor is at the end of a word",
+			inputText:      "hello world",
+			inputPos:       5,
+			expectedOutput: "\x1b[2K\rhelloworld\rhello",
+			expectedText:   "helloworld",
+			expectedPos:    5,
+		},
+		{
+			name:           "Delete to next word when cursor is at whitespace",
+			inputText:      "hello   world",
+			inputPos:       5,
+			expectedOutput: "\x1b[2K\rhello  world\rhello\x1b[2K\rhello world\rhello\x1b[2K\rhelloworld\rhello",
+			expectedText:   "helloworld",
+			expectedPos:    5,
+		},
+		{
+			name:           "Delete to next word when cursor is at the end of text",
+			inputText:      "hello world",
+			inputPos:       11,
+			expectedOutput: "",
+			expectedText:   "hello world",
+			expectedPos:    11,
+		},
+		{
+			name:           "Delete to next word when there are multiple spaces",
+			inputText:      "hello   world",
+			inputPos:       2,
+			expectedOutput: "\x1b[2K\rhelo   world\rhe\x1b[2K\rheo   world\rhe\x1b[2K\rhe   world\rhe\x1b[2K\rhe  world\rhe\x1b[2K\rhe world\rhe\x1b[2K\rheworld\rhe",
+			expectedText:   "heworld",
+			expectedPos:    2,
+		},
+		{
+			name:           "Delete to next word with punctuation",
+			inputText:      "hello, world!",
+			inputPos:       5,
+			expectedOutput: "\x1b[2K\rhello world!\rhello\x1b[2K\rhelloworld!\rhello",
+			expectedText:   "helloworld!",
+			expectedPos:    5,
+		},
+		{
+			name:           "Delete to next word when cursor is at the beginning of an empty content",
+			inputText:      "",
+			inputPos:       0,
+			expectedOutput: "",
+			expectedText:   "",
+			expectedPos:    0,
+		},
+		{
+			name:           "Delete to next word when cursor is in the middle of multiple spaces",
+			inputText:      "hello     world",
+			inputPos:       7,
+			expectedOutput: "\x1b[2K\rhello    world\rhello  \x1b[2K\rhello   world\rhello  \x1b[2K\rhello  world\rhello  ",
+			expectedText:   "hello  world",
+			expectedPos:    7,
+		},
+		{
+			name:           "Delete to next word in multi-line content",
+			inputText:      "hello\nworld\nfoo",
+			inputPos:       6,
+			expectedOutput: "\x1b[2K\rorld\r\x1b[2K\rrld\r\x1b[2K\rld\r\x1b[2K\rd\r\x1b[2K\r\rfoo\n\x1b[2K\r\x1b[1A\r",
+			expectedText:   "hello\nfoo",
+			expectedPos:    6,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Content{
+				text: []rune(tt.inputText),
+				pos:  tt.inputPos,
+			}
+
+			output := c.DeleteToNextWord()
+
+			if output != tt.expectedOutput {
+				t.Errorf("expected output %q, but got %q", tt.expectedOutput, output)
+			}
+
+			if string(c.text) != tt.expectedText {
+				t.Errorf("expected text %q, but got %q", tt.expectedText, string(c.text))
+			}
+
+			if c.pos != tt.expectedPos {
+				t.Errorf("expected position %d, but got %d", tt.expectedPos, c.pos)
+			}
+		})
+	}
+}
+
+func TestContent_PrevSymbol(t *testing.T) {
+	tests := []struct {
+		name     string
+		text     string
+		pos      int
+		expected rune
+	}{
+		{
+			name:     "Cursor at the beginning",
+			text:     "hello",
+			pos:      0,
+			expected: 0,
+		},
+		{
+			name:     "Cursor in the middle",
+			text:     "hello",
+			pos:      2,
+			expected: 'e',
+		},
+		{
+			name:     "Cursor at the end",
+			text:     "hello",
+			pos:      5,
+			expected: 'o',
+		},
+		{
+			name:     "Cursor out of bounds (negative)",
+			text:     "hello",
+			pos:      -1,
+			expected: 0,
+		},
+		{
+			name:     "Cursor out of bounds (beyond length)",
+			text:     "hello",
+			pos:      6,
+			expected: 'o',
+		},
+		{
+			name:     "Empty text",
+			text:     "",
+			pos:      0,
+			expected: 0,
+		},
+		{
+			name:     "Cursor after newline character",
+			text:     "hello\nworld",
+			pos:      6,
+			expected: '\n',
+		},
+		{
+			name:     "Cursor at position 1",
+			text:     "a",
+			pos:      1,
+			expected: 'a',
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Content{
+				text: []rune(tt.text),
+				pos:  tt.pos,
+			}
+
+			if got := c.PrevSymbol(); got != tt.expected {
+				t.Errorf("PrevSymbol() = %q, want %q", got, tt.expected)
 			}
 		})
 	}

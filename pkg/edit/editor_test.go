@@ -220,3 +220,60 @@ func TestEditSpecialKeys(t *testing.T) {
 		}
 	}()
 }
+func TestHandleEscKey(t *testing.T) {
+	tests := []struct {
+		name     string
+		keyEvent keyboard.KeyEvent
+		expected string
+		handled  bool
+	}{
+		{
+			name:     "Alt + Left",
+			keyEvent: keyboard.KeyEvent{Rune: 98},
+			expected: "",
+			handled:  true,
+		},
+		{
+			name:     "Alt + Right",
+			keyEvent: keyboard.KeyEvent{Rune: 102},
+			expected: "",
+			handled:  true,
+		},
+		{
+			name:     "Alt + Delete",
+			keyEvent: keyboard.KeyEvent{Rune: 100},
+			expected: "",
+			handled:  true,
+		},
+		{
+			name:     "Esc",
+			keyEvent: keyboard.KeyEvent{Rune: 0},
+			expected: "",
+			handled:  false,
+		},
+		{
+			name:     "Esc + any other key",
+			keyEvent: keyboard.KeyEvent{Rune: 1},
+			expected: "",
+			handled:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			output := new(bytes.Buffer)
+			editor := NewEditor(output, nil, false)
+
+			handled := handleEscKey(tt.keyEvent, editor)
+
+			if handled != tt.handled {
+				t.Errorf("Expected handled to be %v, got %v", tt.handled, handled)
+			}
+
+			outputStr := output.String()
+			if tt.expected != "" && !bytes.Contains(output.Bytes(), []byte(tt.expected)) {
+				t.Errorf("Expected output to contain %q, got %q", tt.expected, outputStr)
+			}
+		})
+	}
+}

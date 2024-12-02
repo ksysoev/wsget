@@ -141,6 +141,63 @@ func (c *Content) MoveToPrevWord() string {
 	return buf.String()
 }
 
+// DeleteToPrevWord deletes characters from the current position to the beginning of current or previous word in the content.
+func (c *Content) DeleteToPrevWord() string {
+	if c.pos <= 0 {
+		return ""
+	}
+
+	pos := c.pos - 1
+
+	// Handle case where case in the beginning of the word
+	if pos > 0 && isWord(c.text[pos]) {
+		pos--
+	}
+
+	// Move to the end of previous word
+	for pos > 0 && !isWord(c.text[pos]) {
+		pos--
+	}
+
+	// Move to the beginning of the previous word
+	for pos > 0 && isWord(c.text[pos-1]) {
+		pos--
+	}
+
+	buf := bytes.NewBufferString("")
+	for i := c.pos - 1; pos <= i; i-- {
+		fmt.Fprint(buf, c.RemovePrevSymbol())
+	}
+
+	return buf.String()
+}
+
+// DeleteToNextWord deletes characters from the current position to the beginning of the next word in the content.
+func (c *Content) DeleteToNextWord() string {
+	if c.pos >= len(c.text) {
+		return ""
+	}
+
+	pos := c.pos
+
+	// move to the end of the current word
+	for pos < len(c.text) && isWord(c.text[pos]) {
+		pos++
+	}
+
+	// move to the beginning of the next word
+	for pos < len(c.text) && !isWord(c.text[pos]) {
+		pos++
+	}
+
+	buf := bytes.NewBufferString("")
+	for i := c.pos; i < pos; i++ {
+		fmt.Fprint(buf, c.RemoveNextSymbol())
+	}
+
+	return buf.String()
+}
+
 // Clear clears the content and returns the string representation of the cleared content.
 // If the content is already empty, it returns an empty string.
 func (c *Content) Clear() string {
@@ -200,11 +257,13 @@ func (c *Content) MoveToRowEnd() string {
 	return string(c.text[init:c.pos])
 }
 
-// RemoveSymbol removes the symbol at the current position of the Content object and returns the string representation of the changes made.
-// If the current position is out of bounds, an empty string is returned.
-// If the removed symbol is not a newline character, the function returns the string representation of the changes made, including clearing the current line and moving the cursor to the beginning of the line.
-// If the removed symbol is a newline character, the function returns the string representation of the changes made, including moving the cursor up one line and clearing the current line.
-func (c *Content) RemoveSymbol() string {
+// RemovePrevSymbol removes the previous symbol from the content's text at the current position.
+// It adjusts the position and updates the text accordingly.
+// It returns a string representing the changes to be displayed.
+// If the current position is out of bounds, it returns an empty string.
+// If the removed symbol is not a newline, it returns a string to clear and update the current line.
+// If the removed symbol is a newline, it returns a string to clear and update the previous line(s).
+func (c *Content) RemovePrevSymbol() string {
 	if c.pos < 1 || c.pos > len(c.text) {
 		return ""
 	}
@@ -232,6 +291,49 @@ func (c *Content) RemoveSymbol() string {
 	}
 
 	output := LineUp + LineClear + ReturnCarriege + lines[0]
+	moveUp := ""
+
+	for i := 1; i < len(lines); i++ {
+		output += lines[i] + string(NewLine) + LineClear + ReturnCarriege
+		moveUp += LineUp
+	}
+
+	if moveUp != "" {
+		output += moveUp
+		output += ReturnCarriege + lines[0]
+	}
+
+	return output
+}
+
+// RemoveNextSymbol removes the symbol at the current position in the content's text and returns a string representing the updated text or necessary control characters for display.
+// It takes no parameters.
+// It returns a string which is the updated text or control characters for display.
+// If the current position is out of bounds, it returns an empty string.
+// If the symbol at the current position is a newline, it handles the line break and returns the appropriate control characters to update the display.
+func (c *Content) RemoveNextSymbol() string {
+	if c.pos < 0 || c.pos >= len(c.text) {
+		return ""
+	}
+
+	symbol := c.text[c.pos]
+
+	startCurrentLine, lines := c.GetLinesAfterPosition(c.pos)
+
+	buffer := c.text[:c.pos]
+
+	if c.pos < (len(c.text) - 1) {
+		buffer = append(buffer, c.text[c.pos+1:]...)
+	}
+
+	c.text = buffer
+
+	if symbol != NewLine {
+		endCurrentLine := startCurrentLine + len(lines[0])
+		return LineClear + ReturnCarriege + string(c.text[startCurrentLine:endCurrentLine-1]) + ReturnCarriege + string(c.text[startCurrentLine:c.pos])
+	}
+
+	output := ""
 	moveUp := ""
 
 	for i := 1; i < len(lines); i++ {
@@ -332,6 +434,10 @@ func (c *Content) GetLinesAfterPosition(pos int) (startOfLine int, lines []strin
 func (c *Content) PrevSymbol() rune {
 	if c.pos <= 0 {
 		return 0
+	}
+
+	if c.pos > len(c.text) {
+		c.pos = len(c.text)
 	}
 
 	return c.text[c.pos-1]

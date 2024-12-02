@@ -56,15 +56,9 @@ func (ed *Editor) Edit(keyStream <-chan keyboard.KeyEvent, initBuffer string) (s
 			return "", e.Err
 		}
 
-		if keyboard.KeyEsc == e.Key && e.Rune == 98 {
-			// Alt + Left
-			fmt.Fprint(ed.output, ed.content.MoveToPrevWord())
-			continue
-		}
-
-		if keyboard.KeyEsc == e.Key && e.Rune == 102 {
-			// Alt + Right
-			fmt.Fprint(ed.output, ed.content.MoveToNextWord())
+		if keyboard.KeyCtrlW == e.Key {
+			// Alt + Backspace
+			fmt.Fprint(ed.output, ed.content.DeleteToPrevWord())
 			continue
 		}
 
@@ -74,7 +68,10 @@ func (ed *Editor) Edit(keyStream <-chan keyboard.KeyEvent, initBuffer string) (s
 		case keyboard.KeyCtrlS:
 			return ed.done()
 		case keyboard.KeyEsc:
-			fmt.Fprint(ed.output, ed.content.Clear())
+			if handleEscKey(e, ed) {
+				continue
+			}
+
 			return "", nil
 		case keyboard.KeyCtrlU:
 			fmt.Fprint(ed.output, ed.content.Clear())
@@ -84,8 +81,10 @@ func (ed *Editor) Edit(keyStream <-chan keyboard.KeyEvent, initBuffer string) (s
 			if ed.newLineOrDone(isPasting) {
 				return ed.done()
 			}
-		case keyboard.KeyBackspace, keyboard.KeyDelete, MacOSDeleteKey:
-			fmt.Fprint(ed.output, ed.content.RemoveSymbol())
+		case keyboard.KeyBackspace, MacOSDeleteKey:
+			fmt.Fprint(ed.output, ed.content.RemovePrevSymbol())
+		case keyboard.KeyDelete:
+			fmt.Fprint(ed.output, ed.content.RemoveNextSymbol())
 		case keyboard.KeyArrowLeft:
 			fmt.Fprint(ed.output, ed.content.MovePositionLeft())
 		case keyboard.KeyArrowRight:
@@ -128,6 +127,38 @@ func (ed *Editor) Edit(keyStream <-chan keyboard.KeyEvent, initBuffer string) (s
 	}
 
 	return "", fmt.Errorf("keyboard stream was unexpectably closed")
+}
+
+// handleEscKey processes keyboard events involving the Escape key and updates the editor state accordingly.
+// It takes a keyboard.KeyEvent `e` and an `Editor` pointer `ed`.
+// It returns a boolean indicating whether the event was handled (`true`) or not (`false`).
+//
+// The function handles the following key combinations:
+// - Alt + Left (`e.Rune == 98`): Moves the cursor to the previous word.
+// - Alt + Right (`e.Rune == 102`): Moves the cursor to the next word.
+// - Alt + Delete (`e.Rune == 100`): Deletes text up to the next word.
+// - Esc (`e.Rune == 0`): Clears the editor content and stops further processing.
+//
+// Any other key combination with the Escape key is ignored, and the function returns `true`.
+func handleEscKey(e keyboard.KeyEvent, ed *Editor) bool {
+	switch e.Rune {
+	case 98: //nolint:mnd // Alt + Left
+		fmt.Fprint(ed.output, ed.content.MoveToPrevWord())
+		return true
+	case 102: //nolint:mnd // Alt + Right
+		fmt.Fprint(ed.output, ed.content.MoveToNextWord())
+		return true
+	case 100: //nolint:mnd // Alt + Delete
+		fmt.Fprint(ed.output, ed.content.DeleteToNextWord())
+		return true
+	case 0:
+		// Esc
+		fmt.Fprint(ed.output, ed.content.Clear())
+		return false
+	default:
+		// Esc + any other key is ignored
+		return true
+	}
 }
 
 // done returns the current request and clears the editor content.
@@ -186,7 +217,7 @@ func (ed *Editor) newLineOrDone(isPasting bool) (isDone bool) {
 
 	isDone = prev != '\\'
 	if !isDone {
-		fmt.Fprint(ed.output, ed.content.RemoveSymbol())
+		fmt.Fprint(ed.output, ed.content.RemovePrevSymbol())
 		fmt.Fprint(ed.output, ed.content.InsertSymbol('\n'))
 
 		return isDone
