@@ -1191,3 +1191,74 @@ func TestContent_DeleteToNextWord(t *testing.T) {
 		})
 	}
 }
+
+func TestContent_PrevSymbol(t *testing.T) {
+	tests := []struct {
+		name     string
+		text     string
+		pos      int
+		expected rune
+	}{
+		{
+			name:     "Cursor at the beginning",
+			text:     "hello",
+			pos:      0,
+			expected: 0,
+		},
+		{
+			name:     "Cursor in the middle",
+			text:     "hello",
+			pos:      2,
+			expected: 'e',
+		},
+		{
+			name:     "Cursor at the end",
+			text:     "hello",
+			pos:      5,
+			expected: 'o',
+		},
+		{
+			name:     "Cursor out of bounds (negative)",
+			text:     "hello",
+			pos:      -1,
+			expected: 0,
+		},
+		{
+			name:     "Cursor out of bounds (beyond length)",
+			text:     "hello",
+			pos:      6,
+			expected: 'o',
+		},
+		{
+			name:     "Empty text",
+			text:     "",
+			pos:      0,
+			expected: 0,
+		},
+		{
+			name:     "Cursor after newline character",
+			text:     "hello\nworld",
+			pos:      6,
+			expected: '\n',
+		},
+		{
+			name:     "Cursor at position 1",
+			text:     "a",
+			pos:      1,
+			expected: 'a',
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Content{
+				text: []rune(tt.text),
+				pos:  tt.pos,
+			}
+			got := c.PrevSymbol()
+			if got != tt.expected {
+				t.Errorf("PrevSymbol() = %q, want %q", got, tt.expected)
+			}
+		})
+	}
+}

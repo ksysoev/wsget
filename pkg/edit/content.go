@@ -436,6 +436,10 @@ func (c *Content) PrevSymbol() rune {
 		return 0
 	}
 
+	if c.pos > len(c.text) {
+		c.pos = len(c.text)
+	}
+
 	return c.text[c.pos-1]
 }
 
