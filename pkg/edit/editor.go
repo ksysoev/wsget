@@ -76,6 +76,7 @@ func (ed *Editor) Edit(keyStream <-chan keyboard.KeyEvent, initBuffer string) (s
 
 		if keyboard.KeyEsc == e.Key && e.Rune == 100 {
 			// Alt + Delete
+			fmt.Fprint(ed.output, ed.content.DeleteToNextWord())
 			continue
 		}
 

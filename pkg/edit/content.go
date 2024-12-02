@@ -171,6 +171,31 @@ func (c *Content) DeleteToPrevWord() string {
 	return buf.String()
 }
 
+func (c *Content) DeleteToNextWord() string {
+	if c.pos >= len(c.text) {
+		return ""
+	}
+
+	pos := c.pos
+
+	// move to the end of the current word
+	for pos < len(c.text) && isWord(c.text[pos]) {
+		pos++
+	}
+
+	// move to the beginning of the next word
+	for pos < len(c.text) && !isWord(c.text[pos]) {
+		pos++
+	}
+
+	buf := bytes.NewBufferString("")
+	for i := c.pos; i < pos; i++ {
+		fmt.Fprint(buf, c.RemoveNextSymbol())
+	}
+
+	return buf.String()
+}
+
 // Clear clears the content and returns the string representation of the cleared content.
 // If the content is already empty, it returns an empty string.
 func (c *Content) Clear() string {
