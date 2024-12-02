@@ -326,7 +326,7 @@ func TestContent_RemoveSymbol(t *testing.T) {
 				pos:  tt.pos,
 			}
 
-			output := content.RemoveSymbol()
+			output := content.RemovePrevSymbol()
 
 			if output != tt.output {
 				t.Errorf("expected output %q, but got %q", tt.output, output)

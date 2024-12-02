@@ -95,8 +95,10 @@ func (ed *Editor) Edit(keyStream <-chan keyboard.KeyEvent, initBuffer string) (s
 			if ed.newLineOrDone(isPasting) {
 				return ed.done()
 			}
-		case keyboard.KeyBackspace, keyboard.KeyDelete, MacOSDeleteKey:
-			fmt.Fprint(ed.output, ed.content.RemoveSymbol())
+		case keyboard.KeyBackspace, MacOSDeleteKey:
+			fmt.Fprint(ed.output, ed.content.RemovePrevSymbol())
+		case keyboard.KeyDelete:
+			fmt.Fprint(ed.output, ed.content.RemoveNextSymbol())
 		case keyboard.KeyArrowLeft:
 			fmt.Fprint(ed.output, ed.content.MovePositionLeft())
 		case keyboard.KeyArrowRight:
@@ -197,7 +199,7 @@ func (ed *Editor) newLineOrDone(isPasting bool) (isDone bool) {
 
 	isDone = prev != '\\'
 	if !isDone {
-		fmt.Fprint(ed.output, ed.content.RemoveSymbol())
+		fmt.Fprint(ed.output, ed.content.RemovePrevSymbol())
 		fmt.Fprint(ed.output, ed.content.InsertSymbol('\n'))
 
 		return isDone
