@@ -846,3 +846,118 @@ func TestContent_MoveToRowEnd(t *testing.T) {
 		})
 	}
 }
+
+func TestContent_RemoveNextSymbol(t *testing.T) {
+	tests := []struct {
+		name         string
+		input        string
+		pos          int
+		output       string
+		expectedText string
+		expectedPos  int
+	}{
+		{
+			name:         "remove symbol in the middle of the text",
+			input:        "hello world",
+			pos:          5,
+			output:       "\x1b[2K\rhelloworld\rhello",
+			expectedText: "helloworld",
+			expectedPos:  5,
+		},
+		{
+			name:         "remove symbol at the beginning of the text",
+			input:        "hello world",
+			pos:          0,
+			output:       "\x1b[2K\rello world\r",
+			expectedText: "ello world",
+			expectedPos:  0,
+		},
+		{
+			name:         "remove symbol at the end of the text",
+			input:        "hello world",
+			pos:          11,
+			output:       "",
+			expectedText: "hello world",
+			expectedPos:  11,
+		},
+		{
+			name:         "remove newline character in the middle of the text",
+			input:        "hello\nworld",
+			pos:          5,
+			output:       "world\n\x1b[2K\r\x1b[1A\rhello",
+			expectedText: "helloworld",
+			expectedPos:  5,
+		},
+		{
+			name:         "remove symbol when pos is out of bounds (negative)",
+			input:        "hello world",
+			pos:          -1,
+			output:       "",
+			expectedText: "hello world",
+			expectedPos:  -1,
+		},
+		{
+			name:         "remove symbol when pos is out of bounds (exceeds length)",
+			input:        "hello world",
+			pos:          12,
+			output:       "",
+			expectedText: "hello world",
+			expectedPos:  12,
+		},
+		{
+			name:         "remove symbol from empty content",
+			input:        "",
+			pos:          0,
+			output:       "",
+			expectedText: "",
+			expectedPos:  0,
+		},
+		{
+			name:         "remove newline at the end of the text",
+			input:        "hello world\n",
+			pos:          11,
+			output:       "\n\x1b[2K\r\x1b[1A\rhello world",
+			expectedText: "hello world",
+			expectedPos:  11,
+		},
+		{
+			name:         "remove symbol at the end when cursor is before newline",
+			input:        "hello\n",
+			pos:          5,
+			output:       "\n\x1b[2K\r\x1b[1A\rhello",
+			expectedText: "hello",
+			expectedPos:  5,
+		},
+		{
+			name:         "remove symbol when next symbol is newline",
+			input:        "hello\nworld",
+			pos:          5,
+			output:       "world\n\x1b[2K\r\x1b[1A\rhello",
+			expectedText: "helloworld",
+			expectedPos:  5,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Content{
+				text: []rune(tt.input),
+				pos:  tt.pos,
+			}
+
+			output := c.RemoveNextSymbol()
+
+			if output != tt.output {
+				t.Errorf("expected output %q, but got %q", tt.output, output)
+			}
+
+			if string(c.text) != tt.expectedText {
+				t.Errorf("expected text %q, but got %q", tt.expectedText, string(c.text))
+			}
+
+			if c.pos != tt.expectedPos {
+				t.Errorf("expected position %d, but got %d", tt.expectedPos, c.pos)
+			}
+		})
+	}
+}

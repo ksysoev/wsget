@@ -141,6 +141,7 @@ func (c *Content) MoveToPrevWord() string {
 	return buf.String()
 }
 
+// DeleteToPrevWord deletes characters from the current position to the beginning of current or previous word in the content.
 func (c *Content) DeleteToPrevWord() string {
 	if c.pos <= 0 {
 		return ""
@@ -171,6 +172,7 @@ func (c *Content) DeleteToPrevWord() string {
 	return buf.String()
 }
 
+// DeleteToNextWord deletes characters from the current position to the beginning of the next word in the content.
 func (c *Content) DeleteToNextWord() string {
 	if c.pos >= len(c.text) {
 		return ""
@@ -304,12 +306,11 @@ func (c *Content) RemovePrevSymbol() string {
 	return output
 }
 
-// RemoveNextSymbol removes the next symbol from the content's text at the current position.
-// It adjusts the position and updates the text accordingly.
-// It returns a string representing the changes to be displayed.
+// RemoveNextSymbol removes the symbol at the current position in the content's text and returns a string representing the updated text or necessary control characters for display.
+// It takes no parameters.
+// It returns a string which is the updated text or control characters for display.
 // If the current position is out of bounds, it returns an empty string.
-// If the removed symbol is not a newline, it returns a string to clear and update the current line.
-// If the removed symbol is a newline, it returns a string to clear and update the current and next line(s).
+// If the symbol at the current position is a newline, it handles the line break and returns the appropriate control characters to update the display.
 func (c *Content) RemoveNextSymbol() string {
 	if c.pos < 0 || c.pos >= len(c.text) {
 		return ""
@@ -326,10 +327,6 @@ func (c *Content) RemoveNextSymbol() string {
 	}
 
 	c.text = buffer
-
-	if c.pos == len(c.text) && symbol != NewLine {
-		return " " + Backspace
-	}
 
 	if symbol != NewLine {
 		endCurrentLine := startCurrentLine + len(lines[0])
