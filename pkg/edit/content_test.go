@@ -851,9 +851,9 @@ func TestContent_RemoveNextSymbol(t *testing.T) {
 	tests := []struct {
 		name         string
 		input        string
-		pos          int
 		output       string
 		expectedText string
+		pos          int
 		expectedPos  int
 	}{
 		{
@@ -966,9 +966,9 @@ func TestContent_DeleteToPrevWord(t *testing.T) {
 	tests := []struct {
 		name           string
 		inputText      string
-		inputPos       int
 		expectedOutput string
 		expectedText   string
+		inputPos       int
 		expectedPos    int
 	}{
 		{
@@ -1081,9 +1081,9 @@ func TestContent_DeleteToNextWord(t *testing.T) {
 	tests := []struct {
 		name           string
 		inputText      string
-		inputPos       int
 		expectedOutput string
 		expectedText   string
+		inputPos       int
 		expectedPos    int
 	}{
 		{
@@ -1255,8 +1255,8 @@ func TestContent_PrevSymbol(t *testing.T) {
 				text: []rune(tt.text),
 				pos:  tt.pos,
 			}
-			got := c.PrevSymbol()
-			if got != tt.expected {
+
+			if got := c.PrevSymbol(); got != tt.expected {
 				t.Errorf("PrevSymbol() = %q, want %q", got, tt.expected)
 			}
 		})
