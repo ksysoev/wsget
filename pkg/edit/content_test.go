@@ -1076,3 +1076,118 @@ func TestContent_DeleteToPrevWord(t *testing.T) {
 		})
 	}
 }
+
+func TestContent_DeleteToNextWord(t *testing.T) {
+	tests := []struct {
+		name           string
+		inputText      string
+		inputPos       int
+		expectedOutput string
+		expectedText   string
+		expectedPos    int
+	}{
+		{
+			name:           "Delete to next word when cursor is at the beginning of a word",
+			inputText:      "hello world",
+			inputPos:       0,
+			expectedOutput: "\x1b[2K\rello world\r\x1b[2K\rllo world\r\x1b[2K\rlo world\r\x1b[2K\ro world\r\x1b[2K\r world\r\x1b[2K\rworld\r",
+			expectedText:   "world",
+			expectedPos:    0,
+		},
+		{
+			name:           "Delete to next word when cursor is in the middle of a word",
+			inputText:      "hello world",
+			inputPos:       2,
+			expectedOutput: "\x1b[2K\rhelo world\rhe\x1b[2K\rheo world\rhe\x1b[2K\rhe world\rhe\x1b[2K\rheworld\rhe",
+			expectedText:   "heworld",
+			expectedPos:    2,
+		},
+		{
+			name:           "Delete to next word when cursor is at the end of a word",
+			inputText:      "hello world",
+			inputPos:       5,
+			expectedOutput: "\x1b[2K\rhelloworld\rhello",
+			expectedText:   "helloworld",
+			expectedPos:    5,
+		},
+		{
+			name:           "Delete to next word when cursor is at whitespace",
+			inputText:      "hello   world",
+			inputPos:       5,
+			expectedOutput: "\x1b[2K\rhello  world\rhello\x1b[2K\rhello world\rhello\x1b[2K\rhelloworld\rhello",
+			expectedText:   "helloworld",
+			expectedPos:    5,
+		},
+		{
+			name:           "Delete to next word when cursor is at the end of text",
+			inputText:      "hello world",
+			inputPos:       11,
+			expectedOutput: "",
+			expectedText:   "hello world",
+			expectedPos:    11,
+		},
+		{
+			name:           "Delete to next word when there are multiple spaces",
+			inputText:      "hello   world",
+			inputPos:       2,
+			expectedOutput: "\x1b[2K\rhelo   world\rhe\x1b[2K\rheo   world\rhe\x1b[2K\rhe   world\rhe\x1b[2K\rhe  world\rhe\x1b[2K\rhe world\rhe\x1b[2K\rheworld\rhe",
+			expectedText:   "heworld",
+			expectedPos:    2,
+		},
+		{
+			name:           "Delete to next word with punctuation",
+			inputText:      "hello, world!",
+			inputPos:       5,
+			expectedOutput: "\x1b[2K\rhello world!\rhello\x1b[2K\rhelloworld!\rhello",
+			expectedText:   "helloworld!",
+			expectedPos:    5,
+		},
+		{
+			name:           "Delete to next word when cursor is at the beginning of an empty content",
+			inputText:      "",
+			inputPos:       0,
+			expectedOutput: "",
+			expectedText:   "",
+			expectedPos:    0,
+		},
+		{
+			name:           "Delete to next word when cursor is in the middle of multiple spaces",
+			inputText:      "hello     world",
+			inputPos:       7,
+			expectedOutput: "\x1b[2K\rhello    world\rhello  \x1b[2K\rhello   world\rhello  \x1b[2K\rhello  world\rhello  ",
+			expectedText:   "hello  world",
+			expectedPos:    7,
+		},
+		{
+			name:           "Delete to next word in multi-line content",
+			inputText:      "hello\nworld\nfoo",
+			inputPos:       6,
+			expectedOutput: "\x1b[2K\rorld\r\x1b[2K\rrld\r\x1b[2K\rld\r\x1b[2K\rd\r\x1b[2K\r\rfoo\n\x1b[2K\r\x1b[1A\r",
+			expectedText:   "hello\nfoo",
+			expectedPos:    6,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Content{
+				text: []rune(tt.inputText),
+				pos:  tt.inputPos,
+			}
+
+			output := c.DeleteToNextWord()
+
+			if output != tt.expectedOutput {
+				t.Errorf("expected output %q, but got %q", tt.expectedOutput, output)
+			}
+
+			if string(c.text) != tt.expectedText {
+				t.Errorf("expected text %q, but got %q", tt.expectedText, string(c.text))
+			}
+
+			if c.pos != tt.expectedPos {
+				t.Errorf("expected position %d, but got %d", tt.expectedPos, c.pos)
+			}
+		})
+	}
+}
