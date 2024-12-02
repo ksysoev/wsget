@@ -292,23 +292,26 @@ func (c *Content) RemoveNextSymbol() string {
 
 	symbol := c.text[c.pos]
 
-	if c.pos == len(c.text)-1 {
-		c.text = c.text[:c.pos]
-		return ""
-	}
-
 	startCurrentLine, lines := c.GetLinesAfterPosition(c.pos)
 
 	buffer := c.text[:c.pos]
-	buffer = append(buffer, c.text[c.pos+1:]...)
+
+	if c.pos < (len(c.text) - 1) {
+		buffer = append(buffer, c.text[c.pos+1:]...)
+	}
+
 	c.text = buffer
+
+	if c.pos == len(c.text) && symbol != NewLine {
+		return " " + Backspace
+	}
 
 	if symbol != NewLine {
 		endCurrentLine := startCurrentLine + len(lines[0])
-		return LineClear + ReturnCarriege + string(c.text[startCurrentLine:endCurrentLine]) + ReturnCarriege + string(c.text[startCurrentLine:c.pos])
+		return LineClear + ReturnCarriege + string(c.text[startCurrentLine:endCurrentLine-1]) + ReturnCarriege + string(c.text[startCurrentLine:c.pos])
 	}
 
-	output := LineClear + ReturnCarriege + lines[0]
+	output := ""
 	moveUp := ""
 
 	for i := 1; i < len(lines); i++ {
@@ -318,6 +321,7 @@ func (c *Content) RemoveNextSymbol() string {
 
 	if moveUp != "" {
 		output += moveUp
+		output += ReturnCarriege + lines[0]
 	}
 
 	return output
