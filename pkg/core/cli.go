@@ -23,8 +23,6 @@ const (
 	CommandsLimit      = 100
 	HistoryLimit       = 100
 
-	MacOSDeleteKey = 127
-
 	HideCursor = "\x1b[?25l"
 	ShowCursor = "\x1b[?25h"
 
@@ -32,14 +30,14 @@ const (
 )
 
 type CLI struct {
-	formater  *formater.Format
-	wsConn    ws.ConnectionHandler
-	editor    *edit.Editor
-	cmdEditor *edit.Editor
-	input     Inputer
-	output    io.Writer
-	commands  chan command.Executer
-	macro     *command.Macro
+	formater    *formater.Format
+	wsConn      ws.ConnectionHandler
+	editor      *edit.Editor
+	cmdEditor   *edit.Editor
+	inputStream chan KeyEvent
+	output      io.Writer
+	commands    chan command.Executer
+	macro       *command.Macro
 }
 
 type RunOptions struct {
@@ -67,7 +65,7 @@ type Formater interface {
 // NewCLI creates a new CLI instance with the given wsConn, input, and output.
 // It returns an error if it fails to get the current user, create the necessary directories,
 // load the macro for the domain, or initialize the CLI instance.
-func NewCLI(wsConn ws.ConnectionHandler, input Inputer, output io.Writer) (*CLI, error) {
+func NewCLI(wsConn ws.ConnectionHandler, output io.Writer) (*CLI, error) {
 	currentUser, err := user.Current()
 	if err != nil {
 		return nil, fmt.Errorf("fail to get current user: %s", err)
@@ -95,15 +93,19 @@ func NewCLI(wsConn ws.ConnectionHandler, input Inputer, output io.Writer) (*CLI,
 	}
 
 	return &CLI{
-		formater:  formater.NewFormat(),
-		editor:    edit.NewEditor(output, history, false),
-		cmdEditor: cmdEditor,
-		wsConn:    wsConn,
-		input:     input,
-		output:    output,
-		commands:  commands,
-		macro:     macro,
+		formater:    formater.NewFormat(),
+		editor:      edit.NewEditor(output, history, false),
+		cmdEditor:   cmdEditor,
+		wsConn:      wsConn,
+		inputStream: make(chan KeyEvent),
+		output:      output,
+		commands:    commands,
+		macro:       macro,
 	}, nil
+}
+
+func (c *CLI) OnKeyEvent(event KeyEvent) {
+	c.inputStream <- event
 }
 
 // Run runs the CLI with the provided options.
@@ -125,12 +127,6 @@ func (c *CLI) Run(opts RunOptions) error {
 
 	c.hideCursor()
 
-	keysEvents, err := c.input.GetKeys()
-	if err != nil {
-		return err
-	}
-	defer c.input.Close()
-
 	fmt.Fprintln(c.output, "Use Enter to input request and send it, Ctrl+C to exit")
 
 	for _, cmd := range opts.Commands {
@@ -142,6 +138,7 @@ func (c *CLI) Run(opts RunOptions) error {
 	for {
 		select {
 		case cmd := <-c.commands:
+			var err error
 			for cmd != nil {
 				cmd, err = cmd.Execute(exCtx)
 
@@ -149,11 +146,11 @@ func (c *CLI) Run(opts RunOptions) error {
 					return err
 				}
 			}
-		case event := <-keysEvents:
+		case event := <-c.inputStream:
 			switch event.Key {
-			case keyboard.KeyEsc, keyboard.KeyCtrlC, keyboard.KeyCtrlD:
+			case KeyEsc, KeyCtrlC, KeyCtrlD:
 				c.commands <- command.NewExit()
-			case keyboard.KeyEnter:
+			case KeyEnter:
 				c.commands <- command.NewEdit("")
 			default:
 				if event.Key > 0 {

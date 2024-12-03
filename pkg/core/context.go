@@ -3,28 +3,26 @@ package core
 import (
 	"io"
 
-	"github.com/eiannone/keyboard"
 	"github.com/ksysoev/wsget/pkg/command"
 	"github.com/ksysoev/wsget/pkg/formater"
 	"github.com/ksysoev/wsget/pkg/ws"
 )
 
 type ExecutionContext struct {
-	input      <-chan keyboard.KeyEvent
+	input      <-chan KeyEvent
 	cli        *CLI
 	outputFile io.Writer
 }
 
-func NewExecutionContext(cli *CLI, input <-chan keyboard.KeyEvent, outputFile io.Writer) *ExecutionContext {
+func NewExecutionContext(cli *CLI, outputFile io.Writer) *ExecutionContext {
 	return &ExecutionContext{
-		input:      input,
 		cli:        cli,
 		outputFile: outputFile,
 	}
 }
 
-func (ctx *ExecutionContext) Input() <-chan keyboard.KeyEvent {
-	return ctx.input
+func (ctx *ExecutionContext) Input() <-chan KeyEvent {
+	return ctx.cli.inputStream
 }
 
 func (ctx *ExecutionContext) OutputFile() io.Writer {
