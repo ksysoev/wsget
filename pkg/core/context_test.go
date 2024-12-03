@@ -91,17 +91,6 @@ func TestExecutionContext_CmdEditor(t *testing.T) {
 	}
 }
 
-func TestExecutionContext_Macro(t *testing.T) {
-	cli := &CLI{}
-	outputFile := &bytes.Buffer{}
-
-	executionContext := NewExecutionContext(cli, outputFile)
-
-	if executionContext.Macro() != cli.macro {
-		t.Errorf("Unexpected connection: %v", executionContext.Macro())
-	}
-}
-
 func TestExecutionContext_Input(t *testing.T) {
 	cli := &CLI{
 		inputStream: make(chan KeyEvent),

@@ -36,13 +36,13 @@ type CLI struct {
 	cmdEditor   *edit.Editor
 	inputStream chan KeyEvent
 	output      io.Writer
-	commands    chan command.Executer
-	macro       *command.Macro
+	commands    chan Executer
+	cmdFactory  CommandFactory
 }
 
 type RunOptions struct {
 	OutputFile *os.File
-	Commands   []command.Executer
+	Commands   []Executer
 }
 
 type Inputer interface {
@@ -65,7 +65,7 @@ type Formater interface {
 // NewCLI creates a new CLI instance with the given wsConn, input, and output.
 // It returns an error if it fails to get the current user, create the necessary directories,
 // load the macro for the domain, or initialize the CLI instance.
-func NewCLI(wsConn ws.ConnectionHandler, output io.Writer) (*CLI, error) {
+func NewCLI(cmdFactory CommandFactory, wsConn ws.ConnectionHandler, output io.Writer) (*CLI, error) {
 	currentUser, err := user.Current()
 	if err != nil {
 		return nil, fmt.Errorf("fail to get current user: %s", err)
@@ -84,7 +84,7 @@ func NewCLI(wsConn ws.ConnectionHandler, output io.Writer) (*CLI, error) {
 		return nil, fmt.Errorf("fail to load macro: %s", err)
 	}
 
-	commands := make(chan command.Executer, CommandsLimit)
+	commands := make(chan Executer, CommandsLimit)
 
 	cmdEditor := edit.NewEditor(output, cmdHistory, true)
 
@@ -100,7 +100,7 @@ func NewCLI(wsConn ws.ConnectionHandler, output io.Writer) (*CLI, error) {
 		inputStream: make(chan KeyEvent),
 		output:      output,
 		commands:    commands,
-		macro:       macro,
+		cmdFactory:  cmdFactory,
 	}, nil
 }
 
@@ -133,7 +133,7 @@ func (c *CLI) Run(opts RunOptions) error {
 		c.commands <- cmd
 	}
 
-	exCtx := NewExecutionContext(c, keysEvents, opts.OutputFile)
+	exCtx := NewExecutionContext(c, opts.OutputFile)
 
 	for {
 		select {
@@ -149,9 +149,19 @@ func (c *CLI) Run(opts RunOptions) error {
 		case event := <-c.inputStream:
 			switch event.Key {
 			case KeyEsc, KeyCtrlC, KeyCtrlD:
-				c.commands <- command.NewExit()
+				cmd, err := c.cmdFactory.New("exit")
+				if err != nil {
+					return fmt.Errorf("fail to create exit command: %w", err)
+				}
+
+				c.commands <- cmd
 			case KeyEnter:
-				c.commands <- command.NewEdit("")
+				cmd, err := c.cmdFactory.New("edit")
+				if err != nil {
+					return fmt.Errorf("fail to create edit command: %w", err)
+				}
+
+				c.commands <- cmd
 			default:
 				if event.Key > 0 {
 					continue
@@ -159,7 +169,12 @@ func (c *CLI) Run(opts RunOptions) error {
 
 				switch event.Rune {
 				case ':':
-					c.commands <- command.NewCmdEdit()
+					cmd, err := c.cmdFactory.New("editcmd")
+					if err != nil {
+						return fmt.Errorf("fail to create edit command: %w", err)
+					}
+
+					c.commands <- cmd
 				default:
 					continue
 				}

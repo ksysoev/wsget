@@ -2,17 +2,15 @@ package command
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"reflect"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/eiannone/keyboard"
 	"github.com/fatih/color"
 	"github.com/ksysoev/wsget/pkg/clierrors"
-	"github.com/ksysoev/wsget/pkg/formater"
+	"github.com/ksysoev/wsget/pkg/core"
 	"github.com/ksysoev/wsget/pkg/ws"
 	"gopkg.in/yaml.v3"
 )
@@ -25,31 +23,11 @@ const (
 	ShowCursor         = "\x1b[?25h"
 )
 
-type ExecutionContext interface {
-	Input() <-chan keyboard.KeyEvent
-	OutputFile() io.Writer
-	Output() io.Writer
-	Formater() formater.Formater
-	Connection() ws.ConnectionHandler
-	RequestEditor() Editor
-	CmdEditor() Editor
-	Macro() *Macro
-}
-
-type Editor interface {
-	Edit(keyStream <-chan keyboard.KeyEvent, initBuffer string) (string, error)
-	Close() error
-}
-
-type Executer interface {
-	Execute(ExecutionContext) (Executer, error)
-}
-
-// Factory returns an Executer and an error. It takes a string and a Macro pointer as input.
+// Factory returns an core.Executer and an error. It takes a string and a Macro pointer as input.
 // The string is split into parts and the first part is used to determine which command to execute.
 // Depending on the command, different arguments are passed to the corresponding constructor.
 // If the command is not recognized, an error is returned.
-func Factory(raw string, macro *Macro) (Executer, error) {
+func Factory(raw string, macro *Macro) (core.Executer, error) {
 	if raw == "" {
 		return nil, &ErrEmptyCommand{}
 	}
@@ -67,6 +45,8 @@ func Factory(raw string, macro *Macro) (Executer, error) {
 		}
 
 		return NewEdit(content), nil
+	case "editcmd":
+		return NewCmdEdit(), nil
 	case "send":
 		if len(parts) == 1 {
 			return nil, &ErrEmptyRequest{}
@@ -144,7 +124,7 @@ func NewEdit(content string) *Edit {
 }
 
 // Execute executes the edit command and returns a Send command id editing was successful or an error in other case.
-func (c *Edit) Execute(exCtx ExecutionContext) (Executer, error) {
+func (c *Edit) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 	output := exCtx.Output()
 	color.New(color.FgGreen).Fprint(output, "->\n")
 	fmt.Fprint(output, ShowCursor)
@@ -170,8 +150,8 @@ func NewSend(request string) *Send {
 }
 
 // Execute sends the request using the WebSocket connection and returns a PrintMsg to print the response message.
-// It implements the Execute method of the Executer interface.
-func (c *Send) Execute(exCtx ExecutionContext) (Executer, error) {
+// It implements the Execute method of the core.Executer interface.
+func (c *Send) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 	msg, err := exCtx.Connection().Send(c.request)
 	if err != nil {
 		return nil, err
@@ -191,7 +171,7 @@ func NewPrintMsg(msg ws.Message) *PrintMsg {
 // Execute executes the PrintMsg command and returns nil and error.
 // It formats the message and prints it to the output file.
 // If an output file is provided, it writes the formatted message to the file.
-func (c *PrintMsg) Execute(exCtx ExecutionContext) (Executer, error) {
+func (c *PrintMsg) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 	msg := c.msg
 	output, err := exCtx.Formater().FormatMessage(msg)
 
@@ -232,9 +212,9 @@ func NewExit() *Exit {
 	return &Exit{}
 }
 
-// Execute method implements the Execute method of the Executer interface.
+// Execute method implements the Execute method of the core.Executer interface.
 // It returns an error indicating that the program was interrupted.
-func (c *Exit) Execute(_ ExecutionContext) (Executer, error) {
+func (c *Exit) Execute(_ core.ExecutionContext) (core.Executer, error) {
 	return nil, clierrors.Interrupted{}
 }
 
@@ -250,7 +230,7 @@ func NewWaitForResp(timeout time.Duration) *WaitForResp {
 // If a timeout is set, it will return an error if no response is received within the specified time.
 // If a response is received, it will return a new PrintMsg command with the received message.
 // If the WebSocket connection is closed, it will return an error.
-func (c *WaitForResp) Execute(exCtx ExecutionContext) (Executer, error) {
+func (c *WaitForResp) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 	if c.timeout.Seconds() == 0 {
 		msg, ok := <-exCtx.Connection().Messages()
 		if !ok {
@@ -278,9 +258,9 @@ func NewCmdEdit() *CmdEdit {
 	return &CmdEdit{}
 }
 
-// Execute executes the CmdEdit and returns an Executer and an error.
+// Execute executes the CmdEdit and returns an core.Executer and an error.
 // It prompts the user to edit a command and returns the corresponding Command object.
-func (c *CmdEdit) Execute(exCtx ExecutionContext) (Executer, error) {
+func (c *CmdEdit) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 	output := exCtx.Output()
 
 	fmt.Fprint(output, ":")
@@ -306,16 +286,16 @@ func (c *CmdEdit) Execute(exCtx ExecutionContext) (Executer, error) {
 }
 
 type Sequence struct {
-	subCommands []Executer
+	subCommands []core.Executer
 }
 
-func NewSequence(subCommands []Executer) *Sequence {
+func NewSequence(subCommands []core.Executer) *Sequence {
 	return &Sequence{subCommands}
 }
 
 // Execute executes the command sequence by iterating over all sub-commands and executing them recursively.
-// It takes an ExecutionContext as input and returns an Executer and an error.
-func (c *Sequence) Execute(exCtx ExecutionContext) (Executer, error) {
+// It takes an core.ExecutionContext as input and returns an core.Executer and an error.
+func (c *Sequence) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 	for _, cmd := range c.subCommands {
 		for cmd != nil {
 			var err error
@@ -336,9 +316,9 @@ func NewInputFileCommand(filePath string) *InputFileCommand {
 	return &InputFileCommand{filePath}
 }
 
-// Execute executes the InputFileCommand and returns an Executer and an error.
+// Execute executes the InputFileCommand and returns an core.Executer and an error.
 // It reads the file and executes the commands in the file.
-func (c *InputFileCommand) Execute(exCtx ExecutionContext) (Executer, error) {
+func (c *InputFileCommand) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 	data, err := os.ReadFile(c.filePath)
 	if err != nil {
 		return nil, err
@@ -349,7 +329,7 @@ func (c *InputFileCommand) Execute(exCtx ExecutionContext) (Executer, error) {
 		return nil, err
 	}
 
-	cmds := make([]Executer, 0, len(rawCommands))
+	cmds := make([]core.Executer, 0, len(rawCommands))
 
 	for _, rawCommand := range rawCommands {
 		cmd, err := Factory(rawCommand, exCtx.Macro())
@@ -364,17 +344,17 @@ func (c *InputFileCommand) Execute(exCtx ExecutionContext) (Executer, error) {
 }
 
 type RepeatCommand struct {
-	subCommand Executer
+	subCommand core.Executer
 	times      int
 }
 
-func NewRepeatCommand(times int, subCommand Executer) *RepeatCommand {
+func NewRepeatCommand(times int, subCommand core.Executer) *RepeatCommand {
 	return &RepeatCommand{subCommand, times}
 }
 
-// Execute executes the RepeatCommand and returns an Executer and an error.
+// Execute executes the RepeatCommand and returns an core.Executer and an error.
 // It executes the sub-command the specified number of times.
-func (c *RepeatCommand) Execute(exCtx ExecutionContext) (Executer, error) {
+func (c *RepeatCommand) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 	for i := 0; i < c.times; i++ {
 		cmd := c.subCommand
 		for cmd != nil {
@@ -396,9 +376,9 @@ func NewSleepCommand(duration time.Duration) *SleepCommand {
 	return &SleepCommand{duration}
 }
 
-// Execute executes the SleepCommand and returns an Executer and an error.
+// Execute executes the SleepCommand and returns an core.Executer and an error.
 // It sleeps for the specified duration.
-func (c *SleepCommand) Execute(_ ExecutionContext) (Executer, error) {
+func (c *SleepCommand) Execute(_ core.ExecutionContext) (core.Executer, error) {
 	time.Sleep(c.duration)
 
 	return nil, nil

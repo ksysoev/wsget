@@ -3,6 +3,8 @@ package command
 import (
 	"os"
 	"testing"
+
+	"github.com/ksysoev/wsget/pkg/core"
 )
 
 func TestNewMacro(t *testing.T) {
@@ -199,7 +201,7 @@ func TestMacro_Get(t *testing.T) {
 		name    string
 		macro   *Macro
 		cmdName string
-		wantCmd Executer
+		wantCmd core.Executer
 		errMsg  string
 		wantErr bool
 	}{
