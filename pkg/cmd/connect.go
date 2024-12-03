@@ -7,9 +7,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/ksysoev/wsget/pkg/cli"
 	"github.com/ksysoev/wsget/pkg/clierrors"
 	"github.com/ksysoev/wsget/pkg/command"
+	"github.com/ksysoev/wsget/pkg/core"
 	"github.com/ksysoev/wsget/pkg/ws"
 	"github.com/spf13/cobra"
 )
@@ -51,9 +51,9 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 
 	defer wsConn.Close()
 
-	input := cli.NewKeyboard()
+	input := core.NewKeyboard()
 
-	client, err := cli.NewCLI(wsConn, input, os.Stdout)
+	client, err := core.NewCLI(wsConn, input, os.Stdout)
 	if err != nil {
 		return fmt.Errorf("unable to start CLI: %w", err)
 	}
@@ -95,8 +95,8 @@ func validateArgs(wsURL string, args *flags) error {
 // It takes a single parameter args of type *flags which contains the command-line arguments.
 // It returns a pointer to cli.RunOptions and an error.
 // It returns an error if it fails to open the specified output file.
-func initRunOptions(args *flags) (opts *cli.RunOptions, err error) {
-	opts = &cli.RunOptions{}
+func initRunOptions(args *flags) (opts *core.RunOptions, err error) {
+	opts = &core.RunOptions{}
 
 	if args.outputFile != "" {
 		if opts.OutputFile, err = os.Create(args.outputFile); err != nil {
