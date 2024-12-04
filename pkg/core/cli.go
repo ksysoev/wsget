@@ -8,7 +8,6 @@ import (
 
 	"github.com/eiannone/keyboard"
 	"github.com/fatih/color"
-	"github.com/ksysoev/wsget/pkg/edit"
 	"github.com/ksysoev/wsget/pkg/formater"
 	"github.com/ksysoev/wsget/pkg/ws"
 )
@@ -31,8 +30,8 @@ const (
 type CLI struct {
 	formater    *formater.Format
 	wsConn      ws.ConnectionHandler
-	editor      *edit.Editor
-	cmdEditor   *edit.Editor
+	editor      Editor
+	cmdEditor   Editor
 	inputStream chan KeyEvent
 	output      io.Writer
 	commands    chan Executer
@@ -64,7 +63,7 @@ type Formater interface {
 // NewCLI creates a new CLI instance with the given wsConn, input, and output.
 // It returns an error if it fails to get the current user, create the necessary directories,
 // load the macro for the domain, or initialize the CLI instance.
-func NewCLI(cmdFactory CommandFactory, wsConn ws.ConnectionHandler, output io.Writer) (*CLI, error) {
+func NewCLI(cmdFactory CommandFactory, wsConn ws.ConnectionHandler, output io.Writer, edit Editor, cmdEdit Editor) (*CLI, error) {
 	currentUser, err := user.Current()
 	if err != nil {
 		return nil, fmt.Errorf("fail to get current user: %s", err)
@@ -75,8 +74,8 @@ func NewCLI(cmdFactory CommandFactory, wsConn ws.ConnectionHandler, output io.Wr
 		return nil, fmt.Errorf("fail to get current user: %s", err)
 	}
 
-	history := edit.NewHistory(homeDir+"/"+HistoryFilename, HistoryLimit)
-	cmdHistory := edit.NewHistory(homeDir+"/"+HistoryCmdFilename, HistoryLimit)
+	// history := edit.NewHistory(homeDir+"/"+HistoryFilename, HistoryLimit)
+	// cmdHistory := edit.NewHistory(homeDir+"/"+HistoryCmdFilename, HistoryLimit)
 
 	// macro, err := command.LoadMacroForDomain(homeDir+"/"+ConfigDir+"/"+MacroDir, wsConn.Hostname())
 	// if err != nil {
@@ -85,7 +84,7 @@ func NewCLI(cmdFactory CommandFactory, wsConn ws.ConnectionHandler, output io.Wr
 
 	commands := make(chan Executer, CommandsLimit)
 
-	cmdEditor := edit.NewEditor(output, cmdHistory, true)
+	// cmdEditor := edit.NewEditor(output, cmdHistory, true)
 
 	// if macro != nil {
 	// 	cmdEditor.Dictionary = edit.NewDictionary(macro.GetNames())
@@ -93,8 +92,8 @@ func NewCLI(cmdFactory CommandFactory, wsConn ws.ConnectionHandler, output io.Wr
 
 	return &CLI{
 		formater:    formater.NewFormat(),
-		editor:      edit.NewEditor(output, history, false),
-		cmdEditor:   cmdEditor,
+		editor:      edit,
+		cmdEditor:   cmdEdit,
 		wsConn:      wsConn,
 		inputStream: make(chan KeyEvent),
 		output:      output,

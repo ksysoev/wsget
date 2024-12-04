@@ -13,7 +13,6 @@ import (
 	"github.com/coder/websocket"
 	"github.com/eiannone/keyboard"
 	"github.com/ksysoev/wsget/pkg/clierrors"
-	"github.com/ksysoev/wsget/pkg/command"
 	"github.com/ksysoev/wsget/pkg/ws"
 )
 
@@ -72,7 +71,7 @@ func TestNewCLI(t *testing.T) {
 	}
 
 	output := os.Stdout
-	cli, err := NewCLI(wsConn, &mockInput{}, output)
+	cli, err := NewCLI(nil, wsConn, output, nil, nil)
 
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
@@ -124,13 +123,13 @@ func TestNewCLIRunWithCommands(t *testing.T) {
 	}
 
 	output := os.Stdout
-	cli, err := NewCLI(wsConn, &mockInput{}, output)
+	cli, err := NewCLI(nil, wsConn, output, nil, nil)
 
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
 
-	err = cli.Run(RunOptions{Commands: []command.Executer{command.NewExit()}})
+	err = cli.Run(RunOptions{Commands: []Executer{}})
 
 	if err == nil {
 		t.Fatalf("Expected error, but got nothing")

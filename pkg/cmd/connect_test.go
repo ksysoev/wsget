@@ -56,7 +56,7 @@ func TestCreateCommands(t *testing.T) {
 	tests := []struct {
 		name     string
 		args     *flags
-		expected []command.Executer
+		expected []core.Executer
 	}{
 		{
 			name: "Request with waitResponse",
@@ -64,7 +64,7 @@ func TestCreateCommands(t *testing.T) {
 				request:      "test request",
 				waitResponse: 5,
 			},
-			expected: []command.Executer{
+			expected: []core.Executer{
 				command.NewSend("test request"),
 				command.NewWaitForResp(5 * time.Second),
 				command.NewExit(),
@@ -76,7 +76,7 @@ func TestCreateCommands(t *testing.T) {
 				request:      "test request",
 				waitResponse: -1,
 			},
-			expected: []command.Executer{
+			expected: []core.Executer{
 				command.NewSend("test request"),
 			},
 		},
@@ -85,14 +85,14 @@ func TestCreateCommands(t *testing.T) {
 			args: &flags{
 				inputFile: tmpDir + "/testfile.txt",
 			},
-			expected: []command.Executer{
+			expected: []core.Executer{
 				command.NewInputFileCommand(tmpDir + "/testfile.txt"),
 			},
 		},
 		{
 			name: "Default Edit",
 			args: &flags{},
-			expected: []command.Executer{
+			expected: []core.Executer{
 				command.NewEdit(""),
 			},
 		},
@@ -127,7 +127,7 @@ func TestInitRunOptions(t *testing.T) {
 					f, _ := os.Create(tmpDir + "/test_output.txt")
 					return f
 				}(),
-				Commands: []command.Executer{
+				Commands: []core.Executer{
 					command.NewSend("test request"),
 				},
 			},
@@ -148,7 +148,7 @@ func TestInitRunOptions(t *testing.T) {
 				waitResponse: 5,
 			},
 			expected: &core.RunOptions{
-				Commands: []command.Executer{
+				Commands: []core.Executer{
 					command.NewSend("test request"),
 					command.NewWaitForResp(5 * time.Second),
 					command.NewExit(),
@@ -162,7 +162,7 @@ func TestInitRunOptions(t *testing.T) {
 				inputFile: tmpDir + "/testfile.txt",
 			},
 			expected: &core.RunOptions{
-				Commands: []command.Executer{
+				Commands: []core.Executer{
 					command.NewInputFileCommand(tmpDir + "/testfile.txt"),
 				},
 			},
@@ -172,7 +172,7 @@ func TestInitRunOptions(t *testing.T) {
 			name: "Default Edit",
 			args: &flags{},
 			expected: &core.RunOptions{
-				Commands: []command.Executer{
+				Commands: []core.Executer{
 					command.NewEdit(""),
 				},
 			},

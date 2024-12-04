@@ -51,9 +51,9 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 
 	defer wsConn.Close()
 
-	input := core.NewKeyboard()
+	// input := core.NewKeyboard()
 
-	client, err := core.NewCLI(wsConn, input, os.Stdout)
+	client, err := core.NewCLI(nil, wsConn, os.Stdout, nil, nil)
 	if err != nil {
 		return fmt.Errorf("unable to start CLI: %w", err)
 	}
@@ -109,18 +109,18 @@ func initRunOptions(args *flags) (opts *core.RunOptions, err error) {
 	return opts, nil
 }
 
-// createCommands generates a slice of command.Executer based on the provided flags.
+// createCommands generates a slice of core.Executer based on the provided flags.
 // It takes a single parameter args of type *flags, which contains the command-line arguments.
-// It returns a slice of command.Executer, which represents the sequence of commands to be executed.
+// It returns a slice of core.Executer, which represents the sequence of commands to be executed.
 // If args.request is not empty, it creates a Send command and optionally adds WaitForResp and Exit commands if args.waitResponse is non-negative.
 // If args.inputFile is not empty, it creates an InputFileCommand.
 // If neither args.request nor args.inputFile is provided, it defaults to creating an Edit command.
-func createCommands(args *flags) []command.Executer {
-	var executers []command.Executer
+func createCommands(args *flags) []core.Executer {
+	var executers []core.Executer
 
 	switch {
 	case args.request != "":
-		executers = []command.Executer{command.NewSend(args.request)}
+		executers = []core.Executer{command.NewSend(args.request)}
 
 		if args.waitResponse >= 0 {
 			executers = append(
@@ -130,9 +130,9 @@ func createCommands(args *flags) []command.Executer {
 			)
 		}
 	case args.inputFile != "":
-		executers = []command.Executer{command.NewInputFileCommand(args.inputFile)}
+		executers = []core.Executer{command.NewInputFileCommand(args.inputFile)}
 	default:
-		executers = []command.Executer{command.NewEdit("")}
+		executers = []core.Executer{command.NewEdit("")}
 	}
 
 	return executers

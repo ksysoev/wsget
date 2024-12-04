@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/eiannone/keyboard"
 	"github.com/ksysoev/wsget/pkg/clierrors"
+	"github.com/ksysoev/wsget/pkg/core"
 	"github.com/ksysoev/wsget/pkg/formater"
 	"github.com/ksysoev/wsget/pkg/ws"
 )
@@ -18,7 +18,7 @@ import (
 func TestFactory(t *testing.T) {
 	tests := []struct {
 		macro   *Macro
-		want    Executer
+		want    core.Executer
 		name    string
 		raw     string
 		wantErr bool
@@ -144,7 +144,7 @@ type mockCommand struct {
 	err error
 }
 
-func (c *mockCommand) Execute(_ ExecutionContext) (Executer, error) {
+func (c *mockCommand) Execute(_ core.ExecutionContext) (core.Executer, error) {
 	return nil, c.err
 }
 
@@ -152,18 +152,18 @@ func TestSequence_Execute(t *testing.T) {
 	tests := []struct {
 		exCtx       *mockContext
 		name        string
-		subCommands []Executer
+		subCommands []core.Executer
 		wantErr     bool
 	}{
 		{
 			name:        "empty command sequence",
-			subCommands: []Executer{},
+			subCommands: []core.Executer{},
 			exCtx:       &mockContext{},
 			wantErr:     false,
 		},
 		{
 			name: "command sequence with one command",
-			subCommands: []Executer{
+			subCommands: []core.Executer{
 				&mockCommand{},
 			},
 			exCtx:   &mockContext{},
@@ -171,7 +171,7 @@ func TestSequence_Execute(t *testing.T) {
 		},
 		{
 			name: "command sequence with multiple commands",
-			subCommands: []Executer{
+			subCommands: []core.Executer{
 				&mockCommand{},
 				&mockCommand{},
 				&mockCommand{},
@@ -181,7 +181,7 @@ func TestSequence_Execute(t *testing.T) {
 		},
 		{
 			name: "command sequence with error",
-			subCommands: []Executer{
+			subCommands: []core.Executer{
 				&mockCommand{},
 				&mockCommand{err: fmt.Errorf("error")},
 				&mockCommand{},
@@ -275,12 +275,12 @@ func TestPrintMsg_Execute(t *testing.T) {
 }
 
 type mockContext struct {
-	requestEditor Editor
+	requestEditor core.Editor
 	buf           bytes.Buffer
 }
 
-func (c *mockContext) Input() <-chan keyboard.KeyEvent {
-	return make(<-chan keyboard.KeyEvent)
+func (c *mockContext) Input() <-chan core.KeyEvent {
+	return make(<-chan core.KeyEvent)
 }
 func (c *mockContext) Output() io.Writer {
 	return &c.buf
@@ -294,11 +294,11 @@ func (c *mockContext) Formater() formater.Formater {
 	return formater.NewFormat()
 }
 
-func (c *mockContext) RequestEditor() Editor {
+func (c *mockContext) RequestEditor() core.Editor {
 	return c.requestEditor
 }
 
-func (c *mockContext) CmdEditor() Editor {
+func (c *mockContext) CmdEditor() core.Editor {
 	return c.requestEditor
 }
 
@@ -306,7 +306,7 @@ func (c *mockContext) Connection() ws.ConnectionHandler {
 	return &ws.Connection{}
 }
 
-func (c *mockContext) Macro() *Macro {
+func (c *mockContext) Factory() core.CommandFactory {
 	return nil
 }
 
@@ -315,7 +315,7 @@ type mockEditor struct {
 	content string
 }
 
-func (e *mockEditor) Edit(_ <-chan keyboard.KeyEvent, _ string) (string, error) {
+func (e *mockEditor) Edit(_ <-chan core.KeyEvent, _ string) (string, error) {
 	return e.content, e.err
 }
 
@@ -325,7 +325,7 @@ func (e *mockEditor) Close() error {
 func TestCmdEdit_Execute(t *testing.T) {
 	exCtx := &mockContext{}
 	output, _ := exCtx.Output().(*bytes.Buffer)
-	input := make(chan keyboard.KeyEvent)
+	input := make(chan core.KeyEvent)
 	editor := &mockEditor{}
 	editor.content = "edit command"
 	exCtx.requestEditor = editor
@@ -333,7 +333,7 @@ func TestCmdEdit_Execute(t *testing.T) {
 	c := &CmdEdit{}
 
 	go func() {
-		input <- keyboard.KeyEvent{}
+		input <- core.KeyEvent{}
 		close(input)
 	}()
 
