@@ -53,6 +53,26 @@ func Factory(raw string, macro *Macro) (core.Executer, error) {
 		}
 
 		return NewSend(parts[1]), nil
+	case "print":
+		if len(parts) == 1 {
+			return nil, &ErrEmptyRequest{}
+		}
+
+		parts := strings.SplitN(raw, " ", CommandPartsNumber)
+
+		var msgType ws.MessageType
+		switch parts[0] {
+		case "Request":
+			msgType = ws.Request
+		case "Response":
+			msgType = ws.Response
+		default:
+			return nil, fmt.Errorf("invalid message type: %s", parts[0])
+		}
+
+		msg := parts[1]
+
+		return NewPrintMsg(ws.Message{Type: msgType, Data: msg}), nil
 	case "wait":
 		timeout := time.Duration(0)
 
@@ -275,7 +295,7 @@ func (c *CmdEdit) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 		return nil, err
 	}
 
-	cmd, err := Factory(rawCmd, exCtx.Macro())
+	cmd, err := exCtx.Factory().New(rawCmd)
 
 	if err != nil {
 		color.New(color.FgRed).Fprintln(output, err)
@@ -332,7 +352,7 @@ func (c *InputFileCommand) Execute(exCtx core.ExecutionContext) (core.Executer, 
 	cmds := make([]core.Executer, 0, len(rawCommands))
 
 	for _, rawCommand := range rawCommands {
-		cmd, err := Factory(rawCommand, exCtx.Macro())
+		cmd, err := exCtx.Factory().New(rawCommand)
 		if err != nil {
 			return nil, err
 		}

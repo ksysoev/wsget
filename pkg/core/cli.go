@@ -8,7 +8,6 @@ import (
 
 	"github.com/eiannone/keyboard"
 	"github.com/fatih/color"
-	"github.com/ksysoev/wsget/pkg/command"
 	"github.com/ksysoev/wsget/pkg/edit"
 	"github.com/ksysoev/wsget/pkg/formater"
 	"github.com/ksysoev/wsget/pkg/ws"
@@ -79,18 +78,18 @@ func NewCLI(cmdFactory CommandFactory, wsConn ws.ConnectionHandler, output io.Wr
 	history := edit.NewHistory(homeDir+"/"+HistoryFilename, HistoryLimit)
 	cmdHistory := edit.NewHistory(homeDir+"/"+HistoryCmdFilename, HistoryLimit)
 
-	macro, err := command.LoadMacroForDomain(homeDir+"/"+ConfigDir+"/"+MacroDir, wsConn.Hostname())
-	if err != nil {
-		return nil, fmt.Errorf("fail to load macro: %s", err)
-	}
+	// macro, err := command.LoadMacroForDomain(homeDir+"/"+ConfigDir+"/"+MacroDir, wsConn.Hostname())
+	// if err != nil {
+	// 	return nil, fmt.Errorf("fail to load macro: %s", err)
+	// }
 
 	commands := make(chan Executer, CommandsLimit)
 
 	cmdEditor := edit.NewEditor(output, cmdHistory, true)
 
-	if macro != nil {
-		cmdEditor.Dictionary = edit.NewDictionary(macro.GetNames())
-	}
+	// if macro != nil {
+	// 	cmdEditor.Dictionary = edit.NewDictionary(macro.GetNames())
+	// }
 
 	return &CLI{
 		formater:    formater.NewFormat(),
@@ -185,7 +184,13 @@ func (c *CLI) Run(opts RunOptions) error {
 				return nil
 			}
 
-			c.commands <- command.NewPrintMsg(msg)
+			cmd, err := c.cmdFactory.New(fmt.Sprintf("print %s %s", msg.Type.String(), msg.Data))
+
+			if err != nil {
+				return fmt.Errorf("fail to create print command: %w", err)
+			}
+
+			c.commands <- cmd
 		}
 	}
 }
