@@ -12,6 +12,7 @@ import (
 	"github.com/ksysoev/wsget/pkg/command"
 	"github.com/ksysoev/wsget/pkg/core"
 	"github.com/ksysoev/wsget/pkg/edit"
+	"github.com/ksysoev/wsget/pkg/input"
 	"github.com/ksysoev/wsget/pkg/ws"
 	"github.com/spf13/cobra"
 )
@@ -42,6 +43,9 @@ func createConnectRunner(args *flags) func(cmd *cobra.Command, args []string) er
 // It returns an error if the WebSocket connection cannot be established, the CLI cannot be started, or the client fails to run.
 // It returns nil if the client is interrupted gracefully.
 func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	wsURL := unnamedArgs[0]
 
 	if err := validateArgs(wsURL, args); err != nil {
@@ -89,27 +93,49 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 		cmdEditor.Dictionary = edit.NewDictionary(macro.GetNames())
 	}
 
-	// input := core.NewKeyboard()
-
 	client, err := core.NewCLI(cmdFactory, wsConn, os.Stdout, editor, cmdEditor)
 	if err != nil {
 		return fmt.Errorf("unable to start CLI: %w", err)
 	}
 
+	keyboard := input.NewKeyboard(client)
+
 	opts, err := initRunOptions(args)
 	if err != nil {
 		return err
 	}
+	errs := make(chan error, 2)
+	go func() {
+		defer cancel()
 
-	if err = client.Run(*opts); err != nil {
-		if errors.As(err, &clierrors.Interrupted{}) {
-			return nil
+		if err = client.Run(*opts); err != nil {
+			if errors.As(err, &clierrors.Interrupted{}) {
+				errs <- nil
+				return
+			}
+
+			errs <- fmt.Errorf("client run error: %w", err)
+		}
+	}()
+
+	go func() {
+		defer cancel()
+
+		if err = keyboard.Run(ctx); err != nil {
+			errs <- fmt.Errorf("keyboard run error: %w", err)
 		}
 
-		return fmt.Errorf("failed to run client: %w", err)
+		errs <- nil
+	}()
+
+	var errToReturn error
+	for i := 0; i < 2; i++ {
+		if err = <-errs; err != nil && errToReturn == nil {
+			errToReturn = err
+		}
 	}
 
-	return nil
+	return errToReturn
 }
 
 // validateArgs checks the validity of the provided WebSocket URL and flags.
