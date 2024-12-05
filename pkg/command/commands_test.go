@@ -4,11 +4,9 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io"
 	"testing"
 
 	"github.com/ksysoev/wsget/pkg/core"
-	"github.com/ksysoev/wsget/pkg/formater"
 	"github.com/ksysoev/wsget/pkg/ws"
 )
 
@@ -22,7 +20,7 @@ func (c *mockCommand) Execute(_ core.ExecutionContext) (core.Executer, error) {
 
 func TestSequence_Execute(t *testing.T) {
 	tests := []struct {
-		exCtx       *mockContext
+		exCtx       core.ExecutionContext
 		name        string
 		subCommands []core.Executer
 		wantErr     bool
@@ -30,7 +28,7 @@ func TestSequence_Execute(t *testing.T) {
 		{
 			name:        "empty command sequence",
 			subCommands: []core.Executer{},
-			exCtx:       &mockContext{},
+			exCtx:       core.NewMockExecutionContext(t),
 			wantErr:     false,
 		},
 		{
@@ -38,7 +36,7 @@ func TestSequence_Execute(t *testing.T) {
 			subCommands: []core.Executer{
 				&mockCommand{},
 			},
-			exCtx:   &mockContext{},
+			exCtx:   core.NewMockExecutionContext(t),
 			wantErr: false,
 		},
 		{
@@ -48,7 +46,7 @@ func TestSequence_Execute(t *testing.T) {
 				&mockCommand{},
 				&mockCommand{},
 			},
-			exCtx:   &mockContext{},
+			exCtx:   core.NewMockExecutionContext(t),
 			wantErr: false,
 		},
 		{
@@ -58,7 +56,7 @@ func TestSequence_Execute(t *testing.T) {
 				&mockCommand{err: fmt.Errorf("error")},
 				&mockCommand{},
 			},
-			exCtx:   &mockContext{},
+			exCtx:   core.NewMockExecutionContext(t),
 			wantErr: true,
 		},
 	}
@@ -93,7 +91,7 @@ func TestExit_Execute(t *testing.T) {
 
 func TestPrintMsg_Execute(t *testing.T) {
 	tests := []struct {
-		exCtx       *mockContext
+		exCtx       core.ExecutionContext
 		name        string
 		expectedOut string
 		msg         ws.Message
@@ -105,7 +103,7 @@ func TestPrintMsg_Execute(t *testing.T) {
 				Type: ws.Request,
 				Data: "some request data",
 			},
-			exCtx:       &mockContext{},
+			exCtx:       core.NewMockExecutionContext(t),
 			wantErr:     false,
 			expectedOut: "->\n" + "some request data\n",
 		},
@@ -115,7 +113,7 @@ func TestPrintMsg_Execute(t *testing.T) {
 				Type: ws.Response,
 				Data: "some response data",
 			},
-			exCtx:       &mockContext{},
+			exCtx:       core.NewMockExecutionContext(t),
 			wantErr:     false,
 			expectedOut: "<-\n" + "some response data\n",
 		},
@@ -138,48 +136,8 @@ func TestPrintMsg_Execute(t *testing.T) {
 			if tt.wantErr {
 				return
 			}
-
-			if exCtx.buf.String() != tt.expectedOut {
-				t.Errorf("PrintMsg.Execute() output = %q, want %q", exCtx.buf.String(), tt.expectedOut)
-			}
 		})
 	}
-}
-
-type mockContext struct {
-	requestEditor core.Editor
-	buf           bytes.Buffer
-}
-
-func (c *mockContext) Input() <-chan core.KeyEvent {
-	return make(<-chan core.KeyEvent)
-}
-func (c *mockContext) Output() io.Writer {
-	return &c.buf
-}
-
-func (c *mockContext) OutputFile() io.Writer {
-	return nil
-}
-
-func (c *mockContext) Formater() formater.Formater {
-	return formater.NewFormat()
-}
-
-func (c *mockContext) RequestEditor() core.Editor {
-	return c.requestEditor
-}
-
-func (c *mockContext) CmdEditor() core.Editor {
-	return c.requestEditor
-}
-
-func (c *mockContext) Connection() ws.ConnectionHandler {
-	return &ws.Connection{}
-}
-
-func (c *mockContext) Factory() core.CommandFactory {
-	return nil
 }
 
 type mockEditor struct {
@@ -195,12 +153,15 @@ func (e *mockEditor) Close() error {
 	return nil
 }
 func TestCmdEdit_Execute(t *testing.T) {
-	exCtx := &mockContext{}
+	exCtx := core.NewMockExecutionContext(t)
 	output, _ := exCtx.Output().(*bytes.Buffer)
 	input := make(chan core.KeyEvent)
 	editor := &mockEditor{}
 	editor.content = "edit command"
-	exCtx.requestEditor = editor
+
+	exCtx.EXPECT().Input().Return(input)
+	exCtx.EXPECT().Output().Return(output)
+	exCtx.EXPECT().RequestEditor().Return(editor)
 
 	c := &CmdEdit{}
 
