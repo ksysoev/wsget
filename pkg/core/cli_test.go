@@ -95,7 +95,7 @@ func TestNewCLI(t *testing.T) {
 
 	done := make(chan bool)
 	go func() {
-		err := cli.Run(RunOptions{})
+		err := cli.Run(context.Background(), RunOptions{})
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
 		}
@@ -129,7 +129,7 @@ func TestNewCLIRunWithCommands(t *testing.T) {
 		t.Fatalf("Unexpected error: %v", err)
 	}
 
-	err = cli.Run(RunOptions{Commands: []Executer{}})
+	err = cli.Run(context.Background(), RunOptions{Commands: []Executer{}})
 
 	if err == nil {
 		t.Fatalf("Expected error, but got nothing")

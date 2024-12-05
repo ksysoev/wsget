@@ -108,7 +108,7 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 	go func() {
 		defer cancel()
 
-		if err = client.Run(*opts); err != nil {
+		if err = client.Run(ctx, *opts); err != nil {
 			if errors.As(err, &clierrors.Interrupted{}) {
 				errs <- nil
 				return

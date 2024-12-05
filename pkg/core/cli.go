@@ -1,6 +1,7 @@
 package core
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -83,7 +84,7 @@ func (c *CLI) OnKeyEvent(event KeyEvent) {
 
 // Run runs the CLI with the provided options.
 // It listens for user input and executes commands accordingly.
-func (c *CLI) Run(opts RunOptions) error {
+func (c *CLI) Run(ctx context.Context, opts RunOptions) error {
 	defer func() {
 		c.showCursor()
 		err := c.editor.Close()
@@ -165,6 +166,9 @@ func (c *CLI) Run(opts RunOptions) error {
 			}
 
 			c.commands <- cmd
+
+		case <-ctx.Done():
+			return nil
 		}
 	}
 }
