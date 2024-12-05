@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/user"
 
 	"github.com/eiannone/keyboard"
 	"github.com/fatih/color"
@@ -64,31 +63,7 @@ type Formater interface {
 // It returns an error if it fails to get the current user, create the necessary directories,
 // load the macro for the domain, or initialize the CLI instance.
 func NewCLI(cmdFactory CommandFactory, wsConn ws.ConnectionHandler, output io.Writer, edit Editor, cmdEdit Editor) (*CLI, error) {
-	currentUser, err := user.Current()
-	if err != nil {
-		return nil, fmt.Errorf("fail to get current user: %s", err)
-	}
-
-	homeDir := currentUser.HomeDir
-	if err = os.MkdirAll(homeDir+"/"+ConfigDir+"/"+MacroDir, ConfigDirMode); err != nil {
-		return nil, fmt.Errorf("fail to get current user: %s", err)
-	}
-
-	// history := edit.NewHistory(homeDir+"/"+HistoryFilename, HistoryLimit)
-	// cmdHistory := edit.NewHistory(homeDir+"/"+HistoryCmdFilename, HistoryLimit)
-
-	// macro, err := command.LoadMacroForDomain(homeDir+"/"+ConfigDir+"/"+MacroDir, wsConn.Hostname())
-	// if err != nil {
-	// 	return nil, fmt.Errorf("fail to load macro: %s", err)
-	// }
-
 	commands := make(chan Executer, CommandsLimit)
-
-	// cmdEditor := edit.NewEditor(output, cmdHistory, true)
-
-	// if macro != nil {
-	// 	cmdEditor.Dictionary = edit.NewDictionary(macro.GetNames())
-	// }
 
 	return &CLI{
 		formater:    formater.NewFormat(),

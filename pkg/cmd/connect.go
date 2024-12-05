@@ -5,13 +5,25 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/user"
 	"time"
 
 	"github.com/ksysoev/wsget/pkg/clierrors"
 	"github.com/ksysoev/wsget/pkg/command"
 	"github.com/ksysoev/wsget/pkg/core"
+	"github.com/ksysoev/wsget/pkg/edit"
 	"github.com/ksysoev/wsget/pkg/ws"
 	"github.com/spf13/cobra"
+)
+
+const (
+	MacroDir           = "macro"
+	ConfigDir          = ".wsget"
+	HistoryFilename    = ConfigDir + "/history"
+	HistoryCmdFilename = ConfigDir + "/cmd_history"
+	ConfigDirMode      = 0o755
+	CommandsLimit      = 100
+	HistoryLimit       = 100
 )
 
 // createConnectRunner creates a runner function for the connect command.
@@ -51,9 +63,35 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 
 	defer wsConn.Close()
 
+	currentUser, err := user.Current()
+	if err != nil {
+		return fmt.Errorf("fail to get current user: %s", err)
+	}
+
+	homeDir := currentUser.HomeDir
+	if err = os.MkdirAll(homeDir+"/"+ConfigDir+"/"+MacroDir, ConfigDirMode); err != nil {
+		return fmt.Errorf("fail to get current user: %s", err)
+	}
+
+	history := edit.NewHistory(homeDir+"/"+HistoryFilename, HistoryLimit)
+	cmdHistory := edit.NewHistory(homeDir+"/"+HistoryCmdFilename, HistoryLimit)
+
+	macro, err := command.LoadMacroForDomain(homeDir+"/"+ConfigDir+"/"+MacroDir, wsConn.Hostname())
+	if err != nil {
+		return fmt.Errorf("fail to load macro: %s", err)
+	}
+
+	editor := edit.NewEditor(os.Stdout, history, false)
+	cmdEditor := edit.NewEditor(os.Stdout, cmdHistory, true)
+	cmdFactory := command.NewFactory(macro)
+
+	if macro != nil {
+		cmdEditor.Dictionary = edit.NewDictionary(macro.GetNames())
+	}
+
 	// input := core.NewKeyboard()
 
-	client, err := core.NewCLI(nil, wsConn, os.Stdout, nil, nil)
+	client, err := core.NewCLI(cmdFactory, wsConn, os.Stdout, editor, cmdEditor)
 	if err != nil {
 		return fmt.Errorf("unable to start CLI: %w", err)
 	}
