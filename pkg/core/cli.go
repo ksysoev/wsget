@@ -64,6 +64,30 @@ type Formater interface {
 	FormatForFile(wsMsg ws.Message) (string, error)
 }
 
+type CommandFactory interface {
+	Create(raw string) (Executer, error)
+}
+
+type ExecutionContext interface {
+	Input() <-chan KeyEvent
+	OutputFile() io.Writer
+	Output() io.Writer
+	Formater() formater.Formater
+	Connection() ws.ConnectionHandler
+	RequestEditor() Editor
+	CmdEditor() Editor
+	Factory() CommandFactory
+}
+
+type Editor interface {
+	Edit(keyStream <-chan KeyEvent, initBuffer string) (string, error)
+	Close() error
+}
+
+type Executer interface {
+	Execute(ExecutionContext) (Executer, error)
+}
+
 // NewCLI creates a new CLI instance with the given wsConn, input, and output.
 // It returns an error if it fails to get the current user, create the necessary directories,
 // load the macro for the domain, or initialize the CLI instance.
