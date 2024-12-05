@@ -222,8 +222,8 @@ func TestEditSpecialKeys(t *testing.T) {
 func TestHandleEscKey(t *testing.T) {
 	tests := []struct {
 		name     string
-		keyEvent core.KeyEvent
 		expected string
+		keyEvent core.KeyEvent
 		handled  bool
 	}{
 		{

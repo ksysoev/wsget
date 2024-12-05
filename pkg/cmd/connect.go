@@ -104,7 +104,9 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 	if err != nil {
 		return err
 	}
+
 	errs := make(chan error, 2)
+
 	go func() {
 		defer cancel()
 

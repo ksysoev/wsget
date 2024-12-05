@@ -67,9 +67,7 @@ type Formater interface {
 // NewCLI creates a new CLI instance with the given wsConn, input, and output.
 // It returns an error if it fails to get the current user, create the necessary directories,
 // load the macro for the domain, or initialize the CLI instance.
-func NewCLI(cmdFactory CommandFactory, wsConn ws.ConnectionHandler, output io.Writer, edit Editor, cmdEdit Editor) (*CLI, error) {
-	commands := make(chan Executer, CommandsLimit)
-
+func NewCLI(cmdFactory CommandFactory, wsConn ws.ConnectionHandler, output io.Writer, edit, cmdEdit Editor) (*CLI, error) {
 	return &CLI{
 		formater:    formater.NewFormat(),
 		editor:      edit,
@@ -77,7 +75,7 @@ func NewCLI(cmdFactory CommandFactory, wsConn ws.ConnectionHandler, output io.Wr
 		wsConn:      wsConn,
 		inputStream: make(chan KeyEvent),
 		output:      output,
-		commands:    commands,
+		commands:    make(chan Executer, CommandsLimit),
 		cmdFactory:  cmdFactory,
 	}, nil
 }
@@ -111,7 +109,7 @@ func (c *CLI) Run(ctx context.Context, opts RunOptions) error {
 		c.commands <- cmd
 	}
 
-	exCtx := NewExecutionContext(c, opts.OutputFile)
+	exCtx := newExecutionContext(c, opts.OutputFile)
 
 	for {
 		select {

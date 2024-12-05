@@ -13,7 +13,7 @@ type executionContext struct {
 	outputFile io.Writer
 }
 
-func NewExecutionContext(cli *CLI, outputFile io.Writer) *executionContext {
+func newExecutionContext(cli *CLI, outputFile io.Writer) *executionContext {
 	return &executionContext{
 		cli:        cli,
 		outputFile: outputFile,

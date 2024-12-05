@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/coder/websocket"
-	"github.com/eiannone/keyboard"
 	"github.com/ksysoev/wsget/pkg/ws"
 )
 
@@ -49,14 +48,6 @@ func createEchoWSHandler() http.HandlerFunc {
 		}
 	})
 }
-
-type mockInput struct{}
-
-func (m *mockInput) GetKeys() (<-chan keyboard.KeyEvent, error) {
-	return make(chan keyboard.KeyEvent), nil
-}
-
-func (m *mockInput) Close() {}
 
 func TestNewCLI(t *testing.T) {
 	server := httptest.NewServer(createEchoWSHandler())

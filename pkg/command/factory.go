@@ -52,6 +52,7 @@ func (f *Factory) Create(raw string) (core.Executer, error) {
 		parts := strings.SplitN(raw, " ", CommandPartsNumber)
 
 		var msgType ws.MessageType
+
 		switch parts[0] {
 		case "Request":
 			msgType = ws.Request
