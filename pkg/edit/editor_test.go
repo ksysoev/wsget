@@ -6,7 +6,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/ksysoev/wsget/pkg/clierrors"
 	"github.com/ksysoev/wsget/pkg/core"
 )
 
@@ -105,7 +104,7 @@ func TestEditInterrupted(t *testing.T) {
 
 	req, err = editor.Edit(keyStream, "")
 
-	if !errors.As(err, &clierrors.Interrupted{}) {
+	if !errors.Is(err, core.ErrInterrupted) {
 		t.Error("Expected error")
 	}
 

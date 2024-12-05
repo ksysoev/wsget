@@ -12,7 +12,6 @@ import (
 
 	"github.com/coder/websocket"
 	"github.com/eiannone/keyboard"
-	"github.com/ksysoev/wsget/pkg/clierrors"
 	"github.com/ksysoev/wsget/pkg/ws"
 )
 
@@ -135,7 +134,7 @@ func TestNewCLIRunWithCommands(t *testing.T) {
 		t.Fatalf("Expected error, but got nothing")
 	}
 
-	if !errors.As(err, &clierrors.Interrupted{}) {
+	if !errors.Is(err, ErrInterrupted) {
 		t.Errorf("Exit.Execute() error = %v, wantErr interupted", err)
 	}
 }

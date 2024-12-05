@@ -27,6 +27,10 @@ const (
 	Bell = "\a"
 )
 
+var (
+	ErrInterrupted = fmt.Errorf("interrupted")
+)
+
 type CLI struct {
 	formater    *formater.Format
 	wsConn      ws.ConnectionHandler

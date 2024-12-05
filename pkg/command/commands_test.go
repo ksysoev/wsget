@@ -7,7 +7,6 @@ import (
 	"io"
 	"testing"
 
-	"github.com/ksysoev/wsget/pkg/clierrors"
 	"github.com/ksysoev/wsget/pkg/core"
 	"github.com/ksysoev/wsget/pkg/formater"
 	"github.com/ksysoev/wsget/pkg/ws"
@@ -87,7 +86,7 @@ func TestExit_Execute(t *testing.T) {
 		t.Errorf("Exit.Execute() error = %v, wantErr %v", err, true)
 	}
 
-	if !errors.As(err, &clierrors.Interrupted{}) {
+	if !errors.Is(err, core.ErrInterrupted) {
 		t.Errorf("Exit.Execute() error = %v, wantErr interrupted", err)
 	}
 }

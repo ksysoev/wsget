@@ -8,7 +8,6 @@ import (
 	"os/user"
 	"time"
 
-	"github.com/ksysoev/wsget/pkg/clierrors"
 	"github.com/ksysoev/wsget/pkg/command"
 	"github.com/ksysoev/wsget/pkg/core"
 	"github.com/ksysoev/wsget/pkg/edit"
@@ -110,7 +109,7 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 		defer cancel()
 
 		err := client.Run(ctx, *opts)
-		if err != nil && !errors.Is(err, &clierrors.Interrupted{}) {
+		if err != nil && !errors.Is(err, core.ErrInterrupted) {
 			errs <- fmt.Errorf("client run error: %w", err)
 		}
 

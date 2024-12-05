@@ -5,7 +5,6 @@ import (
 	"io"
 	"time"
 
-	"github.com/ksysoev/wsget/pkg/clierrors"
 	"github.com/ksysoev/wsget/pkg/core"
 )
 
@@ -57,7 +56,7 @@ func (ed *Editor) Edit(keyStream <-chan core.KeyEvent, initBuffer string) (strin
 			fmt.Fprint(ed.output, ed.content.DeleteToPrevWord())
 			continue
 		case core.KeyCtrlC, core.KeyCtrlD:
-			return "", clierrors.Interrupted{}
+			return "", core.ErrInterrupted
 		case core.KeyCtrlS:
 			return ed.done()
 		case core.KeyEsc:

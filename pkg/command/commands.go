@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/fatih/color"
-	"github.com/ksysoev/wsget/pkg/clierrors"
 	"github.com/ksysoev/wsget/pkg/core"
 	"github.com/ksysoev/wsget/pkg/ws"
 	"gopkg.in/yaml.v3"
@@ -121,7 +120,7 @@ func NewExit() *Exit {
 // Execute method implements the Execute method of the core.Executer interface.
 // It returns an error indicating that the program was interrupted.
 func (c *Exit) Execute(_ core.ExecutionContext) (core.Executer, error) {
-	return nil, clierrors.Interrupted{}
+	return nil, core.ErrInterrupted
 }
 
 type WaitForResp struct {
