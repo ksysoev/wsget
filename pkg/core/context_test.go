@@ -17,7 +17,7 @@ func TestNewExecutionContext(t *testing.T) {
 		t.Errorf("Unexpected CLI: %v", executionContext.cli)
 	}
 
-	if executionContext.input != cli.inputStream {
+	if executionContext.Input() != cli.inputStream {
 		t.Errorf("Unexpected input channel: %v", executionContext.input)
 	}
 

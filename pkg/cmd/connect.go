@@ -88,6 +88,9 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 	cmdEditor := edit.NewEditor(os.Stdout, cmdHistory, true)
 	cmdFactory := command.NewFactory(macro)
 
+	defer editor.Close()
+	defer cmdEditor.Close()
+
 	if macro != nil {
 		cmdEditor.Dictionary = edit.NewDictionary(macro.GetNames())
 	}

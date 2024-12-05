@@ -7,7 +7,6 @@ import (
 	"os"
 
 	"github.com/eiannone/keyboard"
-	"github.com/fatih/color"
 	"github.com/ksysoev/wsget/pkg/formater"
 	"github.com/ksysoev/wsget/pkg/ws"
 )
@@ -113,16 +112,6 @@ func (c *CLI) OnKeyEvent(event KeyEvent) {
 func (c *CLI) Run(ctx context.Context, opts RunOptions) error {
 	defer func() {
 		c.showCursor()
-		err := c.editor.Close()
-
-		if err != nil {
-			color.New(color.FgRed).Fprint(c.output, "Fail to save history:", err)
-		}
-
-		err = c.cmdEditor.Close()
-		if err != nil {
-			color.New(color.FgRed).Fprint(c.output, "Fail to save history:", err)
-		}
 	}()
 
 	c.hideCursor()

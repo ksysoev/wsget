@@ -12,6 +12,7 @@ import (
 
 	"github.com/coder/websocket"
 	"github.com/ksysoev/wsget/pkg/ws"
+	"github.com/stretchr/testify/mock"
 )
 
 func createEchoWSHandler() http.HandlerFunc {
@@ -60,8 +61,12 @@ func TestNewCLI(t *testing.T) {
 		t.Fatalf("Unexpected error: %v", err)
 	}
 
+	factory := NewMockCommandFactory(t)
+	editor := NewMockEditor(t)
+	cmdEditor := NewMockEditor(t)
+
 	output := os.Stdout
-	cli, err := NewCLI(nil, wsConn, output, nil, nil)
+	cli, err := NewCLI(factory, wsConn, output, editor, cmdEditor)
 
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
@@ -112,14 +117,20 @@ func TestNewCLIRunWithCommands(t *testing.T) {
 		t.Fatalf("Unexpected error: %v", err)
 	}
 
+	factory := NewMockCommandFactory(t)
+	editor := NewMockEditor(t)
+	cmdEditor := NewMockEditor(t)
 	output := os.Stdout
-	cli, err := NewCLI(nil, wsConn, output, nil, nil)
+	cli, err := NewCLI(factory, wsConn, output, editor, cmdEditor)
 
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
 
-	err = cli.Run(context.Background(), RunOptions{Commands: []Executer{}})
+	cmd := NewMockExecuter(t)
+	cmd.EXPECT().Execute(mock.Anything).Return(nil, ErrInterrupted)
+
+	err = cli.Run(context.Background(), RunOptions{Commands: []Executer{cmd}})
 
 	if err == nil {
 		t.Fatalf("Expected error, but got nothing")
