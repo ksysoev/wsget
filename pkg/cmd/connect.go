@@ -99,6 +99,7 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 	}
 
 	keyboard := input.NewKeyboard(client)
+	defer keyboard.Close()
 
 	opts, err := initRunOptions(args)
 	if err != nil {
@@ -108,14 +109,12 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 	go func() {
 		defer cancel()
 
-		if err = client.Run(ctx, *opts); err != nil {
-			if errors.As(err, &clierrors.Interrupted{}) {
-				errs <- nil
-				return
-			}
-
+		err := client.Run(ctx, *opts)
+		if err != nil && !errors.Is(err, &clierrors.Interrupted{}) {
 			errs <- fmt.Errorf("client run error: %w", err)
 		}
+
+		errs <- nil
 	}()
 
 	go func() {
@@ -123,6 +122,7 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 
 		if err = keyboard.Run(ctx); err != nil {
 			errs <- fmt.Errorf("keyboard run error: %w", err)
+			return
 		}
 
 		errs <- nil
@@ -130,12 +130,16 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 
 	var errToReturn error
 	for i := 0; i < 2; i++ {
-		if err = <-errs; err != nil && errToReturn == nil {
+		if err := <-errs; err != nil && errToReturn == nil {
 			errToReturn = err
 		}
 	}
 
-	return errToReturn
+	if errToReturn != nil {
+		return errToReturn
+	}
+
+	return nil
 }
 
 // validateArgs checks the validity of the provided WebSocket URL and flags.
