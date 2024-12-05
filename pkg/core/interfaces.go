@@ -8,7 +8,7 @@ import (
 )
 
 type CommandFactory interface {
-	New(raw string) (Executer, error)
+	Create(raw string) (Executer, error)
 }
 
 type ExecutionContext interface {

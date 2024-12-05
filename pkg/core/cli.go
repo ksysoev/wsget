@@ -147,14 +147,14 @@ func (c *CLI) Run(opts RunOptions) error {
 		case event := <-c.inputStream:
 			switch event.Key {
 			case KeyEsc, KeyCtrlC, KeyCtrlD:
-				cmd, err := c.cmdFactory.New("exit")
+				cmd, err := c.cmdFactory.Create("exit")
 				if err != nil {
 					return fmt.Errorf("fail to create exit command: %w", err)
 				}
 
 				c.commands <- cmd
 			case KeyEnter:
-				cmd, err := c.cmdFactory.New("edit")
+				cmd, err := c.cmdFactory.Create("edit")
 				if err != nil {
 					return fmt.Errorf("fail to create edit command: %w", err)
 				}
@@ -167,7 +167,7 @@ func (c *CLI) Run(opts RunOptions) error {
 
 				switch event.Rune {
 				case ':':
-					cmd, err := c.cmdFactory.New("editcmd")
+					cmd, err := c.cmdFactory.Create("editcmd")
 					if err != nil {
 						return fmt.Errorf("fail to create edit command: %w", err)
 					}
@@ -183,7 +183,7 @@ func (c *CLI) Run(opts RunOptions) error {
 				return nil
 			}
 
-			cmd, err := c.cmdFactory.New(fmt.Sprintf("print %s %s", msg.Type.String(), msg.Data))
+			cmd, err := c.cmdFactory.Create(fmt.Sprintf("print %s %s", msg.Type.String(), msg.Data))
 
 			if err != nil {
 				return fmt.Errorf("fail to create print command: %w", err)

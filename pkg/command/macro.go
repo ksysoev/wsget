@@ -201,7 +201,7 @@ func (t *MacroTemplates) GetExecuter(args []string) (core.Executer, error) {
 			return nil, err
 		}
 
-		cmd, err := Factory(output.String(), nil)
+		cmd, err := NewFactory(nil).Create(output.String())
 		if err != nil {
 			return nil, err
 		}

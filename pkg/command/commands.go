@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"os"
 	"reflect"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/fatih/color"
@@ -22,118 +20,6 @@ const (
 	HideCursor         = "\x1b[?25l"
 	ShowCursor         = "\x1b[?25h"
 )
-
-// Factory returns an core.Executer and an error. It takes a string and a Macro pointer as input.
-// The string is split into parts and the first part is used to determine which command to execute.
-// Depending on the command, different arguments are passed to the corresponding constructor.
-// If the command is not recognized, an error is returned.
-func Factory(raw string, macro *Macro) (core.Executer, error) {
-	if raw == "" {
-		return nil, &ErrEmptyCommand{}
-	}
-
-	parts := strings.SplitN(raw, " ", CommandPartsNumber)
-	cmd := parts[0]
-
-	switch cmd {
-	case "exit":
-		return NewExit(), nil
-	case "edit":
-		content := ""
-		if len(parts) > 1 {
-			content = parts[1]
-		}
-
-		return NewEdit(content), nil
-	case "editcmd":
-		return NewCmdEdit(), nil
-	case "send":
-		if len(parts) == 1 {
-			return nil, &ErrEmptyRequest{}
-		}
-
-		return NewSend(parts[1]), nil
-	case "print":
-		if len(parts) == 1 {
-			return nil, &ErrEmptyRequest{}
-		}
-
-		parts := strings.SplitN(raw, " ", CommandPartsNumber)
-
-		var msgType ws.MessageType
-		switch parts[0] {
-		case "Request":
-			msgType = ws.Request
-		case "Response":
-			msgType = ws.Response
-		default:
-			return nil, fmt.Errorf("invalid message type: %s", parts[0])
-		}
-
-		msg := parts[1]
-
-		return NewPrintMsg(ws.Message{Type: msgType, Data: msg}), nil
-	case "wait":
-		timeout := time.Duration(0)
-
-		if len(parts) > 1 {
-			sec, err := strconv.Atoi(parts[1])
-			if err != nil || sec < 0 {
-				return nil, &ErrInvalidTimeout{parts[1]}
-			}
-
-			timeout = time.Duration(sec) * time.Second
-		}
-
-		return NewWaitForResp(timeout), nil
-
-	case "repeat":
-		if len(parts) < CommandPartsNumber {
-			return nil, fmt.Errorf("not enough arguments for repeat command: %s", raw)
-		}
-
-		repeatParts := strings.SplitN(parts[1], " ", CommandPartsNumber)
-
-		if len(parts) < CommandPartsNumber {
-			return nil, fmt.Errorf("not enough arguments for repeat command: %s", raw)
-		}
-
-		times, err := strconv.Atoi(repeatParts[0])
-		if err != nil || times <= 0 {
-			return nil, fmt.Errorf("invalid repeat times: %s", repeatParts[0])
-		}
-
-		subCommand, err := Factory(repeatParts[1], macro)
-		if err != nil {
-			return nil, err
-		}
-
-		return NewRepeatCommand(times, subCommand), nil
-
-	case "sleep":
-		if len(parts) < CommandPartsNumber {
-			return nil, fmt.Errorf("not enough arguments for sleep command: %s", raw)
-		}
-
-		sec, err := strconv.Atoi(parts[1])
-		if err != nil || sec < 0 {
-			return nil, fmt.Errorf("invalid sleep duration: %s", parts[1])
-		}
-
-		return NewSleepCommand(time.Duration(sec) * time.Second), nil
-	default:
-		args := ""
-		if len(parts) > 1 {
-			args = parts[1]
-		}
-
-		if macro != nil {
-			return macro.Get(cmd, args)
-		}
-
-		return nil, &ErrUnknownCommand{cmd}
-	}
-}
 
 type Edit struct {
 	content string
@@ -295,7 +181,7 @@ func (c *CmdEdit) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 		return nil, err
 	}
 
-	cmd, err := exCtx.Factory().New(rawCmd)
+	cmd, err := exCtx.Factory().Create(rawCmd)
 
 	if err != nil {
 		color.New(color.FgRed).Fprintln(output, err)
@@ -352,7 +238,7 @@ func (c *InputFileCommand) Execute(exCtx core.ExecutionContext) (core.Executer, 
 	cmds := make([]core.Executer, 0, len(rawCommands))
 
 	for _, rawCommand := range rawCommands {
-		cmd, err := exCtx.Factory().New(rawCommand)
+		cmd, err := exCtx.Factory().Create(rawCommand)
 		if err != nil {
 			return nil, err
 		}
