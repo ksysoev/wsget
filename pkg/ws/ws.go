@@ -3,8 +3,10 @@ package ws
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"sort"
@@ -225,8 +227,7 @@ func (wsInsp *Connection) handleError(err error) {
 		return
 	}
 
-	if err.Error() == "EOF" {
-		color.New(color.FgRed).Println("Connection closed by the server")
+	if errors.Is(err, context.Canceled) || errors.Is(err, io.EOF) || errors.Is(err, net.ErrClosed) {
 		return
 	}
 
