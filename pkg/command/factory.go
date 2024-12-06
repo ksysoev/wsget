@@ -49,11 +49,15 @@ func (f *Factory) Create(raw string) (core.Executer, error) {
 			return nil, &ErrEmptyRequest{}
 		}
 
-		parts := strings.SplitN(raw, " ", CommandPartsNumber)
+		args := strings.SplitN(parts[1], " ", CommandPartsNumber)
+
+		if len(args) < CommandPartsNumber {
+			return nil, fmt.Errorf("not enough arguments for print command: %s", raw)
+		}
 
 		var msgType ws.MessageType
 
-		switch parts[0] {
+		switch args[0] {
 		case "Request":
 			msgType = ws.Request
 		case "Response":
@@ -62,7 +66,7 @@ func (f *Factory) Create(raw string) (core.Executer, error) {
 			return nil, fmt.Errorf("invalid message type: %s", parts[0])
 		}
 
-		msg := parts[1]
+		msg := args[1]
 
 		return NewPrintMsg(ws.Message{Type: msgType, Data: msg}), nil
 	case "wait":
