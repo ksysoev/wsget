@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/coder/websocket"
-	"github.com/ksysoev/wsget/pkg/cli"
 	"github.com/ksysoev/wsget/pkg/command"
+	"github.com/ksysoev/wsget/pkg/core"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -56,7 +56,7 @@ func TestCreateCommands(t *testing.T) {
 	tests := []struct {
 		name     string
 		args     *flags
-		expected []command.Executer
+		expected []core.Executer
 	}{
 		{
 			name: "Request with waitResponse",
@@ -64,7 +64,7 @@ func TestCreateCommands(t *testing.T) {
 				request:      "test request",
 				waitResponse: 5,
 			},
-			expected: []command.Executer{
+			expected: []core.Executer{
 				command.NewSend("test request"),
 				command.NewWaitForResp(5 * time.Second),
 				command.NewExit(),
@@ -76,7 +76,7 @@ func TestCreateCommands(t *testing.T) {
 				request:      "test request",
 				waitResponse: -1,
 			},
-			expected: []command.Executer{
+			expected: []core.Executer{
 				command.NewSend("test request"),
 			},
 		},
@@ -85,14 +85,14 @@ func TestCreateCommands(t *testing.T) {
 			args: &flags{
 				inputFile: tmpDir + "/testfile.txt",
 			},
-			expected: []command.Executer{
+			expected: []core.Executer{
 				command.NewInputFileCommand(tmpDir + "/testfile.txt"),
 			},
 		},
 		{
 			name: "Default Edit",
 			args: &flags{},
-			expected: []command.Executer{
+			expected: []core.Executer{
 				command.NewEdit(""),
 			},
 		},
@@ -111,7 +111,7 @@ func TestInitRunOptions(t *testing.T) {
 
 	tests := []struct {
 		args        *flags
-		expected    *cli.RunOptions
+		expected    *core.RunOptions
 		name        string
 		expectError bool
 	}{
@@ -122,12 +122,12 @@ func TestInitRunOptions(t *testing.T) {
 				request:      "test request",
 				waitResponse: -1,
 			},
-			expected: &cli.RunOptions{
+			expected: &core.RunOptions{
 				OutputFile: func() *os.File {
 					f, _ := os.Create(tmpDir + "/test_output.txt")
 					return f
 				}(),
-				Commands: []command.Executer{
+				Commands: []core.Executer{
 					command.NewSend("test request"),
 				},
 			},
@@ -147,8 +147,8 @@ func TestInitRunOptions(t *testing.T) {
 				request:      "test request",
 				waitResponse: 5,
 			},
-			expected: &cli.RunOptions{
-				Commands: []command.Executer{
+			expected: &core.RunOptions{
+				Commands: []core.Executer{
 					command.NewSend("test request"),
 					command.NewWaitForResp(5 * time.Second),
 					command.NewExit(),
@@ -161,8 +161,8 @@ func TestInitRunOptions(t *testing.T) {
 			args: &flags{
 				inputFile: tmpDir + "/testfile.txt",
 			},
-			expected: &cli.RunOptions{
-				Commands: []command.Executer{
+			expected: &core.RunOptions{
+				Commands: []core.Executer{
 					command.NewInputFileCommand(tmpDir + "/testfile.txt"),
 				},
 			},
@@ -171,8 +171,8 @@ func TestInitRunOptions(t *testing.T) {
 		{
 			name: "Default Edit",
 			args: &flags{},
-			expected: &cli.RunOptions{
-				Commands: []command.Executer{
+			expected: &core.RunOptions{
+				Commands: []core.Executer{
 					command.NewEdit(""),
 				},
 			},
@@ -290,7 +290,7 @@ func TestRunConnectCmd_SuccessConnect(t *testing.T) {
 	err := runConnectCmd(ctx, args, []string{url})
 
 	if err != nil {
-		assert.ErrorContains(t, err, "failed to run client: open /dev/tty: ")
+		assert.ErrorContains(t, err, "keyboard run error: open /dev/tty: ")
 	} else {
 		assert.NoError(t, err)
 	}

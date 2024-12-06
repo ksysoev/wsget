@@ -8,6 +8,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/ksysoev/wsget/pkg/core"
 	"gopkg.in/yaml.v3"
 )
 
@@ -72,7 +73,7 @@ func (m *Macro) merge(macro *Macro) error {
 }
 
 // Get returns the Executer associated with the given name, or an error if the name is not found.
-func (m *Macro) Get(name, argString string) (Executer, error) {
+func (m *Macro) Get(name, argString string) (core.Executer, error) {
 	if cmd, ok := m.macro[name]; ok {
 		args := strings.Fields(argString)
 		return cmd.GetExecuter(args)
@@ -188,11 +189,11 @@ func NewMacroTemplates(templates []string) (*MacroTemplates, error) {
 	return tmpls, nil
 }
 
-func (t *MacroTemplates) GetExecuter(args []string) (Executer, error) {
+func (t *MacroTemplates) GetExecuter(args []string) (core.Executer, error) {
 	data := struct {
 		Args []string
 	}{args}
-	cmds := make([]Executer, len(t.list))
+	cmds := make([]core.Executer, len(t.list))
 
 	for i, tmpl := range t.list {
 		var output bytes.Buffer
@@ -200,7 +201,7 @@ func (t *MacroTemplates) GetExecuter(args []string) (Executer, error) {
 			return nil, err
 		}
 
-		cmd, err := Factory(output.String(), nil)
+		cmd, err := NewFactory(nil).Create(output.String())
 		if err != nil {
 			return nil, err
 		}

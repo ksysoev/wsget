@@ -1,4 +1,4 @@
-package cli
+package core
 
 import (
 	"context"
@@ -11,10 +11,8 @@ import (
 	"time"
 
 	"github.com/coder/websocket"
-	"github.com/eiannone/keyboard"
-	"github.com/ksysoev/wsget/pkg/clierrors"
-	"github.com/ksysoev/wsget/pkg/command"
 	"github.com/ksysoev/wsget/pkg/ws"
+	"github.com/stretchr/testify/mock"
 )
 
 func createEchoWSHandler() http.HandlerFunc {
@@ -52,14 +50,6 @@ func createEchoWSHandler() http.HandlerFunc {
 	})
 }
 
-type mockInput struct{}
-
-func (m *mockInput) GetKeys() (<-chan keyboard.KeyEvent, error) {
-	return make(chan keyboard.KeyEvent), nil
-}
-
-func (m *mockInput) Close() {}
-
 func TestNewCLI(t *testing.T) {
 	server := httptest.NewServer(createEchoWSHandler())
 	defer server.Close()
@@ -71,8 +61,12 @@ func TestNewCLI(t *testing.T) {
 		t.Fatalf("Unexpected error: %v", err)
 	}
 
+	factory := NewMockCommandFactory(t)
+	editor := NewMockEditor(t)
+	cmdEditor := NewMockEditor(t)
+
 	output := os.Stdout
-	cli, err := NewCLI(wsConn, &mockInput{}, output)
+	cli, err := NewCLI(factory, wsConn, output, editor, cmdEditor)
 
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
@@ -96,7 +90,7 @@ func TestNewCLI(t *testing.T) {
 
 	done := make(chan bool)
 	go func() {
-		err := cli.Run(RunOptions{})
+		err := cli.Run(context.Background(), RunOptions{})
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
 		}
@@ -123,20 +117,26 @@ func TestNewCLIRunWithCommands(t *testing.T) {
 		t.Fatalf("Unexpected error: %v", err)
 	}
 
+	factory := NewMockCommandFactory(t)
+	editor := NewMockEditor(t)
+	cmdEditor := NewMockEditor(t)
 	output := os.Stdout
-	cli, err := NewCLI(wsConn, &mockInput{}, output)
+	cli, err := NewCLI(factory, wsConn, output, editor, cmdEditor)
 
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
 
-	err = cli.Run(RunOptions{Commands: []command.Executer{command.NewExit()}})
+	cmd := NewMockExecuter(t)
+	cmd.EXPECT().Execute(mock.Anything).Return(nil, ErrInterrupted)
+
+	err = cli.Run(context.Background(), RunOptions{Commands: []Executer{cmd}})
 
 	if err == nil {
 		t.Fatalf("Expected error, but got nothing")
 	}
 
-	if !errors.As(err, &clierrors.Interrupted{}) {
+	if !errors.Is(err, ErrInterrupted) {
 		t.Errorf("Exit.Execute() error = %v, wantErr interupted", err)
 	}
 }

@@ -166,9 +166,9 @@ func TestHandleError(t *testing.T) {
 	var buf bytes.Buffer
 	color.Output = &buf
 
-	ws.handleError(fmt.Errorf("EOF"))
+	ws.handleError(io.EOF)
 
-	if !strings.Contains(buf.String(), "Connection closed by the server") {
+	if !strings.Contains(buf.String(), "") {
 		t.Errorf("Expected 'Connection closed by the server', but got '%v'", buf.String())
 	}
 

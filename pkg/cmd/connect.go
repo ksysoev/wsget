@@ -5,13 +5,25 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/user"
 	"time"
 
-	"github.com/ksysoev/wsget/pkg/cli"
-	"github.com/ksysoev/wsget/pkg/clierrors"
 	"github.com/ksysoev/wsget/pkg/command"
+	"github.com/ksysoev/wsget/pkg/core"
+	"github.com/ksysoev/wsget/pkg/edit"
+	"github.com/ksysoev/wsget/pkg/input"
 	"github.com/ksysoev/wsget/pkg/ws"
 	"github.com/spf13/cobra"
+)
+
+const (
+	MacroDir           = "macro"
+	ConfigDir          = ".wsget"
+	HistoryFilename    = ConfigDir + "/history"
+	HistoryCmdFilename = ConfigDir + "/cmd_history"
+	ConfigDirMode      = 0o755
+	CommandsLimit      = 100
+	HistoryLimit       = 100
 )
 
 // createConnectRunner creates a runner function for the connect command.
@@ -30,6 +42,9 @@ func createConnectRunner(args *flags) func(cmd *cobra.Command, args []string) er
 // It returns an error if the WebSocket connection cannot be established, the CLI cannot be started, or the client fails to run.
 // It returns nil if the client is interrupted gracefully.
 func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	wsURL := unnamedArgs[0]
 
 	if err := validateArgs(wsURL, args); err != nil {
@@ -51,24 +66,81 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 
 	defer wsConn.Close()
 
-	input := cli.NewKeyboard()
+	currentUser, err := user.Current()
+	if err != nil {
+		return fmt.Errorf("fail to get current user: %s", err)
+	}
 
-	client, err := cli.NewCLI(wsConn, input, os.Stdout)
+	homeDir := currentUser.HomeDir
+	if err = os.MkdirAll(homeDir+"/"+ConfigDir+"/"+MacroDir, ConfigDirMode); err != nil {
+		return fmt.Errorf("fail to get current user: %s", err)
+	}
+
+	history := edit.NewHistory(homeDir+"/"+HistoryFilename, HistoryLimit)
+	cmdHistory := edit.NewHistory(homeDir+"/"+HistoryCmdFilename, HistoryLimit)
+
+	macro, err := command.LoadMacroForDomain(homeDir+"/"+ConfigDir+"/"+MacroDir, wsConn.Hostname())
+	if err != nil {
+		return fmt.Errorf("fail to load macro: %s", err)
+	}
+
+	editor := edit.NewEditor(os.Stdout, history, false)
+	cmdEditor := edit.NewEditor(os.Stdout, cmdHistory, true)
+	cmdFactory := command.NewFactory(macro)
+
+	defer editor.Close()
+	defer cmdEditor.Close()
+
+	if macro != nil {
+		cmdEditor.Dictionary = edit.NewDictionary(macro.GetNames())
+	}
+
+	client, err := core.NewCLI(cmdFactory, wsConn, os.Stdout, editor, cmdEditor)
 	if err != nil {
 		return fmt.Errorf("unable to start CLI: %w", err)
 	}
+
+	keyboard := input.NewKeyboard(client)
+	defer keyboard.Close()
 
 	opts, err := initRunOptions(args)
 	if err != nil {
 		return err
 	}
 
-	if err = client.Run(*opts); err != nil {
-		if errors.As(err, &clierrors.Interrupted{}) {
-			return nil
+	errs := make(chan error, 2)
+
+	go func() {
+		defer cancel()
+
+		err := client.Run(ctx, *opts)
+		if err != nil && !errors.Is(err, core.ErrInterrupted) {
+			errs <- fmt.Errorf("client run error: %w", err)
 		}
 
-		return fmt.Errorf("failed to run client: %w", err)
+		errs <- nil
+	}()
+
+	go func() {
+		defer cancel()
+
+		if err = keyboard.Run(ctx); err != nil {
+			errs <- fmt.Errorf("keyboard run error: %w", err)
+			return
+		}
+
+		errs <- nil
+	}()
+
+	var errToReturn error
+	for i := 0; i < 2; i++ {
+		if err := <-errs; err != nil && errToReturn == nil {
+			errToReturn = err
+		}
+	}
+
+	if errToReturn != nil {
+		return errToReturn
 	}
 
 	return nil
@@ -95,8 +167,8 @@ func validateArgs(wsURL string, args *flags) error {
 // It takes a single parameter args of type *flags which contains the command-line arguments.
 // It returns a pointer to cli.RunOptions and an error.
 // It returns an error if it fails to open the specified output file.
-func initRunOptions(args *flags) (opts *cli.RunOptions, err error) {
-	opts = &cli.RunOptions{}
+func initRunOptions(args *flags) (opts *core.RunOptions, err error) {
+	opts = &core.RunOptions{}
 
 	if args.outputFile != "" {
 		if opts.OutputFile, err = os.Create(args.outputFile); err != nil {
@@ -109,18 +181,18 @@ func initRunOptions(args *flags) (opts *cli.RunOptions, err error) {
 	return opts, nil
 }
 
-// createCommands generates a slice of command.Executer based on the provided flags.
+// createCommands generates a slice of core.Executer based on the provided flags.
 // It takes a single parameter args of type *flags, which contains the command-line arguments.
-// It returns a slice of command.Executer, which represents the sequence of commands to be executed.
+// It returns a slice of core.Executer, which represents the sequence of commands to be executed.
 // If args.request is not empty, it creates a Send command and optionally adds WaitForResp and Exit commands if args.waitResponse is non-negative.
 // If args.inputFile is not empty, it creates an InputFileCommand.
 // If neither args.request nor args.inputFile is provided, it defaults to creating an Edit command.
-func createCommands(args *flags) []command.Executer {
-	var executers []command.Executer
+func createCommands(args *flags) []core.Executer {
+	var executers []core.Executer
 
 	switch {
 	case args.request != "":
-		executers = []command.Executer{command.NewSend(args.request)}
+		executers = []core.Executer{command.NewSend(args.request)}
 
 		if args.waitResponse >= 0 {
 			executers = append(
@@ -130,9 +202,9 @@ func createCommands(args *flags) []command.Executer {
 			)
 		}
 	case args.inputFile != "":
-		executers = []command.Executer{command.NewInputFileCommand(args.inputFile)}
+		executers = []core.Executer{command.NewInputFileCommand(args.inputFile)}
 	default:
-		executers = []command.Executer{command.NewEdit("")}
+		executers = []core.Executer{command.NewEdit("")}
 	}
 
 	return executers

@@ -6,8 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/eiannone/keyboard"
-	"github.com/ksysoev/wsget/pkg/clierrors"
+	"github.com/ksysoev/wsget/pkg/core"
 )
 
 func TestNewEditor(t *testing.T) {
@@ -48,15 +47,15 @@ func TestEdit(t *testing.T) {
 	history := NewHistory(tmpfile.Name(), 5)
 	editor := NewEditor(output, history, false)
 
-	keyStream := make(chan keyboard.KeyEvent)
+	keyStream := make(chan core.KeyEvent)
 	defer close(keyStream)
 
 	go func() {
 		for _, key := range "request" {
-			keyStream <- keyboard.KeyEvent{Rune: key}
+			keyStream <- core.KeyEvent{Rune: key}
 		}
 
-		keyStream <- keyboard.KeyEvent{Key: keyboard.KeyCtrlS}
+		keyStream <- core.KeyEvent{Key: core.KeyCtrlS}
 	}()
 
 	req, err := editor.Edit(keyStream, "")
@@ -82,11 +81,11 @@ func TestEditInterrupted(t *testing.T) {
 	history := NewHistory(tmpfile.Name(), 5)
 	editor := NewEditor(output, history, false)
 
-	keyStream := make(chan keyboard.KeyEvent)
+	keyStream := make(chan core.KeyEvent)
 	defer close(keyStream)
 
 	go func() {
-		keyStream <- keyboard.KeyEvent{Key: keyboard.KeyCtrlC}
+		keyStream <- core.KeyEvent{Key: core.KeyCtrlC}
 	}()
 
 	req, err := editor.Edit(keyStream, "")
@@ -100,12 +99,12 @@ func TestEditInterrupted(t *testing.T) {
 	}
 
 	go func() {
-		keyStream <- keyboard.KeyEvent{Key: keyboard.KeyCtrlD}
+		keyStream <- core.KeyEvent{Key: core.KeyCtrlD}
 	}()
 
 	req, err = editor.Edit(keyStream, "")
 
-	if !errors.As(err, &clierrors.Interrupted{}) {
+	if !errors.Is(err, core.ErrInterrupted) {
 		t.Error("Expected error")
 	}
 
@@ -126,11 +125,11 @@ func TestEditExitEditor(t *testing.T) {
 	history := NewHistory(tmpfile.Name(), 5)
 	editor := NewEditor(output, history, false)
 
-	keyStream := make(chan keyboard.KeyEvent)
+	keyStream := make(chan core.KeyEvent)
 	defer close(keyStream)
 
 	go func() {
-		keyStream <- keyboard.KeyEvent{Key: keyboard.KeyEsc}
+		keyStream <- core.KeyEvent{Key: core.KeyEsc}
 	}()
 
 	req, err := editor.Edit(keyStream, "")
@@ -156,7 +155,7 @@ func TestEditClosingKeyboard(t *testing.T) {
 	history := NewHistory(tmpfile.Name(), 5)
 	editor := NewEditor(output, history, false)
 
-	keyStream := make(chan keyboard.KeyEvent)
+	keyStream := make(chan core.KeyEvent)
 	close(keyStream)
 
 	req, err := editor.Edit(keyStream, "")
@@ -182,15 +181,15 @@ func TestEditSpecialKeys(t *testing.T) {
 	history := NewHistory(tmpfile.Name(), 5)
 	editor := NewEditor(output, history, false)
 
-	keyStream := make(chan keyboard.KeyEvent)
+	keyStream := make(chan core.KeyEvent)
 
 	go func() {
-		for _, key := range []keyboard.Key{
-			keyboard.KeySpace,
-			keyboard.KeyCtrlU,
-			keyboard.KeyEsc,
+		for _, key := range []core.Key{
+			core.KeySpace,
+			core.KeyCtrlU,
+			core.KeyEsc,
 		} {
-			keyStream <- keyboard.KeyEvent{Key: key}
+			keyStream <- core.KeyEvent{Key: key}
 		}
 	}()
 
@@ -211,49 +210,49 @@ func TestEditSpecialKeys(t *testing.T) {
 	}
 
 	go func() {
-		for _, key := range []keyboard.Key{
-			keyboard.KeySpace,
-			keyboard.KeyCtrlU,
-			keyboard.KeyEsc,
+		for _, key := range []core.Key{
+			core.KeySpace,
+			core.KeyCtrlU,
+			core.KeyEsc,
 		} {
-			keyStream <- keyboard.KeyEvent{Key: key}
+			keyStream <- core.KeyEvent{Key: key}
 		}
 	}()
 }
 func TestHandleEscKey(t *testing.T) {
 	tests := []struct {
 		name     string
-		keyEvent keyboard.KeyEvent
 		expected string
+		keyEvent core.KeyEvent
 		handled  bool
 	}{
 		{
 			name:     "Alt + Left",
-			keyEvent: keyboard.KeyEvent{Rune: 98},
+			keyEvent: core.KeyEvent{Rune: 98},
 			expected: "",
 			handled:  true,
 		},
 		{
 			name:     "Alt + Right",
-			keyEvent: keyboard.KeyEvent{Rune: 102},
+			keyEvent: core.KeyEvent{Rune: 102},
 			expected: "",
 			handled:  true,
 		},
 		{
 			name:     "Alt + Delete",
-			keyEvent: keyboard.KeyEvent{Rune: 100},
+			keyEvent: core.KeyEvent{Rune: 100},
 			expected: "",
 			handled:  true,
 		},
 		{
 			name:     "Esc",
-			keyEvent: keyboard.KeyEvent{Rune: 0},
+			keyEvent: core.KeyEvent{Rune: 0},
 			expected: "",
 			handled:  false,
 		},
 		{
 			name:     "Esc + any other key",
-			keyEvent: keyboard.KeyEvent{Rune: 1},
+			keyEvent: core.KeyEvent{Rune: 1},
 			expected: "",
 			handled:  true,
 		},

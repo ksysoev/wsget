@@ -5,8 +5,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/eiannone/keyboard"
-	"github.com/ksysoev/wsget/pkg/clierrors"
+	"github.com/ksysoev/wsget/pkg/core"
 )
 
 const (
@@ -45,55 +44,48 @@ func NewEditor(output io.Writer, history *History, isSingleLine bool) *Editor {
 // Edit reads input from the user via a keyboard stream and returns the resulting string.
 // It takes a channel of keyboard events and an initial buffer string as input.
 // It returns the resulting string and an error if any.
-func (ed *Editor) Edit(keyStream <-chan keyboard.KeyEvent, initBuffer string) (string, error) {
+func (ed *Editor) Edit(keyStream <-chan core.KeyEvent, initBuffer string) (string, error) {
 	ed.History.ResetPosition()
 	fmt.Fprint(ed.output, ed.content.ReplaceText(initBuffer))
 
 	for e := range keyStream {
 		isPasting := ed.isPasting()
 
-		if e.Err != nil {
-			return "", e.Err
-		}
-
-		if keyboard.KeyCtrlW == e.Key {
-			// Alt + Backspace
+		switch e.Key {
+		case core.KeyAltBackspace:
 			fmt.Fprint(ed.output, ed.content.DeleteToPrevWord())
 			continue
-		}
-
-		switch e.Key {
-		case keyboard.KeyCtrlC, keyboard.KeyCtrlD:
-			return "", clierrors.Interrupted{}
-		case keyboard.KeyCtrlS:
+		case core.KeyCtrlC, core.KeyCtrlD:
+			return "", core.ErrInterrupted
+		case core.KeyCtrlS:
 			return ed.done()
-		case keyboard.KeyEsc:
+		case core.KeyEsc:
 			if handleEscKey(e, ed) {
 				continue
 			}
 
 			return "", nil
-		case keyboard.KeyCtrlU:
+		case core.KeyCtrlU:
 			fmt.Fprint(ed.output, ed.content.Clear())
-		case keyboard.KeySpace:
+		case core.KeySpace:
 			fmt.Fprint(ed.output, ed.content.InsertSymbol(' '))
-		case keyboard.KeyEnter:
+		case core.KeyEnter:
 			if ed.newLineOrDone(isPasting) {
 				return ed.done()
 			}
-		case keyboard.KeyBackspace, MacOSDeleteKey:
+		case core.KeyBackspace, MacOSDeleteKey:
 			fmt.Fprint(ed.output, ed.content.RemovePrevSymbol())
-		case keyboard.KeyDelete:
+		case core.KeyDelete:
 			fmt.Fprint(ed.output, ed.content.RemoveNextSymbol())
-		case keyboard.KeyArrowLeft:
+		case core.KeyArrowLeft:
 			fmt.Fprint(ed.output, ed.content.MovePositionLeft())
-		case keyboard.KeyArrowRight:
+		case core.KeyArrowRight:
 			fmt.Fprint(ed.output, ed.content.MovePositionRight())
-		case keyboard.KeyArrowUp:
+		case core.KeyArrowUp:
 			ed.prevFromHistory()
-		case keyboard.KeyArrowDown:
+		case core.KeyArrowDown:
 			ed.nextFromHistory()
-		case keyboard.KeyTab:
+		case core.KeyTab:
 			content := ed.content.String()
 			if ed.Dictionary == nil || content == "" {
 				continue
@@ -109,9 +101,9 @@ func (ed *Editor) Edit(keyStream <-chan keyboard.KeyEvent, initBuffer string) (s
 			for _, r := range diff {
 				fmt.Fprint(ed.output, ed.content.InsertSymbol(r))
 			}
-		case keyboard.KeyHome:
+		case core.KeyHome:
 			fmt.Fprint(ed.output, ed.content.MoveToRowStart())
-		case keyboard.KeyEnd:
+		case core.KeyEnd:
 			fmt.Fprint(ed.output, ed.content.MoveToRowEnd())
 		default:
 			if e.Key > 0 {
@@ -140,7 +132,7 @@ func (ed *Editor) Edit(keyStream <-chan keyboard.KeyEvent, initBuffer string) (s
 // - Esc (`e.Rune == 0`): Clears the editor content and stops further processing.
 //
 // Any other key combination with the Escape key is ignored, and the function returns `true`.
-func handleEscKey(e keyboard.KeyEvent, ed *Editor) bool {
+func handleEscKey(e core.KeyEvent, ed *Editor) bool {
 	switch e.Rune {
 	case 98: //nolint:mnd // Alt + Left
 		fmt.Fprint(ed.output, ed.content.MoveToPrevWord())
