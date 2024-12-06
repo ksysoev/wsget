@@ -20,8 +20,8 @@ const (
 	MacBackspace2   Key = 127
 	KeyDelete       Key = 65522
 	KeyArrowLeft    Key = 65515
-	KeyArrowRight   Key = 65517
-	KeyArrowUp      Key = 65514
+	KeyArrowRight   Key = 65514
+	KeyArrowUp      Key = 65517
 	KeyArrowDown    Key = 65516
 	KeyTab          Key = 9
 	KeyHome         Key = 65505
