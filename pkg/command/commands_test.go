@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/ksysoev/wsget/pkg/core"
+	"github.com/ksysoev/wsget/pkg/formater"
 	"github.com/ksysoev/wsget/pkg/ws"
 )
 
@@ -91,7 +92,6 @@ func TestExit_Execute(t *testing.T) {
 
 func TestPrintMsg_Execute(t *testing.T) {
 	tests := []struct {
-		exCtx       core.ExecutionContext
 		name        string
 		expectedOut string
 		msg         ws.Message
@@ -103,7 +103,6 @@ func TestPrintMsg_Execute(t *testing.T) {
 				Type: ws.Request,
 				Data: "some request data",
 			},
-			exCtx:       core.NewMockExecutionContext(t),
 			wantErr:     false,
 			expectedOut: "->\n" + "some request data\n",
 		},
@@ -113,7 +112,6 @@ func TestPrintMsg_Execute(t *testing.T) {
 				Type: ws.Response,
 				Data: "some response data",
 			},
-			exCtx:       core.NewMockExecutionContext(t),
 			wantErr:     false,
 			expectedOut: "<-\n" + "some response data\n",
 		},
@@ -125,7 +123,10 @@ func TestPrintMsg_Execute(t *testing.T) {
 				msg: tt.msg,
 			}
 
-			exCtx := tt.exCtx
+			exCtx := core.NewMockExecutionContext(t)
+			exCtx.EXPECT().Formater().Return(formater.NewFormat())
+			exCtx.EXPECT().Output().Return(&bytes.Buffer{})
+			exCtx.EXPECT().OutputFile().Return(nil)
 
 			_, err := c.Execute(exCtx)
 
@@ -154,14 +155,15 @@ func (e *mockEditor) Close() error {
 }
 func TestCmdEdit_Execute(t *testing.T) {
 	exCtx := core.NewMockExecutionContext(t)
-	output, _ := exCtx.Output().(*bytes.Buffer)
+	output := &bytes.Buffer{}
 	input := make(chan core.KeyEvent)
 	editor := &mockEditor{}
 	editor.content = "edit command"
 
 	exCtx.EXPECT().Input().Return(input)
 	exCtx.EXPECT().Output().Return(output)
-	exCtx.EXPECT().RequestEditor().Return(editor)
+	exCtx.EXPECT().CmdEditor().Return(editor)
+	exCtx.EXPECT().Factory().Return(NewFactory(nil))
 
 	c := &CmdEdit{}
 
