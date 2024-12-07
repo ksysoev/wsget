@@ -23,8 +23,6 @@ const (
 	HistoryFilename    = ConfigDir + "/history"
 	HistoryCmdFilename = ConfigDir + "/cmd_history"
 	ConfigDirMode      = 0o755
-	CommandsLimit      = 100
-	HistoryLimit       = 100
 )
 
 // createConnectRunner creates a runner function for the connect command.
@@ -77,10 +75,18 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 		return fmt.Errorf("fail to get current user: %s", err)
 	}
 
-	history := repo.NewHistory(homeDir+"/"+HistoryFilename, HistoryLimit)
+	history, err := repo.LoadHistory(homeDir + "/" + HistoryFilename)
+	if err != nil {
+		return fmt.Errorf("fail to load history: %s", err)
+	}
+
 	defer history.Close()
 
-	cmdHistory := repo.NewHistory(homeDir+"/"+HistoryCmdFilename, HistoryLimit)
+	cmdHistory, err := repo.LoadHistory(homeDir + "/" + HistoryCmdFilename)
+	if err != nil {
+		return fmt.Errorf("fail to load command history: %s", err)
+	}
+
 	defer cmdHistory.Close()
 
 	macro, err := command.LoadMacroForDomain(homeDir+"/"+ConfigDir+"/"+MacroDir, wsConn.Hostname())

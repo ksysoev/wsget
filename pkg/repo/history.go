@@ -2,15 +2,17 @@ package repo
 
 import (
 	"bufio"
-	"log"
+	"fmt"
 	"os"
 	"strings"
 )
 
 const (
 	HistoryFileRigths = 0o644
+	DefaultLimit      = 100
 )
 
+// History maintains a record of command requests, enabling storage, retrieval, and navigation through past requests.
 type History struct {
 	fileName string
 	requests []string
@@ -18,36 +20,33 @@ type History struct {
 	pos      int
 }
 
-// NewHistory creates a new History instance with the given file name and limit.
-// The History instance stores a list of requests made by the user and loads them from the file if it exists.
-// The limit parameter specifies the maximum number of requests to store in the history.
-func NewHistory(fileName string, limit int) *History {
+// NewHistory creates and returns a new History instance with default settings and an initial empty requests slice.
+func NewHistory(fileName string) *History {
 	h := &History{
 		fileName: fileName,
-		limit:    limit,
-		requests: make([]string, 0),
+		limit:    DefaultLimit,
+		requests: make([]string, 0, DefaultLimit),
 		pos:      0,
 	}
-
-	_ = h.loadFromFile()
-
 	return h
 }
 
-// loadFromFile reads the history file and loads the requests into the History struct.
-// It returns an error if the file cannot be opened or read.
-func (h *History) loadFromFile() error {
-	fileHandler, err := os.OpenFile(h.fileName, os.O_RDONLY|os.O_CREATE, HistoryFileRigths)
+// LoadHistory loads the command history from the specified file.
+// It opens the file with the given filename and reads its contents.
+// Each line in the file represents a request and is added to a History instance.
+// Newlines represented by "\n" within a request are preserved.
+// Returns a pointer to a History instance or an error if the file cannot be opened.
+func LoadHistory(fileName string) (*History, error) {
+	fileHandler, err := os.OpenFile(fileName, os.O_RDONLY|os.O_CREATE, HistoryFileRigths)
 	if err != nil {
-		log.Println("Error opening history file:", err)
-		return err
+		return nil, fmt.Errorf("failed to open history file: %w", err)
 	}
 
 	defer fileHandler.Close()
 
 	reader := bufio.NewReader(fileHandler)
 
-	h.requests = make([]string, 0)
+	h := NewHistory(fileName)
 
 	for {
 		line, err := reader.ReadString('\n')
@@ -63,20 +62,13 @@ func (h *History) loadFromFile() error {
 
 		line = strings.ReplaceAll(line, "\\n", "\n")
 
-		h.requests = append(h.requests, line)
+		h.AddRequest(line)
 	}
 
-	h.pos = len(h.requests) - 1
-
-	return nil
+	return h, nil
 }
 
-// SaveToFile saves the history to a file.
-// It opens the file with the given filename and writes the history requests to it.
-// If the file does not exist, it creates it.
-// If the number of requests is greater than the limit, it writes only the last limit requests.
-// It replaces newlines with the escape sequence "\\n".
-// It returns an error if it fails to open the file or write to it.
+// Close writes the recent requests to the file and closes the file. It returns an error if the operation fails.
 func (h *History) Close() error {
 	fileHandler, err := os.OpenFile(h.fileName, os.O_WRONLY|os.O_CREATE, HistoryFileRigths)
 	if err != nil {
@@ -111,7 +103,7 @@ func (h *History) Close() error {
 	return writer.Flush()
 }
 
-// AddRequest adds a request to the history. If the request is empty or the same as the last request, it will not be added.
+// AddRequest adds a new request to the history if it is not empty and not a duplicate of the last request.
 func (h *History) AddRequest(request string) {
 	if request == "" {
 		return
@@ -127,8 +119,7 @@ func (h *History) AddRequest(request string) {
 	h.pos = len(h.requests)
 }
 
-// PrevRequest returns the previous request in the history.
-// If there are no more previous requests, it returns an empty string.
+// PrevRequest returns the previous request from the history. If at the beginning of the history, it returns an empty string.
 func (h *History) PrevRequest() string {
 	if h.pos <= 0 {
 		return ""
@@ -140,21 +131,19 @@ func (h *History) PrevRequest() string {
 	return req
 }
 
-// NextRequest returns the next request in the history.
-// If there are no more requests, it returns an empty string.
+// NextRequest returns the next request from the history. If at the end of the history, it returns an empty string.
 func (h *History) NextRequest() string {
-	if h.pos >= len(h.requests)-1 {
+	if h.pos >= len(h.requests) {
 		return ""
 	}
 
-	h.pos++
 	req := h.requests[h.pos]
+	h.pos++
 
 	return req
 }
 
-// ResetPosition resets the position of the history to the end.
-// If the history is empty, it does nothing.
+// ResetPosition resets the position in the history to the end, allowing traversal from the latest request again.
 func (h *History) ResetPosition() {
 	if len(h.requests) == 0 {
 		return
