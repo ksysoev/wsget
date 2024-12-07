@@ -12,6 +12,7 @@ import (
 	"github.com/ksysoev/wsget/pkg/core"
 	"github.com/ksysoev/wsget/pkg/edit"
 	"github.com/ksysoev/wsget/pkg/input"
+	"github.com/ksysoev/wsget/pkg/repo"
 	"github.com/ksysoev/wsget/pkg/ws"
 	"github.com/spf13/cobra"
 )
@@ -22,8 +23,6 @@ const (
 	HistoryFilename    = ConfigDir + "/history"
 	HistoryCmdFilename = ConfigDir + "/cmd_history"
 	ConfigDirMode      = 0o755
-	CommandsLimit      = 100
-	HistoryLimit       = 100
 )
 
 // createConnectRunner creates a runner function for the connect command.
@@ -76,8 +75,19 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 		return fmt.Errorf("fail to get current user: %s", err)
 	}
 
-	history := edit.NewHistory(homeDir+"/"+HistoryFilename, HistoryLimit)
-	cmdHistory := edit.NewHistory(homeDir+"/"+HistoryCmdFilename, HistoryLimit)
+	history, err := repo.LoadHistory(homeDir + "/" + HistoryFilename)
+	if err != nil {
+		return fmt.Errorf("fail to load history: %s", err)
+	}
+
+	defer history.Close()
+
+	cmdHistory, err := repo.LoadHistory(homeDir + "/" + HistoryCmdFilename)
+	if err != nil {
+		return fmt.Errorf("fail to load command history: %s", err)
+	}
+
+	defer cmdHistory.Close()
 
 	macro, err := command.LoadMacroForDomain(homeDir+"/"+ConfigDir+"/"+MacroDir, wsConn.Hostname())
 	if err != nil {
@@ -87,9 +97,6 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 	editor := edit.NewEditor(os.Stdout, history, false)
 	cmdEditor := edit.NewEditor(os.Stdout, cmdHistory, true)
 	cmdFactory := command.NewFactory(macro)
-
-	defer editor.Close()
-	defer cmdEditor.Close()
 
 	if macro != nil {
 		cmdEditor.Dictionary = edit.NewDictionary(macro.GetNames())
