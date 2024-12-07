@@ -99,6 +99,12 @@ func TestHistoryClose(t *testing.T) {
 			expectError:   false,
 		},
 		{
+			name:          "IncorrectPath",
+			history:       &History{fileName: "/incorrect/path.txt", requests: []string{"request1"}, limit: 10},
+			expectedLines: []string(nil),
+			expectError:   true,
+		},
+		{
 			name:          "SingleRequest",
 			history:       &History{fileName: "history_single_request.txt", requests: []string{"request1"}, limit: 10},
 			expectedLines: []string{"request1"},
@@ -114,6 +120,12 @@ func TestHistoryClose(t *testing.T) {
 			name:          "ExceedLimit",
 			history:       &History{fileName: "history_exceed_limit.txt", requests: []string{"req1", "req2", "req3"}, limit: 2},
 			expectedLines: []string{"req2", "req3"},
+			expectError:   false,
+		},
+		{
+			name:          "EmptyLines",
+			history:       &History{fileName: "history_empty_lines.txt", requests: []string{"", "req1", "", "req2", "", "req3", ""}, limit: 10},
+			expectedLines: []string{"req1", "req2", "req3"},
 			expectError:   false,
 		},
 	}
@@ -225,6 +237,14 @@ func TestLoadHistory(t *testing.T) {
 			expectedError: false,
 		},
 		{
+			name:     "FileNotFound",
+			fileName: "/incorrect/path.txt",
+			setup: func(_ string) error {
+				return nil
+			},
+			expectedError: true,
+		},
+		{
 			name:     "EmptyFile",
 			fileName: "empty.txt",
 			setup: func(fileName string) error {
@@ -263,6 +283,21 @@ func TestLoadHistory(t *testing.T) {
 				}
 				defer f.Close()
 				_, err = f.WriteString("entry1\nentry2\nentry3\n")
+				return err
+			},
+			expectedError: false,
+			expectedCount: 3,
+		},
+		{
+			name:     "EmptyLines",
+			fileName: "multiple_entries.txt",
+			setup: func(fileName string) error {
+				f, err := os.Create(fileName)
+				if err != nil {
+					return err
+				}
+				defer f.Close()
+				_, err = f.WriteString("\nentry1\n\nentry2\n\nentry3\n\n")
 				return err
 			},
 			expectedError: false,
