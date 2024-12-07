@@ -64,7 +64,7 @@ func TestHistory(t *testing.T) {
 	}
 
 	// Test SaveToFile method
-	if err = h.SaveToFile(); err != nil {
+	if err = h.Close(); err != nil {
 		t.Errorf("SaveToFile failed, expected to get no error, but got %s", err)
 	}
 

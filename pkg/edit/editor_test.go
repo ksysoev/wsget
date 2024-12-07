@@ -3,11 +3,11 @@ package edit
 import (
 	"bytes"
 	"errors"
-	"github.com/ksysoev/wsget/pkg/repo"
 	"os"
 	"testing"
 
 	"github.com/ksysoev/wsget/pkg/core"
+	"github.com/ksysoev/wsget/pkg/repo"
 )
 
 func TestNewEditor(t *testing.T) {
