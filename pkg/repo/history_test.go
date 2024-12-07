@@ -22,9 +22,9 @@ func TestNewHistory(t *testing.T) {
 func TestNextRequest(t *testing.T) {
 	tests := []struct {
 		name        string
+		expected    string
 		initial     []string
 		initialPos  int
-		expected    string
 		expectedPos int
 	}{
 		{
@@ -126,6 +126,7 @@ func TestHistoryClose(t *testing.T) {
 				assert.Error(t, err)
 				return
 			}
+
 			assert.NoError(t, err)
 
 			// Read the file and compare with expectedLines
@@ -134,6 +135,7 @@ func TestHistoryClose(t *testing.T) {
 			defer file.Close()
 
 			var lines []string
+
 			scanner := bufio.NewScanner(file)
 			for scanner.Scan() {
 				lines = append(lines, scanner.Text())
@@ -208,16 +210,16 @@ func TestAddRequest(t *testing.T) {
 
 func TestLoadHistory(t *testing.T) {
 	tests := []struct {
+		setup         func(fileName string) error
 		name          string
 		fileName      string
-		setup         func(fileName string) error
-		expectedError bool
 		expectedCount int
+		expectedError bool
 	}{
 		{
 			name:     "FileNotFound",
 			fileName: "non_existent.txt",
-			setup: func(fileName string) error {
+			setup: func(_ string) error {
 				return nil
 			},
 			expectedError: false,
@@ -226,7 +228,7 @@ func TestLoadHistory(t *testing.T) {
 			name:     "EmptyFile",
 			fileName: "empty.txt",
 			setup: func(fileName string) error {
-				f, err := os.Create("empty.txt")
+				f, err := os.Create(fileName)
 				if err != nil {
 					return err
 				}
@@ -240,7 +242,7 @@ func TestLoadHistory(t *testing.T) {
 			name:     "SingleEntry",
 			fileName: "single_entry.txt",
 			setup: func(fileName string) error {
-				f, err := os.Create("single_entry.txt")
+				f, err := os.Create(fileName)
 				if err != nil {
 					return err
 				}
@@ -255,7 +257,7 @@ func TestLoadHistory(t *testing.T) {
 			name:     "MultipleEntries",
 			fileName: "multiple_entries.txt",
 			setup: func(fileName string) error {
-				f, err := os.Create("multiple_entries.txt")
+				f, err := os.Create(fileName)
 				if err != nil {
 					return err
 				}
@@ -289,9 +291,9 @@ func TestLoadHistory(t *testing.T) {
 func TestPrevRequest(t *testing.T) {
 	tests := []struct {
 		name        string
+		expected    string
 		initial     []string
 		initialPos  int
-		expected    string
 		expectedPos int
 	}{
 		{

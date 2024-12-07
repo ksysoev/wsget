@@ -12,7 +12,7 @@ import (
 
 func TestNewEditor(t *testing.T) {
 	output := new(bytes.Buffer)
-	history := repo.NewHistory("", 0)
+	history := repo.NewHistory("")
 	editor := NewEditor(output, history, false)
 
 	if editor.content == nil {
@@ -45,7 +45,11 @@ func TestEdit(t *testing.T) {
 	defer os.Remove(tmpfile.Name())
 
 	output := new(bytes.Buffer)
-	history := repo.NewHistory(tmpfile.Name(), 5)
+
+	history := NewMockHistoryRepo(t)
+	history.EXPECT().ResetPosition()
+	history.EXPECT().AddRequest("request")
+
 	editor := NewEditor(output, history, false)
 
 	keyStream := make(chan core.KeyEvent)
@@ -79,7 +83,10 @@ func TestEditInterrupted(t *testing.T) {
 	defer os.Remove(tmpfile.Name())
 
 	output := new(bytes.Buffer)
-	history := repo.NewHistory(tmpfile.Name(), 5)
+
+	history := NewMockHistoryRepo(t)
+	history.EXPECT().ResetPosition()
+
 	editor := NewEditor(output, history, false)
 
 	keyStream := make(chan core.KeyEvent)
@@ -123,7 +130,10 @@ func TestEditExitEditor(t *testing.T) {
 	defer os.Remove(tmpfile.Name())
 
 	output := new(bytes.Buffer)
-	history := repo.NewHistory(tmpfile.Name(), 5)
+
+	history := NewMockHistoryRepo(t)
+	history.EXPECT().ResetPosition()
+
 	editor := NewEditor(output, history, false)
 
 	keyStream := make(chan core.KeyEvent)
@@ -145,15 +155,11 @@ func TestEditExitEditor(t *testing.T) {
 }
 
 func TestEditClosingKeyboard(t *testing.T) {
-	tmpfile, err := os.CreateTemp("", "test_history")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	defer os.Remove(tmpfile.Name())
-
 	output := new(bytes.Buffer)
-	history := repo.NewHistory(tmpfile.Name(), 5)
+
+	history := NewMockHistoryRepo(t)
+	history.EXPECT().ResetPosition()
+
 	editor := NewEditor(output, history, false)
 
 	keyStream := make(chan core.KeyEvent)
@@ -179,7 +185,10 @@ func TestEditSpecialKeys(t *testing.T) {
 	defer os.Remove(tmpfile.Name())
 
 	output := new(bytes.Buffer)
-	history := repo.NewHistory(tmpfile.Name(), 5)
+
+	history := NewMockHistoryRepo(t)
+	history.EXPECT().ResetPosition()
+
 	editor := NewEditor(output, history, false)
 
 	keyStream := make(chan core.KeyEvent)

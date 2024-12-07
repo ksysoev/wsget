@@ -22,13 +22,12 @@ type History struct {
 
 // NewHistory creates and returns a new History instance with default settings and an initial empty requests slice.
 func NewHistory(fileName string) *History {
-	h := &History{
+	return &History{
 		fileName: fileName,
 		limit:    DefaultLimit,
 		requests: make([]string, 0, DefaultLimit),
 		pos:      0,
 	}
-	return h
 }
 
 // LoadHistory loads the command history from the specified file.

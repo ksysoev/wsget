@@ -8,7 +8,7 @@ import (
 	"github.com/ksysoev/wsget/pkg/core"
 )
 
-type History interface {
+type HistoryRepo interface {
 	AddRequest(req string)
 	PrevRequest() string
 	NextRequest() string
@@ -22,7 +22,7 @@ const (
 )
 
 type Editor struct {
-	History         History
+	History         HistoryRepo
 	content         *Content
 	Dictionary      *Dictionary
 	output          io.Writer
@@ -33,10 +33,10 @@ type Editor struct {
 }
 
 // NewEditor creates a new instance of Editor struct.
-// It takes an io.Writer to output the editor content, a *History to store the command history,
+// It takes an io.Writer to output the editor content, a *HistoryRepo to store the command history,
 // a boolean value to indicate whether the editor should be single line or not.
 // It returns a pointer to the created Editor struct.
-func NewEditor(output io.Writer, history History, isSingleLine bool) *Editor {
+func NewEditor(output io.Writer, history HistoryRepo, isSingleLine bool) *Editor {
 	return &Editor{
 		History:         history,
 		content:         NewContent(),
