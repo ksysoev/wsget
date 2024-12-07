@@ -3,6 +3,7 @@ package edit
 import (
 	"bytes"
 	"errors"
+	"github.com/ksysoev/wsget/pkg/repo"
 	"os"
 	"testing"
 
@@ -11,7 +12,7 @@ import (
 
 func TestNewEditor(t *testing.T) {
 	output := new(bytes.Buffer)
-	history := NewHistory("", 0)
+	history := repo.NewHistory("", 0)
 	editor := NewEditor(output, history, false)
 
 	if editor.content == nil {
@@ -44,7 +45,7 @@ func TestEdit(t *testing.T) {
 	defer os.Remove(tmpfile.Name())
 
 	output := new(bytes.Buffer)
-	history := NewHistory(tmpfile.Name(), 5)
+	history := repo.NewHistory(tmpfile.Name(), 5)
 	editor := NewEditor(output, history, false)
 
 	keyStream := make(chan core.KeyEvent)
@@ -78,7 +79,7 @@ func TestEditInterrupted(t *testing.T) {
 	defer os.Remove(tmpfile.Name())
 
 	output := new(bytes.Buffer)
-	history := NewHistory(tmpfile.Name(), 5)
+	history := repo.NewHistory(tmpfile.Name(), 5)
 	editor := NewEditor(output, history, false)
 
 	keyStream := make(chan core.KeyEvent)
@@ -122,7 +123,7 @@ func TestEditExitEditor(t *testing.T) {
 	defer os.Remove(tmpfile.Name())
 
 	output := new(bytes.Buffer)
-	history := NewHistory(tmpfile.Name(), 5)
+	history := repo.NewHistory(tmpfile.Name(), 5)
 	editor := NewEditor(output, history, false)
 
 	keyStream := make(chan core.KeyEvent)
@@ -152,7 +153,7 @@ func TestEditClosingKeyboard(t *testing.T) {
 	defer os.Remove(tmpfile.Name())
 
 	output := new(bytes.Buffer)
-	history := NewHistory(tmpfile.Name(), 5)
+	history := repo.NewHistory(tmpfile.Name(), 5)
 	editor := NewEditor(output, history, false)
 
 	keyStream := make(chan core.KeyEvent)
@@ -178,7 +179,7 @@ func TestEditSpecialKeys(t *testing.T) {
 	defer os.Remove(tmpfile.Name())
 
 	output := new(bytes.Buffer)
-	history := NewHistory(tmpfile.Name(), 5)
+	history := repo.NewHistory(tmpfile.Name(), 5)
 	editor := NewEditor(output, history, false)
 
 	keyStream := make(chan core.KeyEvent)

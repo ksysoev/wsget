@@ -1,4 +1,4 @@
-package edit
+package repo
 
 import (
 	"bufio"
@@ -77,7 +77,7 @@ func (h *History) loadFromFile() error {
 // If the number of requests is greater than the limit, it writes only the last limit requests.
 // It replaces newlines with the escape sequence "\\n".
 // It returns an error if it fails to open the file or write to it.
-func (h *History) SaveToFile() error {
+func (h *History) Close() error {
 	fileHandler, err := os.OpenFile(h.fileName, os.O_WRONLY|os.O_CREATE, HistoryFileRigths)
 	if err != nil {
 		return err
@@ -127,9 +127,9 @@ func (h *History) AddRequest(request string) {
 	h.pos = len(h.requests)
 }
 
-// PrevRequst returns the previous request in the history.
+// PrevRequest returns the previous request in the history.
 // If there are no more previous requests, it returns an empty string.
-func (h *History) PrevRequst() string {
+func (h *History) PrevRequest() string {
 	if h.pos <= 0 {
 		return ""
 	}
@@ -142,7 +142,7 @@ func (h *History) PrevRequst() string {
 
 // NextRequest returns the next request in the history.
 // If there are no more requests, it returns an empty string.
-func (h *History) NextRequst() string {
+func (h *History) NextRequest() string {
 	if h.pos >= len(h.requests)-1 {
 		return ""
 	}

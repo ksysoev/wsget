@@ -8,6 +8,13 @@ import (
 	"github.com/ksysoev/wsget/pkg/core"
 )
 
+type History interface {
+	AddRequest(req string)
+	PrevRequest() string
+	NextRequest() string
+	ResetPosition()
+}
+
 const (
 	PastingTimingThresholdInMicrosec = 250
 	MacOSDeleteKey                   = 127
@@ -15,7 +22,7 @@ const (
 )
 
 type Editor struct {
-	History         *History
+	History         History
 	content         *Content
 	Dictionary      *Dictionary
 	output          io.Writer
@@ -29,7 +36,7 @@ type Editor struct {
 // It takes an io.Writer to output the editor content, a *History to store the command history,
 // a boolean value to indicate whether the editor should be single line or not.
 // It returns a pointer to the created Editor struct.
-func NewEditor(output io.Writer, history *History, isSingleLine bool) *Editor {
+func NewEditor(output io.Writer, history History, isSingleLine bool) *Editor {
 	return &Editor{
 		History:         history,
 		content:         NewContent(),
@@ -173,7 +180,7 @@ func (ed *Editor) done() (string, error) {
 // prevFromHistory retrieves the previous request from the history and replaces the current content with it.
 // If there is no previous request, it prints a bell character and returns.
 func (ed *Editor) prevFromHistory() {
-	req := ed.History.PrevRequst()
+	req := ed.History.PrevRequest()
 
 	if req == "" {
 		fmt.Fprint(ed.output, Bell)
@@ -186,7 +193,7 @@ func (ed *Editor) prevFromHistory() {
 // nextFromHistory retrieves the next request from the history and replaces the current content with it.
 // If there are no more requests in the history, it prints a bell character and returns.
 func (ed *Editor) nextFromHistory() {
-	req := ed.History.NextRequst()
+	req := ed.History.NextRequest()
 
 	if req == "" {
 		fmt.Fprint(ed.output, Bell)
@@ -229,9 +236,4 @@ func (ed *Editor) isPasting() bool {
 	ed.prevPressedTime = time.Now()
 
 	return elapsed.Microseconds() < PastingTimingThresholdInMicrosec
-}
-
-// Close saves the history to the history file.
-func (ed *Editor) Close() error {
-	return ed.History.SaveToFile()
 }

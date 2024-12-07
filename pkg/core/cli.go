@@ -12,18 +12,10 @@ import (
 )
 
 const (
-	MacroDir           = "macro"
-	ConfigDir          = ".wsget"
-	HistoryFilename    = ConfigDir + "/history"
-	HistoryCmdFilename = ConfigDir + "/cmd_history"
-	ConfigDirMode      = 0o755
-	CommandsLimit      = 100
-	HistoryLimit       = 100
+	CommandsLimit = 100
 
 	HideCursor = "\x1b[?25l"
 	ShowCursor = "\x1b[?25h"
-
-	Bell = "\a"
 )
 
 var (
@@ -80,7 +72,6 @@ type ExecutionContext interface {
 
 type Editor interface {
 	Edit(keyStream <-chan KeyEvent, initBuffer string) (string, error)
-	Close() error
 }
 
 type Executer interface {

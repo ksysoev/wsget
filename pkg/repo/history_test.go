@@ -1,4 +1,4 @@
-package edit
+package repo
 
 import (
 	"os"
@@ -36,24 +36,24 @@ func TestHistory(t *testing.T) {
 
 	// Test PrevRequest method
 	for i := len(req) - 1; i >= 0; i-- {
-		if h.PrevRequst() != req[i] {
-			t.Errorf("PrevRequest failed, expected %s, got %s", req[i], h.PrevRequst())
+		if h.PrevRequest() != req[i] {
+			t.Errorf("PrevRequest failed, expected %s, got %s", req[i], h.PrevRequest())
 		}
 	}
 
-	if h.PrevRequst() != "" {
-		t.Errorf("PrevRequest failed, expected %s, got %s", "", h.PrevRequst())
+	if h.PrevRequest() != "" {
+		t.Errorf("PrevRequest failed, expected %s, got %s", "", h.PrevRequest())
 	}
 
 	// Test NextRequest method
 	for i := 1; i < len(req); i++ {
-		if h.NextRequst() != req[i] {
-			t.Errorf("NextRequest failed, expected %s, got %s", req[i], h.NextRequst())
+		if h.NextRequest() != req[i] {
+			t.Errorf("NextRequest failed, expected %s, got %s", req[i], h.NextRequest())
 		}
 	}
 
-	if h.NextRequst() != "" {
-		t.Errorf("NextRequest failed, expected %s, got %s", "", h.NextRequst())
+	if h.NextRequest() != "" {
+		t.Errorf("NextRequest failed, expected %s, got %s", "", h.NextRequest())
 	}
 
 	// Test ResetPosition method
