@@ -94,15 +94,15 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 		return fmt.Errorf("fail to load macro: %s", err)
 	}
 
-	editor := edit.NewEditor(os.Stdout, history, false)
-	cmdEditor := edit.NewEditor(os.Stdout, cmdHistory, true)
-	cmdFactory := command.NewFactory(macro)
-
+	var dict *edit.Dictionary
 	if macro != nil {
-		cmdEditor.Dictionary = edit.NewDictionary(macro.GetNames())
+		dict = edit.NewDictionary(macro.GetNames())
 	}
 
-	client, err := core.NewCLI(cmdFactory, wsConn, os.Stdout, editor, cmdEditor)
+	editor := edit.NewMultiMode(os.Stdout, history, cmdHistory, dict)
+	cmdFactory := command.NewFactory(macro)
+
+	client, err := core.NewCLI(cmdFactory, wsConn, os.Stdout, editor)
 	if err != nil {
 		return fmt.Errorf("unable to start CLI: %w", err)
 	}

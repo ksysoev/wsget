@@ -9,6 +9,8 @@ import (
 	"github.com/ksysoev/wsget/pkg/core"
 	"github.com/ksysoev/wsget/pkg/formater"
 	"github.com/ksysoev/wsget/pkg/ws"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 type mockCommand struct {
@@ -141,28 +143,16 @@ func TestPrintMsg_Execute(t *testing.T) {
 	}
 }
 
-type mockEditor struct {
-	err     error
-	content string
-}
-
-func (e *mockEditor) Edit(_ <-chan core.KeyEvent, _ string) (string, error) {
-	return e.content, e.err
-}
-
-func (e *mockEditor) Close() error {
-	return nil
-}
 func TestCmdEdit_Execute(t *testing.T) {
 	exCtx := core.NewMockExecutionContext(t)
 	output := &bytes.Buffer{}
 	input := make(chan core.KeyEvent)
-	editor := &mockEditor{}
-	editor.content = "edit command"
+	editor := core.NewMockEditor(t)
+	editor.EXPECT().CommandMode(mock.Anything, "").Return("", nil)
 
 	exCtx.EXPECT().Input().Return(input)
 	exCtx.EXPECT().Output().Return(output)
-	exCtx.EXPECT().CmdEditor().Return(editor)
+	exCtx.EXPECT().Editor().Return(editor)
 	exCtx.EXPECT().Factory().Return(NewFactory(nil))
 
 	c := &CmdEdit{}
@@ -172,18 +162,7 @@ func TestCmdEdit_Execute(t *testing.T) {
 		close(input)
 	}()
 
-	_, err := c.Execute(exCtx)
-
-	if err != nil {
-		t.Errorf("CmdEdit.Execute() error = %v, want nil", err)
-	}
-
-	expectedOutput := ":"
-	expectedOutput += ShowCursor
-	expectedOutput += LineClear + "\r"
-	expectedOutput += HideCursor
-
-	if output.String() != expectedOutput {
-		t.Errorf("CmdEdit.Execute() output = %q, want %q", output.String(), expectedOutput)
-	}
+	cmd, err := c.Execute(exCtx)
+	assert.NoError(t, err)
+	assert.Nil(t, cmd)
 }

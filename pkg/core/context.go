@@ -40,12 +40,8 @@ func (ctx *executionContext) Connection() ws.ConnectionHandler {
 	return ctx.cli.wsConn
 }
 
-func (ctx *executionContext) RequestEditor() Editor {
+func (ctx *executionContext) Editor() Editor {
 	return ctx.cli.editor
-}
-
-func (ctx *executionContext) CmdEditor() Editor {
-	return ctx.cli.cmdEditor
 }
 
 func (ctx *executionContext) Factory() CommandFactory {

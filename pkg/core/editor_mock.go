@@ -19,6 +19,63 @@ func (_m *MockEditor) EXPECT() *MockEditor_Expecter {
 	return &MockEditor_Expecter{mock: &_m.Mock}
 }
 
+// CommandMode provides a mock function with given fields: keyStream, initBuffer
+func (_m *MockEditor) CommandMode(keyStream <-chan KeyEvent, initBuffer string) (string, error) {
+	ret := _m.Called(keyStream, initBuffer)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CommandMode")
+	}
+
+	var r0 string
+	var r1 error
+	if rf, ok := ret.Get(0).(func(<-chan KeyEvent, string) (string, error)); ok {
+		return rf(keyStream, initBuffer)
+	}
+	if rf, ok := ret.Get(0).(func(<-chan KeyEvent, string) string); ok {
+		r0 = rf(keyStream, initBuffer)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	if rf, ok := ret.Get(1).(func(<-chan KeyEvent, string) error); ok {
+		r1 = rf(keyStream, initBuffer)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockEditor_CommandMode_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CommandMode'
+type MockEditor_CommandMode_Call struct {
+	*mock.Call
+}
+
+// CommandMode is a helper method to define mock.On call
+//   - keyStream <-chan KeyEvent
+//   - initBuffer string
+func (_e *MockEditor_Expecter) CommandMode(keyStream interface{}, initBuffer interface{}) *MockEditor_CommandMode_Call {
+	return &MockEditor_CommandMode_Call{Call: _e.mock.On("CommandMode", keyStream, initBuffer)}
+}
+
+func (_c *MockEditor_CommandMode_Call) Run(run func(keyStream <-chan KeyEvent, initBuffer string)) *MockEditor_CommandMode_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(<-chan KeyEvent), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *MockEditor_CommandMode_Call) Return(_a0 string, _a1 error) *MockEditor_CommandMode_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockEditor_CommandMode_Call) RunAndReturn(run func(<-chan KeyEvent, string) (string, error)) *MockEditor_CommandMode_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Edit provides a mock function with given fields: keyStream, initBuffer
 func (_m *MockEditor) Edit(keyStream <-chan KeyEvent, initBuffer string) (string, error) {
 	ret := _m.Called(keyStream, initBuffer)

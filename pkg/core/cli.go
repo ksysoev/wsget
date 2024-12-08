@@ -6,7 +6,6 @@ import (
 	"io"
 	"os"
 
-	"github.com/eiannone/keyboard"
 	"github.com/ksysoev/wsget/pkg/formater"
 	"github.com/ksysoev/wsget/pkg/ws"
 )
@@ -26,7 +25,6 @@ type CLI struct {
 	formater    *formater.Format
 	wsConn      ws.ConnectionHandler
 	editor      Editor
-	cmdEditor   Editor
 	inputStream chan KeyEvent
 	output      io.Writer
 	commands    chan Executer
@@ -36,18 +34,6 @@ type CLI struct {
 type RunOptions struct {
 	OutputFile *os.File
 	Commands   []Executer
-}
-
-type Inputer interface {
-	GetKeys() (<-chan keyboard.KeyEvent, error)
-	Close()
-}
-
-type ConnectionHandler interface {
-	Messages() <-chan ws.Message
-	Hostname() string
-	Send(msg string) (*ws.Message, error)
-	Close()
 }
 
 type Formater interface {
@@ -65,13 +51,13 @@ type ExecutionContext interface {
 	Output() io.Writer
 	Formater() formater.Formater
 	Connection() ws.ConnectionHandler
-	RequestEditor() Editor
-	CmdEditor() Editor
+	Editor() Editor
 	Factory() CommandFactory
 }
 
 type Editor interface {
 	Edit(keyStream <-chan KeyEvent, initBuffer string) (string, error)
+	CommandMode(keyStream <-chan KeyEvent, initBuffer string) (string, error)
 }
 
 type Executer interface {
@@ -81,11 +67,10 @@ type Executer interface {
 // NewCLI creates a new CLI instance with the given wsConn, input, and output.
 // It returns an error if it fails to get the current user, create the necessary directories,
 // load the macro for the domain, or initialize the CLI instance.
-func NewCLI(cmdFactory CommandFactory, wsConn ws.ConnectionHandler, output io.Writer, edit, cmdEdit Editor) (*CLI, error) {
+func NewCLI(cmdFactory CommandFactory, wsConn ws.ConnectionHandler, output io.Writer, editor Editor) (*CLI, error) {
 	return &CLI{
 		formater:    formater.NewFormat(),
-		editor:      edit,
-		cmdEditor:   cmdEdit,
+		editor:      editor,
 		wsConn:      wsConn,
 		inputStream: make(chan KeyEvent),
 		output:      output,

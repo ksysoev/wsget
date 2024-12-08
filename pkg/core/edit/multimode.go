@@ -11,10 +11,15 @@ type MultiMode struct {
 	editMode    *Editor
 }
 
-func NewMultiMode(output io.Writer, reqHistory, cmdHistory HistoryRepo) *MultiMode {
+func NewMultiMode(output io.Writer, reqHistory, cmdHistory HistoryRepo, cmdDict *Dictionary) *MultiMode {
+	commandMode := NewEditor(output, cmdHistory, true)
+	if cmdDict != nil {
+		commandMode.Dictionary = cmdDict
+	}
+
 	return &MultiMode{
-		commandMode: NewEditor(output, reqHistory, true),
-		editMode:    NewEditor(output, cmdHistory, false),
+		commandMode: commandMode,
+		editMode:    NewEditor(output, reqHistory, false),
 	}
 }
 
