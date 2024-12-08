@@ -75,19 +75,8 @@ func TestExecutionContext_RequestEditor(t *testing.T) {
 
 	executionContext := newExecutionContext(cli, outputFile)
 
-	if executionContext.RequestEditor() != cli.editor {
-		t.Errorf("Unexpected connection: %v", executionContext.RequestEditor())
-	}
-}
-
-func TestExecutionContext_CmdEditor(t *testing.T) {
-	cli := &CLI{}
-	outputFile := &bytes.Buffer{}
-
-	executionContext := newExecutionContext(cli, outputFile)
-
-	if executionContext.CmdEditor() != cli.cmdEditor {
-		t.Errorf("Unexpected connection: %v", executionContext.CmdEditor())
+	if executionContext.Editor() != cli.editor {
+		t.Errorf("Unexpected connection: %v", executionContext.Editor())
 	}
 }
 

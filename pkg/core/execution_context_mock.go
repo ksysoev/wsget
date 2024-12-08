@@ -27,53 +27,6 @@ func (_m *MockExecutionContext) EXPECT() *MockExecutionContext_Expecter {
 	return &MockExecutionContext_Expecter{mock: &_m.Mock}
 }
 
-// CmdEditor provides a mock function with given fields:
-func (_m *MockExecutionContext) CmdEditor() Editor {
-	ret := _m.Called()
-
-	if len(ret) == 0 {
-		panic("no return value specified for CmdEditor")
-	}
-
-	var r0 Editor
-	if rf, ok := ret.Get(0).(func() Editor); ok {
-		r0 = rf()
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(Editor)
-		}
-	}
-
-	return r0
-}
-
-// MockExecutionContext_CmdEditor_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CmdEditor'
-type MockExecutionContext_CmdEditor_Call struct {
-	*mock.Call
-}
-
-// CmdEditor is a helper method to define mock.On call
-func (_e *MockExecutionContext_Expecter) CmdEditor() *MockExecutionContext_CmdEditor_Call {
-	return &MockExecutionContext_CmdEditor_Call{Call: _e.mock.On("CmdEditor")}
-}
-
-func (_c *MockExecutionContext_CmdEditor_Call) Run(run func()) *MockExecutionContext_CmdEditor_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run()
-	})
-	return _c
-}
-
-func (_c *MockExecutionContext_CmdEditor_Call) Return(_a0 Editor) *MockExecutionContext_CmdEditor_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *MockExecutionContext_CmdEditor_Call) RunAndReturn(run func() Editor) *MockExecutionContext_CmdEditor_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // Connection provides a mock function with given fields:
 func (_m *MockExecutionContext) Connection() ws.ConnectionHandler {
 	ret := _m.Called()
@@ -117,6 +70,53 @@ func (_c *MockExecutionContext_Connection_Call) Return(_a0 ws.ConnectionHandler)
 }
 
 func (_c *MockExecutionContext_Connection_Call) RunAndReturn(run func() ws.ConnectionHandler) *MockExecutionContext_Connection_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Editor provides a mock function with given fields:
+func (_m *MockExecutionContext) Editor() Editor {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for Editor")
+	}
+
+	var r0 Editor
+	if rf, ok := ret.Get(0).(func() Editor); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(Editor)
+		}
+	}
+
+	return r0
+}
+
+// MockExecutionContext_Editor_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Editor'
+type MockExecutionContext_Editor_Call struct {
+	*mock.Call
+}
+
+// Editor is a helper method to define mock.On call
+func (_e *MockExecutionContext_Expecter) Editor() *MockExecutionContext_Editor_Call {
+	return &MockExecutionContext_Editor_Call{Call: _e.mock.On("Editor")}
+}
+
+func (_c *MockExecutionContext_Editor_Call) Run(run func()) *MockExecutionContext_Editor_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *MockExecutionContext_Editor_Call) Return(_a0 Editor) *MockExecutionContext_Editor_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockExecutionContext_Editor_Call) RunAndReturn(run func() Editor) *MockExecutionContext_Editor_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -352,53 +352,6 @@ func (_c *MockExecutionContext_OutputFile_Call) Return(_a0 io.Writer) *MockExecu
 }
 
 func (_c *MockExecutionContext_OutputFile_Call) RunAndReturn(run func() io.Writer) *MockExecutionContext_OutputFile_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// RequestEditor provides a mock function with given fields:
-func (_m *MockExecutionContext) RequestEditor() Editor {
-	ret := _m.Called()
-
-	if len(ret) == 0 {
-		panic("no return value specified for RequestEditor")
-	}
-
-	var r0 Editor
-	if rf, ok := ret.Get(0).(func() Editor); ok {
-		r0 = rf()
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(Editor)
-		}
-	}
-
-	return r0
-}
-
-// MockExecutionContext_RequestEditor_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RequestEditor'
-type MockExecutionContext_RequestEditor_Call struct {
-	*mock.Call
-}
-
-// RequestEditor is a helper method to define mock.On call
-func (_e *MockExecutionContext_Expecter) RequestEditor() *MockExecutionContext_RequestEditor_Call {
-	return &MockExecutionContext_RequestEditor_Call{Call: _e.mock.On("RequestEditor")}
-}
-
-func (_c *MockExecutionContext_RequestEditor_Call) Run(run func()) *MockExecutionContext_RequestEditor_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run()
-	})
-	return _c
-}
-
-func (_c *MockExecutionContext_RequestEditor_Call) Return(_a0 Editor) *MockExecutionContext_RequestEditor_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *MockExecutionContext_RequestEditor_Call) RunAndReturn(run func() Editor) *MockExecutionContext_RequestEditor_Call {
 	_c.Call.Return(run)
 	return _c
 }

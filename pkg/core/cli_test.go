@@ -63,10 +63,9 @@ func TestNewCLI(t *testing.T) {
 
 	factory := NewMockCommandFactory(t)
 	editor := NewMockEditor(t)
-	cmdEditor := NewMockEditor(t)
 
 	output := os.Stdout
-	cli, err := NewCLI(factory, wsConn, output, editor, cmdEditor)
+	cli, err := NewCLI(factory, wsConn, output, editor)
 
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
@@ -119,9 +118,8 @@ func TestNewCLIRunWithCommands(t *testing.T) {
 
 	factory := NewMockCommandFactory(t)
 	editor := NewMockEditor(t)
-	cmdEditor := NewMockEditor(t)
 	output := os.Stdout
-	cli, err := NewCLI(factory, wsConn, output, editor, cmdEditor)
+	cli, err := NewCLI(factory, wsConn, output, editor)
 
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
