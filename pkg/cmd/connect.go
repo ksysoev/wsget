@@ -10,7 +10,7 @@ import (
 
 	"github.com/ksysoev/wsget/pkg/command"
 	"github.com/ksysoev/wsget/pkg/core"
-	"github.com/ksysoev/wsget/pkg/edit"
+	"github.com/ksysoev/wsget/pkg/core/edit"
 	"github.com/ksysoev/wsget/pkg/input"
 	"github.com/ksysoev/wsget/pkg/repo"
 	"github.com/ksysoev/wsget/pkg/ws"
