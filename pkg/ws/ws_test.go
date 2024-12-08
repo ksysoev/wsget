@@ -13,6 +13,7 @@ import (
 
 	"github.com/coder/websocket"
 	"github.com/fatih/color"
+	"github.com/ksysoev/wsget/pkg/core"
 )
 
 func createEchoWSHandler() http.HandlerFunc {
@@ -193,21 +194,21 @@ func TestMessageTypeString(t *testing.T) {
 	tests := []struct {
 		name string
 		want string
-		mt   MessageType
+		mt   core.MessageType
 	}{
 		{
 			name: "Request",
-			mt:   Request,
+			mt:   core.Request,
 			want: "Request",
 		},
 		{
 			name: "Response",
-			mt:   Response,
+			mt:   core.Response,
 			want: "Response",
 		},
 		{
 			name: "Not defined",
-			mt:   MessageType(42),
+			mt:   core.MessageType(42),
 			want: "Not defined",
 		},
 	}
