@@ -17,26 +17,8 @@ import (
 
 	"github.com/coder/websocket"
 	"github.com/fatih/color"
+	"github.com/ksysoev/wsget/pkg/core"
 )
-
-type MessageType uint8
-
-const (
-	NotDefined MessageType = iota
-	Request
-	Response
-)
-
-func (mt MessageType) String() string {
-	switch mt {
-	case Request:
-		return "Request"
-	case Response:
-		return "Response"
-	default:
-		return "Not defined"
-	}
-}
 
 const (
 	wsMessageBufferSize   = 100
@@ -45,14 +27,9 @@ const (
 	defaultMaxMessageSize = 1024 * 1024
 )
 
-type Message struct {
-	Data string      `json:"data"`
-	Type MessageType `json:"type"`
-}
-
 type Connection struct {
 	ws        *websocket.Conn
-	messages  chan Message
+	messages  chan core.Message
 	waitGroup *sync.WaitGroup
 	hostname  string
 	isClosed  atomic.Bool
@@ -65,9 +42,9 @@ type Options struct {
 }
 
 type ConnectionHandler interface {
-	Messages() <-chan Message
+	Messages() <-chan core.Message
 	Hostname() string
-	Send(msg string) (*Message, error)
+	Send(msg string) (*core.Message, error)
 	Close()
 }
 
@@ -173,7 +150,7 @@ func NewWS(ctx context.Context, wsURL string, opts Options) (*Connection, error)
 
 	var waitGroup sync.WaitGroup
 
-	messages := make(chan Message, wsMessageBufferSize)
+	messages := make(chan core.Message, wsMessageBufferSize)
 
 	wsInsp := &Connection{ws: ws, messages: messages, waitGroup: &waitGroup, hostname: parsedURL.Hostname()}
 
@@ -183,7 +160,7 @@ func NewWS(ctx context.Context, wsURL string, opts Options) (*Connection, error)
 }
 
 // Messages returns a channel that receives messages from the WebSocket connection.
-func (wsInsp *Connection) Messages() <-chan Message {
+func (wsInsp *Connection) Messages() <-chan core.Message {
 	return wsInsp.messages
 }
 
@@ -218,7 +195,7 @@ func (wsInsp *Connection) handleResponses(ctx context.Context) {
 			return
 		}
 
-		wsInsp.messages <- Message{Type: Response, Data: string(data)}
+		wsInsp.messages <- core.Message{Type: core.Response, Data: string(data)}
 	}
 }
 
@@ -237,7 +214,7 @@ func (wsInsp *Connection) handleError(err error) {
 // Send sends a message to the websocket connection and returns a Message and an error.
 // It takes a string message as input and returns a pointer to a Message struct and an error.
 // The Message struct contains the message type and data.
-func (wsInsp *Connection) Send(msg string) (*Message, error) {
+func (wsInsp *Connection) Send(msg string) (*core.Message, error) {
 	wsInsp.waitGroup.Add(1)
 	defer wsInsp.waitGroup.Done()
 
@@ -245,7 +222,7 @@ func (wsInsp *Connection) Send(msg string) (*Message, error) {
 		return nil, err
 	}
 
-	return &Message{Type: Request, Data: msg}, nil
+	return &core.Message{Type: core.Request, Data: msg}, nil
 }
 
 // Close closes the WebSocket connection.

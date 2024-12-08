@@ -3,15 +3,15 @@ package formater
 import (
 	"testing"
 
-	"github.com/ksysoev/wsget/pkg/ws"
+	"github.com/ksysoev/wsget/pkg/core"
 )
 
 func TestFormat_FormatMessage(t *testing.T) {
 	formater := NewFormat()
 
 	// Test text message formatting
-	textMsg := ws.Message{
-		Type: ws.Request,
+	textMsg := core.Message{
+		Type: core.Request,
 		Data: "TestFormat_FormatMessage",
 	}
 
@@ -26,8 +26,8 @@ func TestFormat_FormatMessage(t *testing.T) {
 	}
 
 	// Test JSON message formatting
-	jsonMsg := ws.Message{
-		Type: ws.Response,
+	jsonMsg := core.Message{
+		Type: core.Response,
 		Data: `{"status": 200, "body": "TestFormat_FormatMessage"}`,
 	}
 
@@ -43,8 +43,8 @@ func TestFormat_FormatMessage(t *testing.T) {
 
 	testString := `{"status": 200, "body": "TestFormat_FormatMessage"`
 	// Test invalid JSON message formatting
-	invalidJSONMsg := ws.Message{
-		Type: ws.Response,
+	invalidJSONMsg := core.Message{
+		Type: core.Response,
 		Data: testString,
 	}
 
@@ -58,8 +58,8 @@ func TestFormat_FormatMessage(t *testing.T) {
 	}
 
 	// Test unknown message type
-	unknownMsg := ws.Message{
-		Type: ws.MessageType(0),
+	unknownMsg := core.Message{
+		Type: core.MessageType(0),
 		Data: "unknown message type",
 	}
 
@@ -77,8 +77,8 @@ func TestFormat_FormatForFile(t *testing.T) {
 	formater := NewFormat()
 
 	// Test text message formatting for file
-	textMsg := ws.Message{
-		Type: ws.Request,
+	textMsg := core.Message{
+		Type: core.Request,
 		Data: "TestFormat_FormatForFile",
 	}
 
@@ -93,8 +93,8 @@ func TestFormat_FormatForFile(t *testing.T) {
 	}
 
 	// Test JSON message formatting for file
-	jsonMsg := ws.Message{
-		Type: ws.Response,
+	jsonMsg := core.Message{
+		Type: core.Response,
 		Data: `{"status": 200, "body": "TestFormat_FormatForFile"}`,
 	}
 
@@ -109,8 +109,8 @@ func TestFormat_FormatForFile(t *testing.T) {
 	}
 
 	// Test invalid JSON message formatting for file
-	invalidJSONMsg := ws.Message{
-		Type: ws.Response,
+	invalidJSONMsg := core.Message{
+		Type: core.Response,
 		Data: `{"status": 200, "body": "TestFormat_FormatForFile"`,
 	}
 
@@ -129,7 +129,7 @@ func TestFormat_formatTextMessage(t *testing.T) {
 	formater := NewFormat()
 
 	// Test request message formatting
-	requestMsg := ws.Request
+	requestMsg := core.Request
 	requestData := "GET / HTTP/1.1\r\nHost: example.com\r\n\r\n"
 
 	formattedRequestMsg, err := formater.formatTextMessage(requestMsg, requestData)
@@ -143,7 +143,7 @@ func TestFormat_formatTextMessage(t *testing.T) {
 	}
 
 	// Test response message formatting
-	responseMsg := ws.Response
+	responseMsg := core.Response
 	responseData := "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nHello, world!"
 
 	formattedResponseMsg, err := formater.formatTextMessage(responseMsg, responseData)
@@ -157,7 +157,7 @@ func TestFormat_formatTextMessage(t *testing.T) {
 	}
 
 	// Test unknown message type
-	unknownMsg := ws.MessageType(0)
+	unknownMsg := core.MessageType(0)
 	unknownData := "Hello, world!"
 
 	formattedUnknownMsg, err := formater.formatTextMessage(unknownMsg, unknownData)
@@ -174,7 +174,7 @@ func TestFormat_formatJSONMessage(t *testing.T) {
 	formater := NewFormat()
 
 	// Test request message formatting as JSON
-	requestMsg := ws.Request
+	requestMsg := core.Request
 	requestData := map[string]interface{}{
 		"status": "200",
 		"body":   "Hello, world!",
@@ -192,7 +192,7 @@ func TestFormat_formatJSONMessage(t *testing.T) {
 	}
 
 	// Test response message formatting as JSON
-	responseMsg := ws.Response
+	responseMsg := core.Response
 	responseData := map[string]interface{}{
 		"status": "200",
 		"body":   "Hello, world!",
@@ -209,7 +209,7 @@ func TestFormat_formatJSONMessage(t *testing.T) {
 	}
 
 	// Test unknown message type
-	unknownMsg := ws.MessageType(0)
+	unknownMsg := core.MessageType(0)
 	unknownData := "Hello, world!"
 
 	formattedUnknownMsg, err := formater.formatJSONMessage(unknownMsg, unknownData)

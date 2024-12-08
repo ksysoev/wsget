@@ -37,8 +37,8 @@ type RunOptions struct {
 }
 
 type Formater interface {
-	FormatMessage(wsMsg ws.Message) (string, error)
-	FormatForFile(wsMsg ws.Message) (string, error)
+	FormatMessage(wsMsg Message) (string, error)
+	FormatForFile(wsMsg Message) (string, error)
 }
 
 type CommandFactory interface {
@@ -172,4 +172,28 @@ func (c *CLI) hideCursor() {
 // showCursor shows the cursor in the terminal output.
 func (c *CLI) showCursor() {
 	fmt.Fprint(c.output, ShowCursor)
+}
+
+type MessageType uint8
+
+const (
+	NotDefined MessageType = iota
+	Request
+	Response
+)
+
+func (mt MessageType) String() string {
+	switch mt {
+	case Request:
+		return "Request"
+	case Response:
+		return "Response"
+	default:
+		return "Not defined"
+	}
+}
+
+type Message struct {
+	Data string      `json:"data"`
+	Type MessageType `json:"type"`
 }

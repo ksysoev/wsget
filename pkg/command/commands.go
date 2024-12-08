@@ -8,7 +8,6 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/ksysoev/wsget/pkg/core"
-	"github.com/ksysoev/wsget/pkg/ws"
 	"gopkg.in/yaml.v3"
 )
 
@@ -66,10 +65,10 @@ func (c *Send) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 }
 
 type PrintMsg struct {
-	msg ws.Message
+	msg core.Message
 }
 
-func NewPrintMsg(msg ws.Message) *PrintMsg {
+func NewPrintMsg(msg core.Message) *PrintMsg {
 	return &PrintMsg{msg}
 }
 
@@ -85,9 +84,9 @@ func (c *PrintMsg) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 	}
 
 	switch msg.Type {
-	case ws.Request:
+	case core.Request:
 		color.New(color.FgGreen).Fprintln(exCtx.Output(), "->")
-	case ws.Response:
+	case core.Response:
 		color.New(color.FgRed).Fprintln(exCtx.Output(), "<-")
 	default:
 		return nil, &ErrUnsupportedMessageType{msg.Type.String()}
