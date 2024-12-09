@@ -111,32 +111,32 @@ func TestNew(t *testing.T) {
 
 func TestSetOnMessage(t *testing.T) {
 	tests := []struct {
-		name         string
 		initialFunc  func([]byte)
 		newFunc      func([]byte)
 		expectedFunc func([]byte)
+		name         string
 	}{
 		{
 			name:         "Set new simple function",
 			initialFunc:  nil,
-			newFunc:      func(data []byte) {},
-			expectedFunc: func(data []byte) {},
+			newFunc:      func(_ []byte) {},
+			expectedFunc: func(_ []byte) {},
 		},
 		{
 			name:         "Set nil function",
-			initialFunc:  func(data []byte) {},
+			initialFunc:  func(_ []byte) {},
 			newFunc:      nil,
 			expectedFunc: nil,
 		},
 		{
 			name: "Replace existing function",
-			initialFunc: func(data []byte) {
+			initialFunc: func(_ []byte) {
 				fmt.Println("Old")
 			},
-			newFunc: func(data []byte) {
+			newFunc: func(_ []byte) {
 				fmt.Println("New")
 			},
-			expectedFunc: func(data []byte) {
+			expectedFunc: func(_ []byte) {
 				fmt.Println("New")
 			},
 		},
@@ -205,8 +205,8 @@ func TestConnection_Hostname(t *testing.T) {
 
 func TestConnection_HandleError(t *testing.T) {
 	tests := []struct {
-		name  string
 		err   error
+		name  string
 		isNil bool
 	}{
 		{
@@ -251,6 +251,7 @@ func TestConnection_HandleError(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			conn := &Connection{}
 			err := conn.handleError(tt.err)
+
 			if tt.isNil {
 				assert.NoError(t, err)
 			} else {
@@ -302,6 +303,58 @@ func TestConnection_Connect_Success(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("timeout waiting for response")
 	}
+}
+
+func TestConnection_Connect_NoCallback(t *testing.T) {
+	conn, err := New("ws://localhost:0", Options{})
+	assert.NoError(t, err)
+
+	err = conn.Connect(context.Background())
+	assert.Error(t, err)
+}
+
+func TestConnection_Connect_AlreadyConnected(t *testing.T) {
+	s := httptest.NewServer(createEchoWSHandler())
+	defer s.Close()
+
+	conn, err := New("ws://"+s.Listener.Addr().String(), Options{})
+	assert.NoError(t, err)
+
+	conn.SetOnMessage(func([]byte) {})
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+
+	defer wg.Wait()
+	defer conn.Close()
+
+	go func() {
+		defer wg.Done()
+
+		err = conn.Connect(context.Background())
+		assert.NoError(t, err)
+	}()
+
+	select {
+	case <-conn.ready:
+	case <-time.After(1 * time.Second):
+	}
+
+	err = conn.Connect(context.Background())
+	assert.Error(t, err)
+}
+
+func TestConnection_Connect_ContextCancelled(t *testing.T) {
+	conn, err := New("ws://localhost:0", Options{})
+	assert.NoError(t, err)
+
+	conn.SetOnMessage(func([]byte) {})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	err = conn.Connect(ctx)
+	assert.NoError(t, err)
 }
 
 func TestConnection_Send_ContextCancelled(t *testing.T) {

@@ -96,7 +96,7 @@ func (c *Connection) Connect(ctx context.Context) error {
 
 	ws, resp, err := websocket.Dial(ctx, c.url.String(), c.opts)
 	if err != nil {
-		return err
+		return c.handleError(err)
 	}
 
 	if resp.Body != nil {
