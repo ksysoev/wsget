@@ -9,10 +9,8 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"sort"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/coder/websocket"
@@ -28,11 +26,12 @@ const (
 )
 
 type Connection struct {
-	ws        *websocket.Conn
-	messages  chan core.Message
-	waitGroup *sync.WaitGroup
-	hostname  string
-	isClosed  atomic.Bool
+	opts     Options
+	url      *url.URL
+	ws       *websocket.Conn
+	messages chan core.Message
+	wg       sync.WaitGroup
+	l        sync.Mutex
 }
 
 type Options struct {
@@ -41,77 +40,33 @@ type Options struct {
 	Verbose             bool
 }
 
-type ConnectionHandler interface {
-	Messages() <-chan core.Message
-	Hostname() string
-	Send(msg string) (*core.Message, error)
-	Close()
-}
-
-type requestLogger struct {
-	transport *http.Transport
-	verbose   bool
-}
-
-// RoundTrip logs the request and response details.
-func (t *requestLogger) RoundTrip(req *http.Request) (*http.Response, error) {
-	if t.verbose {
-		tx := color.New(color.FgGreen)
-
-		tx.Printf("> %s %s %s\n", req.Method, req.URL.String(), req.Proto)
-		printHeaders(req.Header, tx, ">")
-		tx.Println()
-	}
-
-	resp, err := t.transport.RoundTrip(req)
-
-	if err != nil {
-		return nil, err
-	}
-
-	if t.verbose {
-		rx := color.New(color.FgYellow)
-
-		rx.Printf("< %s %s\n", resp.Proto, resp.Status)
-		printHeaders(resp.Header, rx, "<")
-		rx.Println()
-	}
-
-	return resp, nil
-}
-
-// printHeaders prints the headers to the output with the given prefix.
-func printHeaders(headers http.Header, out *color.Color, prefix string) {
-	// Sort headers for consistent output
-	headerNames := make([]string, 0, len(headers))
-	for header := range headers {
-		headerNames = append(headerNames, header)
-	}
-
-	sort.Strings(headerNames)
-
-	for _, header := range headerNames {
-		values := headers[header]
-		for _, value := range values {
-			out.Printf("%s %s: %s\n", prefix, header, value)
-		}
-	}
-}
-
-// NewWS creates a new WebSocket connection to the specified URL with the given options.
+// New creates a new WebSocket connection to the specified URL with the given options.
 // It returns a Connection object and an error if any occurred.
-func NewWS(ctx context.Context, wsURL string, opts Options) (*Connection, error) {
+func New(wsURL string, opts Options) (*Connection, error) {
 	parsedURL, err := url.Parse(wsURL)
 	if err != nil {
 		return nil, err
 	}
 
+	wsInsp := &Connection{url: parsedURL, messages: make(chan core.Message, wsMessageBufferSize), opts: opts}
+
+	return wsInsp, nil
+}
+
+func (c *Connection) Connect(ctx context.Context) error {
+	c.l.Lock()
+	defer c.l.Unlock()
+
+	if c.ws != nil {
+		return fmt.Errorf("connection already established")
+	}
+
 	httpCli := &http.Client{
 		Transport: &requestLogger{
 			transport: &http.Transport{
-				TLSClientConfig: &tls.Config{InsecureSkipVerify: opts.SkipSSLVerification}, //nolint:gosec // Skip SSL verification
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: c.opts.SkipSSLVerification}, //nolint:gosec // Skip SSL verification
 			},
-			verbose: opts.Verbose,
+			verbose: c.opts.Verbose,
 		},
 		Timeout: dialTimeout,
 	}
@@ -120,12 +75,12 @@ func NewWS(ctx context.Context, wsURL string, opts Options) (*Connection, error)
 		HTTPClient: httpCli,
 	}
 
-	if len(opts.Headers) > 0 {
+	if len(c.opts.Headers) > 0 {
 		Headers := make(http.Header)
-		for _, headerInput := range opts.Headers {
+		for _, headerInput := range c.opts.Headers {
 			splited := strings.Split(headerInput, ":")
 			if len(splited) != headerPartsNumber {
-				return nil, fmt.Errorf("invalid header: %s", headerInput)
+				return fmt.Errorf("invalid header: %s", headerInput)
 			}
 
 			header := strings.TrimSpace(splited[0])
@@ -137,9 +92,9 @@ func NewWS(ctx context.Context, wsURL string, opts Options) (*Connection, error)
 		wsOpts.HTTPHeader = Headers
 	}
 
-	ws, resp, err := websocket.Dial(ctx, wsURL, wsOpts)
+	ws, resp, err := websocket.Dial(ctx, c.url.String(), wsOpts)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if resp.Body != nil {
@@ -148,62 +103,56 @@ func NewWS(ctx context.Context, wsURL string, opts Options) (*Connection, error)
 
 	ws.SetReadLimit(defaultMaxMessageSize)
 
-	var waitGroup sync.WaitGroup
+	c.ws = ws
 
-	messages := make(chan core.Message, wsMessageBufferSize)
+	c.wg.Add(1)
 
-	wsInsp := &Connection{ws: ws, messages: messages, waitGroup: &waitGroup, hostname: parsedURL.Hostname()}
+	go c.handleResponses(ctx, ws)
 
-	go wsInsp.handleResponses(ctx)
-
-	return wsInsp, nil
+	return nil
 }
 
 // Messages returns a channel that receives messages from the WebSocket connection.
-func (wsInsp *Connection) Messages() <-chan core.Message {
-	return wsInsp.messages
+func (c *Connection) Messages() <-chan core.Message {
+	return c.messages
 }
 
 // Hostname returns the hostname of the WebSocket server.
-func (wsInsp *Connection) Hostname() string {
-	return wsInsp.hostname
+func (c *Connection) Hostname() string {
+	return c.url.Hostname()
 }
 
 // handleResponses reads messages from the websocket connection and sends them to the Messages channel.
 // It runs in a loop until the connection is closed or an error occurs.
-func (wsInsp *Connection) handleResponses(ctx context.Context) {
+func (c *Connection) handleResponses(ctx context.Context, ws *websocket.Conn) {
 	defer func() {
-		wsInsp.waitGroup.Wait()
-		close(wsInsp.messages)
+		c.wg.Done()
+		close(c.messages)
 	}()
 
 	for ctx.Err() == nil {
-		msgType, reader, err := wsInsp.ws.Reader(ctx)
+		msgType, reader, err := ws.Reader(ctx)
 		if err != nil {
-			wsInsp.handleError(err)
+			c.handleError(err)
 			return
 		}
 
 		if msgType == websocket.MessageBinary {
-			wsInsp.handleError(fmt.Errorf("unexpected binary message"))
+			c.handleError(fmt.Errorf("unexpected binary message"))
 			return
 		}
 
 		data, err := io.ReadAll(reader)
 		if err != nil {
-			wsInsp.handleError(err)
+			c.handleError(err)
 			return
 		}
 
-		wsInsp.messages <- core.Message{Type: core.Response, Data: string(data)}
+		c.messages <- core.Message{Type: core.Response, Data: string(data)}
 	}
 }
 
-func (wsInsp *Connection) handleError(err error) {
-	if wsInsp.isClosed.Load() {
-		return
-	}
-
+func (c *Connection) handleError(err error) {
 	if errors.Is(err, context.Canceled) || errors.Is(err, io.EOF) || errors.Is(err, net.ErrClosed) {
 		return
 	}
@@ -214,11 +163,11 @@ func (wsInsp *Connection) handleError(err error) {
 // Send sends a message to the websocket connection and returns a Message and an error.
 // It takes a string message as input and returns a pointer to a Message struct and an error.
 // The Message struct contains the message type and data.
-func (wsInsp *Connection) Send(msg string) (*core.Message, error) {
-	wsInsp.waitGroup.Add(1)
-	defer wsInsp.waitGroup.Done()
+func (c *Connection) Send(msg string) (*core.Message, error) {
+	c.l.Lock()
+	defer c.l.Unlock()
 
-	if err := wsInsp.ws.Write(context.TODO(), websocket.MessageText, []byte(msg)); err != nil {
+	if err := c.ws.Write(context.TODO(), websocket.MessageText, []byte(msg)); err != nil {
 		return nil, err
 	}
 
@@ -227,12 +176,11 @@ func (wsInsp *Connection) Send(msg string) (*core.Message, error) {
 
 // Close closes the WebSocket connection.
 // If the connection is already closed, it returns immediately.
-func (wsInsp *Connection) Close() {
-	if wsInsp.isClosed.Load() {
-		return
-	}
+func (c *Connection) Close() {
+	c.l.Lock()
+	defer c.l.Unlock()
 
-	wsInsp.isClosed.Store(true)
+	c.ws.Close(websocket.StatusNormalClosure, "closing connection")
 
-	wsInsp.ws.Close(websocket.StatusNormalClosure, "closing connection")
+	c.wg.Wait()
 }

@@ -4,7 +4,6 @@ import (
 	"io"
 
 	"github.com/ksysoev/wsget/pkg/formater"
-	"github.com/ksysoev/wsget/pkg/ws"
 )
 
 type executionContext struct {
@@ -36,7 +35,7 @@ func (ctx *executionContext) Formater() formater.Formater {
 	return ctx.cli.formater
 }
 
-func (ctx *executionContext) Connection() ws.ConnectionHandler {
+func (ctx *executionContext) Connection() ConnectionHandler {
 	return ctx.cli.wsConn
 }
 

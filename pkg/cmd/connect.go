@@ -50,7 +50,7 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 		return err
 	}
 
-	wsConn, err := ws.NewWS(
+	wsConn, err := ws.New(
 		ctx,
 		wsURL,
 		ws.Options{
