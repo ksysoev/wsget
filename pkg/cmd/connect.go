@@ -51,7 +51,6 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 	}
 
 	wsConn, err := ws.New(
-		ctx,
 		wsURL,
 		ws.Options{
 			SkipSSLVerification: args.insecure,

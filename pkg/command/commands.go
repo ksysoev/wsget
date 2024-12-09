@@ -77,7 +77,7 @@ func NewPrintMsg(msg core.Message) *PrintMsg {
 // If an output file is provided, it writes the formatted message to the file.
 func (c *PrintMsg) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 	msg := c.msg
-	output, err := exCtx.Formater().FormatMessage(msg)
+	output, err := exCtx.Formater().FormatMessage(msg.Type.String(), msg.Data)
 
 	if err != nil {
 		return nil, err
@@ -96,7 +96,7 @@ func (c *PrintMsg) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 
 	outputFile := exCtx.OutputFile()
 	if outputFile != nil && !reflect.ValueOf(outputFile).IsNil() {
-		output, err := exCtx.Formater().FormatForFile(msg)
+		output, err := exCtx.Formater().FormatForFile(msg.Type.String(), msg.Data)
 		if err != nil {
 			return nil, err
 		}
