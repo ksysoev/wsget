@@ -2,20 +2,12 @@ package formater
 
 import (
 	"testing"
-
-	"github.com/ksysoev/wsget/pkg/core"
 )
 
 func TestFormat_FormatMessage(t *testing.T) {
 	formater := NewFormat()
 
-	// Test text message formatting
-	textMsg := core.Message{
-		Type: core.Request,
-		Data: "TestFormat_FormatMessage",
-	}
-
-	formattedTextMsg, err := formater.FormatMessage(textMsg)
+	formattedTextMsg, err := formater.FormatMessage("Request", "TestFormat_FormatMessage")
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
@@ -25,13 +17,7 @@ func TestFormat_FormatMessage(t *testing.T) {
 		t.Errorf("Unexpected formatted message: %v", formattedTextMsg)
 	}
 
-	// Test JSON message formatting
-	jsonMsg := core.Message{
-		Type: core.Response,
-		Data: `{"status": 200, "body": "TestFormat_FormatMessage"}`,
-	}
-
-	formattedJSONMsg, err := formater.FormatMessage(jsonMsg)
+	formattedJSONMsg, err := formater.FormatMessage("Response", `{"status": 200, "body": "TestFormat_FormatMessage"}`)
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
@@ -42,13 +28,8 @@ func TestFormat_FormatMessage(t *testing.T) {
 	}
 
 	testString := `{"status": 200, "body": "TestFormat_FormatMessage"`
-	// Test invalid JSON message formatting
-	invalidJSONMsg := core.Message{
-		Type: core.Response,
-		Data: testString,
-	}
 
-	formattedInvalidJSONMsg, err := formater.FormatMessage(invalidJSONMsg)
+	formattedInvalidJSONMsg, err := formater.FormatMessage("Response", testString)
 	if err != nil {
 		t.Errorf("Expected to get no error, but got %v", err)
 	}
@@ -57,13 +38,7 @@ func TestFormat_FormatMessage(t *testing.T) {
 		t.Errorf("Expected formated plain string, but got %v", formattedInvalidJSONMsg)
 	}
 
-	// Test unknown message type
-	unknownMsg := core.Message{
-		Type: core.MessageType(0),
-		Data: "unknown message type",
-	}
-
-	formattedUnknownMsg, err := formater.FormatMessage(unknownMsg)
+	formattedUnknownMsg, err := formater.FormatMessage("NotDefined", "unknown message type")
 	if err == nil {
 		t.Errorf("Expected error, but got nil")
 	}
@@ -76,13 +51,7 @@ func TestFormat_FormatMessage(t *testing.T) {
 func TestFormat_FormatForFile(t *testing.T) {
 	formater := NewFormat()
 
-	// Test text message formatting for file
-	textMsg := core.Message{
-		Type: core.Request,
-		Data: "TestFormat_FormatForFile",
-	}
-
-	formattedTextMsg, err := formater.FormatForFile(textMsg)
+	formattedTextMsg, err := formater.FormatForFile("Request", "TestFormat_FormatForFile")
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
@@ -92,13 +61,7 @@ func TestFormat_FormatForFile(t *testing.T) {
 		t.Errorf("Unexpected formatted message: %v", formattedTextMsg)
 	}
 
-	// Test JSON message formatting for file
-	jsonMsg := core.Message{
-		Type: core.Response,
-		Data: `{"status": 200, "body": "TestFormat_FormatForFile"}`,
-	}
-
-	formattedJSONMsg, err := formater.FormatForFile(jsonMsg)
+	formattedJSONMsg, err := formater.FormatForFile("Response", `{"status": 200, "body": "TestFormat_FormatForFile"}`)
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
@@ -108,13 +71,7 @@ func TestFormat_FormatForFile(t *testing.T) {
 		t.Errorf("Unexpected formatted message: %v", formattedJSONMsg)
 	}
 
-	// Test invalid JSON message formatting for file
-	invalidJSONMsg := core.Message{
-		Type: core.Response,
-		Data: `{"status": 200, "body": "TestFormat_FormatForFile"`,
-	}
-
-	formattedInvalidJSONMsg, err := formater.FormatForFile(invalidJSONMsg)
+	formattedInvalidJSONMsg, err := formater.FormatForFile("Response", `{"status": 200, "body": "TestFormat_FormatForFile"`)
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
@@ -128,11 +85,9 @@ func TestFormat_FormatForFile(t *testing.T) {
 func TestFormat_formatTextMessage(t *testing.T) {
 	formater := NewFormat()
 
-	// Test request message formatting
-	requestMsg := core.Request
 	requestData := "GET / HTTP/1.1\r\nHost: example.com\r\n\r\n"
 
-	formattedRequestMsg, err := formater.formatTextMessage(requestMsg, requestData)
+	formattedRequestMsg, err := formater.formatTextMessage("Request", requestData)
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
@@ -143,10 +98,9 @@ func TestFormat_formatTextMessage(t *testing.T) {
 	}
 
 	// Test response message formatting
-	responseMsg := core.Response
 	responseData := "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nHello, world!"
 
-	formattedResponseMsg, err := formater.formatTextMessage(responseMsg, responseData)
+	formattedResponseMsg, err := formater.formatTextMessage("Response", responseData)
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
@@ -156,11 +110,9 @@ func TestFormat_formatTextMessage(t *testing.T) {
 		t.Errorf("Unexpected formatted message: %v", formattedResponseMsg)
 	}
 
-	// Test unknown message type
-	unknownMsg := core.MessageType(0)
 	unknownData := "Hello, world!"
 
-	formattedUnknownMsg, err := formater.formatTextMessage(unknownMsg, unknownData)
+	formattedUnknownMsg, err := formater.formatTextMessage("NotDefined", unknownData)
 	if err == nil {
 		t.Errorf("Expected error, but got nil")
 	}
@@ -174,13 +126,12 @@ func TestFormat_formatJSONMessage(t *testing.T) {
 	formater := NewFormat()
 
 	// Test request message formatting as JSON
-	requestMsg := core.Request
 	requestData := map[string]interface{}{
 		"status": "200",
 		"body":   "Hello, world!",
 	}
 
-	formattedRequestMsg, err := formater.formatJSONMessage(requestMsg, requestData)
+	formattedRequestMsg, err := formater.formatJSONMessage("Request", requestData)
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
@@ -192,13 +143,12 @@ func TestFormat_formatJSONMessage(t *testing.T) {
 	}
 
 	// Test response message formatting as JSON
-	responseMsg := core.Response
 	responseData := map[string]interface{}{
 		"status": "200",
 		"body":   "Hello, world!",
 	}
 
-	formattedResponseMsg, err := formater.formatJSONMessage(responseMsg, responseData)
+	formattedResponseMsg, err := formater.formatJSONMessage("Response", responseData)
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
@@ -209,10 +159,9 @@ func TestFormat_formatJSONMessage(t *testing.T) {
 	}
 
 	// Test unknown message type
-	unknownMsg := core.MessageType(0)
 	unknownData := "Hello, world!"
 
-	formattedUnknownMsg, err := formater.formatJSONMessage(unknownMsg, unknownData)
+	formattedUnknownMsg, err := formater.formatJSONMessage("NotDefined", unknownData)
 	if err == nil {
 		t.Errorf("Expected error, but got nil")
 	}
