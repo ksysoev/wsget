@@ -3,64 +3,15 @@ package core
 import (
 	"context"
 	"errors"
-	"io"
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"testing"
 	"time"
 
-	"github.com/coder/websocket"
-	"github.com/ksysoev/wsget/pkg/ws"
 	"github.com/stretchr/testify/mock"
 )
 
-func createEchoWSHandler() http.HandlerFunc {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		c, err := websocket.Accept(w, r, nil)
-		if err != nil {
-			return
-		}
-
-		defer c.Close(websocket.StatusNormalClosure, "")
-
-		for {
-			_, wsr, err := c.Reader(r.Context())
-			if err != nil {
-				if err == io.EOF {
-					return
-				}
-
-				return
-			}
-
-			wsw, err := c.Writer(r.Context(), websocket.MessageText)
-			if err != nil {
-				return
-			}
-
-			if _, err := io.Copy(wsw, wsr); err != nil {
-				return
-			}
-
-			if err := wsw.Close(); err != nil {
-				return
-			}
-		}
-	})
-}
-
 func TestNewCLI(t *testing.T) {
-	server := httptest.NewServer(createEchoWSHandler())
-	defer server.Close()
-
-	url := "ws://" + server.Listener.Addr().String()
-	wsConn, err := ws.New(url, ws.Options{})
-
-	if err != nil {
-		t.Fatalf("Unexpected error: %v", err)
-	}
-
+	wsConn := NewMockConnectionHandler(t)
 	factory := NewMockCommandFactory(t)
 	editor := NewMockEditor(t)
 
@@ -106,16 +57,7 @@ func TestNewCLI(t *testing.T) {
 }
 
 func TestNewCLIRunWithCommands(t *testing.T) {
-	server := httptest.NewServer(createEchoWSHandler())
-	defer server.Close()
-
-	url := "ws://" + server.Listener.Addr().String()
-	wsConn, err := ws.New(url, ws.Options{})
-
-	if err != nil {
-		t.Fatalf("Unexpected error: %v", err)
-	}
-
+	wsConn := NewMockConnectionHandler(t)
 	factory := NewMockCommandFactory(t)
 	editor := NewMockEditor(t)
 	output := os.Stdout

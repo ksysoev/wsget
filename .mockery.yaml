@@ -12,6 +12,7 @@ packages:
       Executer:
       ExecutionContext:
       Formater:
+      ConnectionHandler:
   github.com/ksysoev/wsget/pkg/core/edit:
     interfaces:
       HistoryRepo:
