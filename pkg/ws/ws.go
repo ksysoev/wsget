@@ -26,10 +26,10 @@ const (
 )
 
 type Connection struct {
-	opts     Options
 	url      *url.URL
 	ws       *websocket.Conn
 	messages chan core.Message
+	opts     Options
 	wg       sync.WaitGroup
 	l        sync.Mutex
 }

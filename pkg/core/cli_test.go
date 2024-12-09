@@ -11,7 +11,12 @@ import (
 )
 
 func TestNewCLI(t *testing.T) {
+	msgChan := make(chan Message)
 	wsConn := NewMockConnectionHandler(t)
+
+	wsConn.EXPECT().Send(mock.Anything).Return(&Message{}, nil)
+	wsConn.EXPECT().Messages().Return(msgChan)
+
 	factory := NewMockCommandFactory(t)
 	editor := NewMockEditor(t)
 
@@ -47,7 +52,7 @@ func TestNewCLI(t *testing.T) {
 		done <- true
 	}()
 
-	wsConn.Close()
+	close(msgChan)
 
 	select {
 	case <-done:
@@ -57,7 +62,11 @@ func TestNewCLI(t *testing.T) {
 }
 
 func TestNewCLIRunWithCommands(t *testing.T) {
+	msgChan := make(chan Message)
+
 	wsConn := NewMockConnectionHandler(t)
+	wsConn.EXPECT().Messages().Return(msgChan)
+
 	factory := NewMockCommandFactory(t)
 	editor := NewMockEditor(t)
 	output := os.Stdout

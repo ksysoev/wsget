@@ -2,6 +2,7 @@ package ws
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -13,6 +14,8 @@ import (
 	"github.com/coder/websocket"
 	"github.com/fatih/color"
 	"github.com/ksysoev/wsget/pkg/core"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func createEchoWSHandler() http.HandlerFunc {
@@ -56,8 +59,11 @@ func TestNewWS(t *testing.T) {
 
 	url := "ws://" + server.Listener.Addr().String()
 	ws, err := New(url, Options{})
-
 	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	if err := ws.Connect(context.Background()); err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
 
@@ -76,7 +82,7 @@ func TestNewWS(t *testing.T) {
 }
 
 func TestNewWSWithInvalidURL(t *testing.T) {
-	_, err := New("invalid", Options{})
+	_, err := New("invalid"+string(rune(0)), Options{})
 
 	if err == nil {
 		t.Fatalf("Expected error, but got nil")
@@ -84,9 +90,10 @@ func TestNewWSWithInvalidURL(t *testing.T) {
 }
 
 func TestNewWSFailToConnect(t *testing.T) {
-	_, err := New("ws://localhost:12345", Options{})
+	ws, err := New("ws://localhost:12345", Options{})
+	require.NoError(t, err)
 
-	if err == nil {
+	if err := ws.Connect(context.Background()); err == nil {
 		t.Fatalf("Expected error, but got nil")
 	}
 }
@@ -97,6 +104,9 @@ func TestNewWSDisconnect(t *testing.T) {
 
 	url := "ws://" + server.Listener.Addr().String()
 	ws, err := New(url, Options{})
+
+	err = ws.Connect(context.Background())
+	require.NoError(t, err)
 
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
@@ -136,9 +146,11 @@ func TestNewWSWithHeaders(t *testing.T) {
 	url := "ws://" + server.Listener.Addr().String()
 	ws, err := New(url, Options{Headers: []string{"X-Test: Test"}})
 
-	if err != nil {
-		t.Fatalf("Unexpected error: %v", err)
-	}
+	require.NoError(t, err)
+
+	err = ws.Connect(context.Background())
+
+	require.NoError(t, err)
 
 	ws.Close()
 }
@@ -148,15 +160,13 @@ func TestNewWSWithInvalidHeaders(t *testing.T) {
 	defer server.Close()
 
 	url := "ws://" + server.Listener.Addr().String()
-	_, err := New(url, Options{Headers: []string{"X-Test"}})
+	ws, err := New(url, Options{Headers: []string{"X-Test"}})
 
-	if err == nil {
-		t.Fatalf("Expected error, but got nil")
-	}
+	require.NoError(t, err)
 
-	if !strings.Contains(err.Error(), "invalid header") {
-		t.Errorf("Expected error to contain 'invalid header', but got %v", err)
-	}
+	err = ws.Connect(context.Background())
+
+	assert.ErrorContains(t, err, "invalid header")
 }
 func TestHandleError(t *testing.T) {
 	// Create a new Connection instance
@@ -178,14 +188,6 @@ func TestHandleError(t *testing.T) {
 
 	if !strings.Contains(buf.String(), "Fail read from connection: some error\n") {
 		t.Errorf("Expected 'Fail read from connection: some error', but got %v", buf.String())
-	}
-
-	// Test with closed connection
-	buf.Reset()
-	ws.handleError(fmt.Errorf("some error"))
-
-	if buf.String() != "" {
-		t.Errorf("Expected empty string, but got %v", buf.String())
 	}
 }
 func TestMessageTypeString(t *testing.T) {
