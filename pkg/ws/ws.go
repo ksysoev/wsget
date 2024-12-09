@@ -28,7 +28,7 @@ type Connection struct {
 	url       *url.URL
 	ws        *websocket.Conn
 	onMessage func(core.Message)
-	opts      Options
+	opts      *websocket.DialOptions
 	l         sync.Mutex
 	ready     chan struct{}
 }
@@ -47,9 +47,40 @@ func New(wsURL string, opts Options) (*Connection, error) {
 		return nil, err
 	}
 
+	httpCli := &http.Client{
+		Transport: &requestLogger{
+			transport: &http.Transport{
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: opts.SkipSSLVerification}, //nolint:gosec // Skip SSL verification
+			},
+			verbose: opts.Verbose,
+		},
+		Timeout: dialTimeout,
+	}
+
+	wsOpts := &websocket.DialOptions{
+		HTTPClient: httpCli,
+	}
+
+	if len(opts.Headers) > 0 {
+		Headers := make(http.Header)
+		for _, headerInput := range c.opts.Headers {
+			splited := strings.Split(headerInput, ":")
+			if len(splited) != headerPartsNumber {
+				return nil, fmt.Errorf("invalid header: %s", headerInput)
+			}
+
+			header := strings.TrimSpace(splited[0])
+			value := strings.TrimSpace(splited[1])
+
+			Headers.Add(header, value)
+		}
+
+		wsOpts.HTTPHeader = Headers
+	}
+
 	return &Connection{
 		url:   parsedURL,
-		opts:  opts,
+		opts:  wsOpts,
 		ready: make(chan struct{}),
 	}, nil
 }
@@ -65,39 +96,7 @@ func (c *Connection) Connect(ctx context.Context) error {
 	if c.onMessage == nil {
 		return fmt.Errorf("onMessage callback is not set")
 	}
-
-	httpCli := &http.Client{
-		Transport: &requestLogger{
-			transport: &http.Transport{
-				TLSClientConfig: &tls.Config{InsecureSkipVerify: c.opts.SkipSSLVerification}, //nolint:gosec // Skip SSL verification
-			},
-			verbose: c.opts.Verbose,
-		},
-		Timeout: dialTimeout,
-	}
-
-	wsOpts := &websocket.DialOptions{
-		HTTPClient: httpCli,
-	}
-
-	if len(c.opts.Headers) > 0 {
-		Headers := make(http.Header)
-		for _, headerInput := range c.opts.Headers {
-			splited := strings.Split(headerInput, ":")
-			if len(splited) != headerPartsNumber {
-				return fmt.Errorf("invalid header: %s", headerInput)
-			}
-
-			header := strings.TrimSpace(splited[0])
-			value := strings.TrimSpace(splited[1])
-
-			Headers.Add(header, value)
-		}
-
-		wsOpts.HTTPHeader = Headers
-	}
-
-	ws, resp, err := websocket.Dial(ctx, c.url.String(), wsOpts)
+	ws, resp, err := websocket.Dial(ctx, c.url.String(), c.opts)
 	if err != nil {
 		return err
 	}
@@ -176,8 +175,11 @@ func (c *Connection) Send(ctx context.Context, msg string) error {
 // Close closes the WebSocket connection.
 // If the connection is already closed, it returns immediately.
 func (c *Connection) Close() error {
-	c.l.Lock()
-	defer c.l.Unlock()
+	select {
+	case <-c.ready:
+	default:
+		return fmt.Errorf("connection is not established")
+	}
 
 	return c.ws.Close(websocket.StatusNormalClosure, "closing connection")
 }
