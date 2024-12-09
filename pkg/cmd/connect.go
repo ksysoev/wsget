@@ -63,10 +63,6 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 		return fmt.Errorf("unable to connect to the server: %w", err)
 	}
 
-	if err = wsConn.Connect(ctx); err != nil {
-		return fmt.Errorf("unable to connect to the server: %w", err)
-	}
-
 	defer wsConn.Close()
 
 	currentUser, err := user.Current()
@@ -116,7 +112,7 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 		return err
 	}
 
-	errs := make(chan error, 2)
+	errs := make(chan error, 3)
 
 	go func() {
 		defer cancel()
@@ -132,7 +128,7 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 	go func() {
 		defer cancel()
 
-		if err = keyboard.Run(ctx); err != nil {
+		if err := keyboard.Run(ctx); err != nil {
 			errs <- fmt.Errorf("keyboard run error: %w", err)
 			return
 		}
@@ -140,8 +136,19 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 		errs <- nil
 	}()
 
+	go func() {
+		defer cancel()
+
+		if err = wsConn.Connect(ctx); err != nil {
+			errs <- fmt.Errorf("fail to connect to the server: %w", err)
+			return
+		}
+
+		errs <- nil
+	}()
+
 	var errToReturn error
-	for i := 0; i < 2; i++ {
+	for i := 0; i < 3; i++ {
 		if err := <-errs; err != nil && errToReturn == nil {
 			errToReturn = err
 		}
