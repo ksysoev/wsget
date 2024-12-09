@@ -63,6 +63,10 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 		return fmt.Errorf("unable to connect to the server: %w", err)
 	}
 
+	if err = wsConn.Connect(ctx); err != nil {
+		return fmt.Errorf("unable to connect to the server: %w", err)
+	}
+
 	defer wsConn.Close()
 
 	currentUser, err := user.Current()
