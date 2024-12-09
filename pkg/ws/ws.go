@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/coder/websocket"
-	"github.com/fatih/color"
 	"github.com/ksysoev/wsget/pkg/core"
 )
 
@@ -26,12 +25,12 @@ const (
 )
 
 type Connection struct {
-	url      *url.URL
-	ws       *websocket.Conn
-	messages chan core.Message
-	opts     Options
-	wg       sync.WaitGroup
-	l        sync.Mutex
+	url       *url.URL
+	ws        *websocket.Conn
+	onMessage func(core.Message)
+	opts      Options
+	l         sync.Mutex
+	ready     chan struct{}
 }
 
 type Options struct {
@@ -48,17 +47,23 @@ func New(wsURL string, opts Options) (*Connection, error) {
 		return nil, err
 	}
 
-	wsInsp := &Connection{url: parsedURL, messages: make(chan core.Message, wsMessageBufferSize), opts: opts}
-
-	return wsInsp, nil
+	return &Connection{
+		url:   parsedURL,
+		opts:  opts,
+		ready: make(chan struct{}),
+	}, nil
 }
 
-func (c *Connection) Connect(ctx context.Context) error {
+func (c *Connection) SetOnMessage(onMessage func(core.Message)) {
 	c.l.Lock()
 	defer c.l.Unlock()
 
-	if c.ws != nil {
-		return fmt.Errorf("connection already established")
+	c.onMessage = onMessage
+}
+
+func (c *Connection) Connect(ctx context.Context) error {
+	if c.onMessage == nil {
+		return fmt.Errorf("onMessage callback is not set")
 	}
 
 	httpCli := &http.Client{
@@ -101,20 +106,20 @@ func (c *Connection) Connect(ctx context.Context) error {
 		resp.Body.Close()
 	}
 
-	ws.SetReadLimit(defaultMaxMessageSize)
+	c.l.Lock()
+	if c.ws != nil {
+		c.l.Unlock()
+		return fmt.Errorf("connection already established")
+	}
 
 	c.ws = ws
+	close(c.ready)
 
-	c.wg.Add(1)
+	c.l.Unlock()
 
-	go c.handleResponses(ctx, ws)
+	ws.SetReadLimit(defaultMaxMessageSize)
 
-	return nil
-}
-
-// Messages returns a channel that receives messages from the WebSocket connection.
-func (c *Connection) Messages() <-chan core.Message {
-	return c.messages
+	return c.handleResponses(ctx, ws)
 }
 
 // Hostname returns the hostname of the WebSocket server.
@@ -124,63 +129,55 @@ func (c *Connection) Hostname() string {
 
 // handleResponses reads messages from the websocket connection and sends them to the Messages channel.
 // It runs in a loop until the connection is closed or an error occurs.
-func (c *Connection) handleResponses(ctx context.Context, ws *websocket.Conn) {
-	defer func() {
-		c.wg.Done()
-		close(c.messages)
-	}()
-
+func (c *Connection) handleResponses(ctx context.Context, ws *websocket.Conn) error {
 	for ctx.Err() == nil {
 		msgType, reader, err := ws.Reader(ctx)
 		if err != nil {
-			c.handleError(err)
-			return
+
+			return c.handleError(err)
 		}
 
 		if msgType == websocket.MessageBinary {
-			c.handleError(fmt.Errorf("unexpected binary message"))
-			return
+			return c.handleError(fmt.Errorf("unexpected binary message"))
 		}
 
 		data, err := io.ReadAll(reader)
 		if err != nil {
-			c.handleError(err)
-			return
+			return c.handleError(err)
 		}
 
-		c.messages <- core.Message{Type: core.Response, Data: string(data)}
+		c.onMessage(core.Message{Type: core.Response, Data: string(data)})
 	}
+
+	return nil
 }
 
-func (c *Connection) handleError(err error) {
+func (c *Connection) handleError(err error) error {
 	if errors.Is(err, context.Canceled) || errors.Is(err, io.EOF) || errors.Is(err, net.ErrClosed) {
-		return
+		return nil
 	}
 
-	color.New(color.FgRed).Println("Fail read from connection:", err)
+	return fmt.Errorf("Fail read from connection: %w", err)
 }
 
 // Send sends a message to the websocket connection and returns a Message and an error.
 // It takes a string message as input and returns a pointer to a Message struct and an error.
 // The Message struct contains the message type and data.
-func (c *Connection) Send(msg string) (*core.Message, error) {
-	c.l.Lock()
-	defer c.l.Unlock()
-
-	if err := c.ws.Write(context.TODO(), websocket.MessageText, []byte(msg)); err != nil {
-		return nil, err
+func (c *Connection) Send(ctx context.Context, msg string) error {
+	select {
+	case <-c.ready:
+	case <-ctx.Done():
+		return ctx.Err()
 	}
 
-	return &core.Message{Type: core.Request, Data: msg}, nil
+	return c.ws.Write(ctx, websocket.MessageText, []byte(msg))
 }
 
 // Close closes the WebSocket connection.
 // If the connection is already closed, it returns immediately.
-func (c *Connection) Close() {
+func (c *Connection) Close() error {
 	c.l.Lock()
 	defer c.l.Unlock()
 
-	c.ws.Close(websocket.StatusNormalClosure, "closing connection")
-
-	c.wg.Wait()
+	return c.ws.Close(websocket.StatusNormalClosure, "closing connection")
 }

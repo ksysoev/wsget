@@ -62,10 +62,8 @@ type Executer interface {
 }
 
 type ConnectionHandler interface {
-	Messages() <-chan Message
-	Hostname() string
-	Send(msg string) (*Message, error)
-	Close()
+	SetOnMessage(func([]byte))
+	Send(ctx context.Context, msg string) error
 }
 
 // NewCLI creates a new CLI instance with the given wsConn, input, and output.
