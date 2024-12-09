@@ -5,6 +5,7 @@
 package core
 
 import (
+	context "context"
 	io "io"
 
 	mock "github.com/stretchr/testify/mock"
@@ -348,6 +349,62 @@ func (_c *MockExecutionContext_OutputFile_Call) Return(_a0 io.Writer) *MockExecu
 }
 
 func (_c *MockExecutionContext_OutputFile_Call) RunAndReturn(run func() io.Writer) *MockExecutionContext_OutputFile_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// WaitForMessage provides a mock function with given fields: _a0
+func (_m *MockExecutionContext) WaitForMessage(_a0 context.Context) (Message, error) {
+	ret := _m.Called(_a0)
+
+	if len(ret) == 0 {
+		panic("no return value specified for WaitForMessage")
+	}
+
+	var r0 Message
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context) (Message, error)); ok {
+		return rf(_a0)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context) Message); ok {
+		r0 = rf(_a0)
+	} else {
+		r0 = ret.Get(0).(Message)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockExecutionContext_WaitForMessage_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'WaitForMessage'
+type MockExecutionContext_WaitForMessage_Call struct {
+	*mock.Call
+}
+
+// WaitForMessage is a helper method to define mock.On call
+//   - _a0 context.Context
+func (_e *MockExecutionContext_Expecter) WaitForMessage(_a0 interface{}) *MockExecutionContext_WaitForMessage_Call {
+	return &MockExecutionContext_WaitForMessage_Call{Call: _e.mock.On("WaitForMessage", _a0)}
+}
+
+func (_c *MockExecutionContext_WaitForMessage_Call) Run(run func(_a0 context.Context)) *MockExecutionContext_WaitForMessage_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context))
+	})
+	return _c
+}
+
+func (_c *MockExecutionContext_WaitForMessage_Call) Return(_a0 Message, _a1 error) *MockExecutionContext_WaitForMessage_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockExecutionContext_WaitForMessage_Call) RunAndReturn(run func(context.Context) (Message, error)) *MockExecutionContext_WaitForMessage_Call {
 	_c.Call.Return(run)
 	return _c
 }

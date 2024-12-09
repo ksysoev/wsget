@@ -1,18 +1,13 @@
 package ws
 
 import (
-	"bytes"
 	"context"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
-	"time"
 
 	"github.com/coder/websocket"
-	"github.com/fatih/color"
 	"github.com/ksysoev/wsget/pkg/core"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -66,10 +61,8 @@ func TestNewWS(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, ws.ws)
 
-	msg, err := ws.Send("Hello, world!")
+	err = ws.Send(context.Background(), "Hello, world!")
 	require.NoError(t, err)
-
-	assert.Equal(t, "Hello, world!", msg.Data)
 }
 
 func TestNewWSWithInvalidURL(t *testing.T) {
@@ -98,6 +91,8 @@ func TestNewWSDisconnect(t *testing.T) {
 	ws, err := New(url, Options{})
 	require.NoError(t, err)
 
+	ws.SetOnMessage(func([]byte) {})
+
 	err = ws.Connect(context.Background())
 	require.NoError(t, err)
 
@@ -105,18 +100,6 @@ func TestNewWSDisconnect(t *testing.T) {
 		t.Fatalf("Unexpected error: %v", err)
 	}
 
-	ws.Close()
-
-	select {
-	case _, ok := <-ws.Messages():
-		if ok {
-			t.Errorf("Expected channel to be closed")
-		}
-	case <-time.After(time.Millisecond * 10):
-		t.Errorf("Expected channel to be closed")
-	}
-
-	// Close again to make sure it doesn't panic
 	ws.Close()
 }
 
@@ -165,23 +148,11 @@ func TestHandleError(t *testing.T) {
 	// Create a new Connection instance
 	ws := &Connection{}
 
-	// Test with EOF error
-	var buf bytes.Buffer
-	color.Output = &buf
+	err := ws.handleError(io.EOF)
+	assert.NoError(t, err)
 
-	ws.handleError(io.EOF)
-
-	if !strings.Contains(buf.String(), "") {
-		t.Errorf("Expected 'Connection closed by the server', but got '%v'", buf.String())
-	}
-
-	// Test with other error
-	buf.Reset()
-	ws.handleError(fmt.Errorf("some error"))
-
-	if !strings.Contains(buf.String(), "Fail read from connection: some error\n") {
-		t.Errorf("Expected 'Fail read from connection: some error', but got %v", buf.String())
-	}
+	err = ws.handleError(assert.AnError)
+	assert.ErrorIs(t, err, assert.AnError)
 }
 func TestMessageTypeString(t *testing.T) {
 	tests := []struct {

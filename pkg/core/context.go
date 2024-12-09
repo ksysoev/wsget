@@ -1,6 +1,7 @@
 package core
 
 import (
+	"context"
 	"io"
 )
 
@@ -35,6 +36,10 @@ func (ctx *executionContext) Formater() Formater {
 
 func (ctx *executionContext) Connection() ConnectionHandler {
 	return ctx.cli.wsConn
+}
+
+func (ctx *executionContext) WaitForMessage(c context.Context) (Message, error) {
+	return ctx.cli.WaitForMessage(c)
 }
 
 func (ctx *executionContext) Editor() Editor {

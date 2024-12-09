@@ -23,6 +23,7 @@ type CLI struct {
 	wsConn      ConnectionHandler
 	editor      Editor
 	inputStream chan KeyEvent
+	messages    chan Message
 	output      io.Writer
 	commands    chan Executer
 	cmdFactory  CommandFactory
@@ -48,6 +49,7 @@ type ExecutionContext interface {
 	Output() io.Writer
 	Formater() Formater
 	Connection() ConnectionHandler
+	WaitForMessage(context.Context) (Message, error)
 	Editor() Editor
 	Factory() CommandFactory
 }
@@ -69,20 +71,43 @@ type ConnectionHandler interface {
 // NewCLI creates a new CLI instance with the given wsConn, input, and output.
 // It returns an error if it fails to get the current user, create the necessary directories,
 // load the macro for the domain, or initialize the CLI instance.
-func NewCLI(cmdFactory CommandFactory, wsConn ConnectionHandler, output io.Writer, editor Editor, formater Formater) (*CLI, error) {
-	return &CLI{
+func NewCLI(cmdFactory CommandFactory, wsConn ConnectionHandler, output io.Writer, editor Editor, formater Formater) *CLI {
+	c := &CLI{
 		formater:    formater,
 		editor:      editor,
 		wsConn:      wsConn,
 		inputStream: make(chan KeyEvent),
+		messages:    make(chan Message),
 		output:      output,
 		commands:    make(chan Executer, CommandsLimit),
 		cmdFactory:  cmdFactory,
-	}, nil
+	}
+
+	wsConn.SetOnMessage(func(msg []byte) {
+		c.onMessage(Message{
+			Data: string(msg),
+			Type: Response,
+		})
+	})
+
+	return c
 }
 
 func (c *CLI) OnKeyEvent(event KeyEvent) {
 	c.inputStream <- event
+}
+
+func (c *CLI) onMessage(msg Message) {
+	c.messages <- msg
+}
+
+func (c *CLI) WaitForMessage(ctx context.Context) (Message, error) {
+	select {
+	case msg := <-c.messages:
+		return msg, nil
+	case <-ctx.Done():
+		return Message{}, ctx.Err()
+	}
 }
 
 // Run runs the CLI with the provided options.
@@ -90,6 +115,7 @@ func (c *CLI) OnKeyEvent(event KeyEvent) {
 func (c *CLI) Run(ctx context.Context, opts RunOptions) error {
 	defer func() {
 		c.showCursor()
+		close(c.messages)
 	}()
 
 	c.hideCursor()
@@ -147,7 +173,7 @@ func (c *CLI) Run(ctx context.Context, opts RunOptions) error {
 				}
 			}
 
-		case msg, ok := <-c.wsConn.Messages():
+		case msg, ok := <-c.messages:
 			if !ok {
 				return nil
 			}

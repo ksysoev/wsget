@@ -106,10 +106,7 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 	editor := edit.NewMultiMode(os.Stdout, history, cmdHistory, dict)
 	cmdFactory := command.NewFactory(macro)
 
-	client, err := core.NewCLI(cmdFactory, wsConn, os.Stdout, editor, formater.NewFormat())
-	if err != nil {
-		return fmt.Errorf("unable to start CLI: %w", err)
-	}
+	client := core.NewCLI(cmdFactory, wsConn, os.Stdout, editor, formater.NewFormat())
 
 	keyboard := input.NewKeyboard(client)
 	defer keyboard.Close()

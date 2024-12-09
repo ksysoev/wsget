@@ -1,6 +1,7 @@
 package ws
 
 import (
+	"crypto/tls"
 	"net/http"
 	"sort"
 
@@ -10,6 +11,16 @@ import (
 type requestLogger struct {
 	transport *http.Transport
 	verbose   bool
+}
+
+// newRequestLogger creates a new request logger with the given verbosity and SSL verification settings.
+func newRequestLogger(verbose, skipSSLVerification bool) *requestLogger {
+	return &requestLogger{
+		transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: skipSSLVerification}, //nolint:gosec // Skip SSL verification
+		},
+		verbose: verbose,
+	}
 }
 
 // RoundTrip logs the request and response details.

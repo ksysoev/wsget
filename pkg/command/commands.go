@@ -1,6 +1,7 @@
 package command
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"reflect"
@@ -56,12 +57,12 @@ func NewSend(request string) *Send {
 // Execute sends the request using the WebSocket connection and returns a PrintMsg to print the response message.
 // It implements the Execute method of the core.Executer interface.
 func (c *Send) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
-	msg, err := exCtx.Connection().Send(c.request)
+	err := exCtx.Connection().Send(context.TODO(), c.request)
 	if err != nil {
 		return nil, err
 	}
 
-	return NewPrintMsg(*msg), nil
+	return NewPrintMsg(core.Message{Type: core.Request, Data: c.request}), nil
 }
 
 type PrintMsg struct {
@@ -135,25 +136,20 @@ func NewWaitForResp(timeout time.Duration) *WaitForResp {
 // If a response is received, it will return a new PrintMsg command with the received message.
 // If the WebSocket connection is closed, it will return an error.
 func (c *WaitForResp) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
-	if c.timeout.Seconds() == 0 {
-		msg, ok := <-exCtx.Connection().Messages()
-		if !ok {
-			return nil, &ErrConnectionClosed{}
-		}
+	ctx := context.TODO()
 
-		return NewPrintMsg(msg), nil
+	if c.timeout.Seconds() != 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(context.Background(), c.timeout)
+		defer cancel()
 	}
 
-	select {
-	case <-time.After(c.timeout):
-		return nil, &ErrTimeout{}
-	case msg, ok := <-exCtx.Connection().Messages():
-		if !ok {
-			return nil, &ErrConnectionClosed{}
-		}
-
-		return NewPrintMsg(msg), nil
+	msg, err := exCtx.WaitForMessage(ctx)
+	if err != nil {
+		return nil, err
 	}
+
+	return NewPrintMsg(msg), nil
 }
 
 type CmdEdit struct{}

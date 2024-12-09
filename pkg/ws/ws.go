@@ -2,7 +2,6 @@ package ws
 
 import (
 	"context"
-	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
@@ -14,7 +13,6 @@ import (
 	"time"
 
 	"github.com/coder/websocket"
-	"github.com/ksysoev/wsget/pkg/core"
 )
 
 const (
@@ -27,10 +25,10 @@ const (
 type Connection struct {
 	url       *url.URL
 	ws        *websocket.Conn
-	onMessage func(core.Message)
+	onMessage func([]byte)
 	opts      *websocket.DialOptions
-	l         sync.Mutex
 	ready     chan struct{}
+	l         sync.Mutex
 }
 
 type Options struct {
@@ -48,13 +46,8 @@ func New(wsURL string, opts Options) (*Connection, error) {
 	}
 
 	httpCli := &http.Client{
-		Transport: &requestLogger{
-			transport: &http.Transport{
-				TLSClientConfig: &tls.Config{InsecureSkipVerify: opts.SkipSSLVerification}, //nolint:gosec // Skip SSL verification
-			},
-			verbose: opts.Verbose,
-		},
-		Timeout: dialTimeout,
+		Transport: newRequestLogger(opts.Verbose, opts.SkipSSLVerification),
+		Timeout:   dialTimeout,
 	}
 
 	wsOpts := &websocket.DialOptions{
@@ -63,7 +56,7 @@ func New(wsURL string, opts Options) (*Connection, error) {
 
 	if len(opts.Headers) > 0 {
 		Headers := make(http.Header)
-		for _, headerInput := range c.opts.Headers {
+		for _, headerInput := range opts.Headers {
 			splited := strings.Split(headerInput, ":")
 			if len(splited) != headerPartsNumber {
 				return nil, fmt.Errorf("invalid header: %s", headerInput)
@@ -85,7 +78,7 @@ func New(wsURL string, opts Options) (*Connection, error) {
 	}, nil
 }
 
-func (c *Connection) SetOnMessage(onMessage func(core.Message)) {
+func (c *Connection) SetOnMessage(onMessage func([]byte)) {
 	c.l.Lock()
 	defer c.l.Unlock()
 
@@ -96,6 +89,7 @@ func (c *Connection) Connect(ctx context.Context) error {
 	if c.onMessage == nil {
 		return fmt.Errorf("onMessage callback is not set")
 	}
+
 	ws, resp, err := websocket.Dial(ctx, c.url.String(), c.opts)
 	if err != nil {
 		return err
@@ -132,7 +126,6 @@ func (c *Connection) handleResponses(ctx context.Context, ws *websocket.Conn) er
 	for ctx.Err() == nil {
 		msgType, reader, err := ws.Reader(ctx)
 		if err != nil {
-
 			return c.handleError(err)
 		}
 
@@ -145,7 +138,7 @@ func (c *Connection) handleResponses(ctx context.Context, ws *websocket.Conn) er
 			return c.handleError(err)
 		}
 
-		c.onMessage(core.Message{Type: core.Response, Data: string(data)})
+		c.onMessage(data)
 	}
 
 	return nil
@@ -156,7 +149,7 @@ func (c *Connection) handleError(err error) error {
 		return nil
 	}
 
-	return fmt.Errorf("Fail read from connection: %w", err)
+	return fmt.Errorf("fail read from connection: %w", err)
 }
 
 // Send sends a message to the websocket connection and returns a Message and an error.
