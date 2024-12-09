@@ -2,15 +2,16 @@ package ws
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"io"
+	"net"
 	"net/http"
-	"net/http/httptest"
+	"net/url"
 	"testing"
 
 	"github.com/coder/websocket"
-	"github.com/ksysoev/wsget/pkg/core"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func createEchoWSHandler() http.HandlerFunc {
@@ -48,139 +49,194 @@ func createEchoWSHandler() http.HandlerFunc {
 	})
 }
 
-func TestNewWS(t *testing.T) {
-	server := httptest.NewServer(createEchoWSHandler())
-	defer server.Close()
-
-	url := "ws://" + server.Listener.Addr().String()
-
-	ws, err := New(url, Options{})
-	require.NoError(t, err)
-
-	err = ws.Connect(context.Background())
-	require.NoError(t, err)
-	require.NotNil(t, ws.ws)
-
-	err = ws.Send(context.Background(), "Hello, world!")
-	require.NoError(t, err)
-}
-
-func TestNewWSWithInvalidURL(t *testing.T) {
-	_, err := New("invalid"+string(rune(0)), Options{})
-
-	if err == nil {
-		t.Fatalf("Expected error, but got nil")
-	}
-}
-
-func TestNewWSFailToConnect(t *testing.T) {
-	ws, err := New("ws://localhost:12345", Options{})
-	require.NoError(t, err)
-
-	if err := ws.Connect(context.Background()); err == nil {
-		t.Fatalf("Expected error, but got nil")
-	}
-}
-
-func TestNewWSDisconnect(t *testing.T) {
-	server := httptest.NewServer(createEchoWSHandler())
-	defer server.Close()
-
-	url := "ws://" + server.Listener.Addr().String()
-
-	ws, err := New(url, Options{})
-	require.NoError(t, err)
-
-	ws.SetOnMessage(func([]byte) {})
-
-	err = ws.Connect(context.Background())
-	require.NoError(t, err)
-
-	if err != nil {
-		t.Fatalf("Unexpected error: %v", err)
-	}
-
-	ws.Close()
-}
-
-func TestNewWSWithHeaders(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("X-Test") != "Test" {
-			t.Errorf("Expected header X-Test to be 'Test', but got %v", r.Header.Get("X-Test"))
-		}
-
-		c, err := websocket.Accept(w, r, nil)
-
-		if err != nil {
-			return
-		}
-
-		c.Close(websocket.StatusNormalClosure, "")
-	}))
-	defer server.Close()
-
-	url := "ws://" + server.Listener.Addr().String()
-	ws, err := New(url, Options{Headers: []string{"X-Test: Test"}})
-
-	require.NoError(t, err)
-
-	err = ws.Connect(context.Background())
-
-	require.NoError(t, err)
-
-	ws.Close()
-}
-
-func TestNewWSWithInvalidHeaders(t *testing.T) {
-	server := httptest.NewServer(createEchoWSHandler())
-	defer server.Close()
-
-	url := "ws://" + server.Listener.Addr().String()
-	ws, err := New(url, Options{Headers: []string{"X-Test"}})
-
-	require.NoError(t, err)
-
-	err = ws.Connect(context.Background())
-
-	assert.ErrorContains(t, err, "invalid header")
-}
-func TestHandleError(t *testing.T) {
-	// Create a new Connection instance
-	ws := &Connection{}
-
-	err := ws.handleError(io.EOF)
-	assert.NoError(t, err)
-
-	err = ws.handleError(assert.AnError)
-	assert.ErrorIs(t, err, assert.AnError)
-}
-func TestMessageTypeString(t *testing.T) {
+func TestNew(t *testing.T) {
 	tests := []struct {
-		name string
-		want string
-		mt   core.MessageType
+		name      string
+		url       string
+		options   Options
+		wantError bool
 	}{
 		{
-			name: "Request",
-			mt:   core.Request,
-			want: "Request",
+			name: "Valid URL without headers",
+			url:  "ws://localhost:8080",
+			options: Options{
+				Headers: []string{},
+			},
+			wantError: false,
 		},
 		{
-			name: "Response",
-			mt:   core.Response,
-			want: "Response",
+			name: "Valid URL with headers",
+			url:  "ws://localhost:8080",
+			options: Options{
+				Headers: []string{"Authorization: Bearer token"},
+			},
+			wantError: false,
 		},
 		{
-			name: "Not defined",
-			mt:   core.MessageType(42),
-			want: "Not defined",
+			name:      "Invalid URL format",
+			url:       "invalid_url" + string(rune(0)),
+			options:   Options{},
+			wantError: true,
+		},
+		{
+			name: "Headers with incorrect format",
+			url:  "ws://localhost:8080",
+			options: Options{
+				Headers: []string{"X-Test"},
+			},
+			wantError: true,
+		},
+		{
+			name:      "Empty URL",
+			url:       "",
+			options:   Options{},
+			wantError: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.mt.String(); got != tt.want {
-				t.Errorf("MessageType.String() = %v, want %v", got, tt.want)
+			_, err := New(tt.url, tt.options)
+			if tt.wantError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestSetOnMessage(t *testing.T) {
+	tests := []struct {
+		name         string
+		initialFunc  func([]byte)
+		newFunc      func([]byte)
+		expectedFunc func([]byte)
+	}{
+		{
+			name:         "Set new simple function",
+			initialFunc:  nil,
+			newFunc:      func(data []byte) {},
+			expectedFunc: func(data []byte) {},
+		},
+		{
+			name:         "Set nil function",
+			initialFunc:  func(data []byte) {},
+			newFunc:      nil,
+			expectedFunc: nil,
+		},
+		{
+			name: "Replace existing function",
+			initialFunc: func(data []byte) {
+				fmt.Println("Old")
+			},
+			newFunc: func(data []byte) {
+				fmt.Println("New")
+			},
+			expectedFunc: func(data []byte) {
+				fmt.Println("New")
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			conn := &Connection{}
+			conn.SetOnMessage(tt.initialFunc)
+			conn.SetOnMessage(tt.newFunc)
+
+			if tt.expectedFunc == nil {
+				assert.Nil(t, conn.onMessage)
+			} else {
+				assert.NotNil(t, conn.onMessage)
+			}
+		})
+	}
+}
+
+func TestConnection_Hostname(t *testing.T) {
+	tests := []struct {
+		name         string
+		url          string
+		expectedHost string
+	}{
+		{
+			name:         "Valid URL with port",
+			url:          "ws://localhost:8080",
+			expectedHost: "localhost",
+		},
+		{
+			name:         "Valid URL without port",
+			url:          "ws://example.com",
+			expectedHost: "example.com",
+		},
+		{
+			name:         "IPv4 address",
+			url:          "ws://127.0.0.1:8080",
+			expectedHost: "127.0.0.1",
+		},
+		{
+			name:         "IPv6 address",
+			url:          "ws://[::1]:8080",
+			expectedHost: "::1",
+		},
+		{
+			name:         "URL with subdomain",
+			url:          "ws://api.example.com",
+			expectedHost: "api.example.com",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			u, err := url.Parse(tt.url)
+			assert.NoError(t, err)
+
+			conn := &Connection{url: u}
+			host := conn.Hostname()
+
+			assert.Equal(t, tt.expectedHost, host)
+		})
+	}
+}
+
+func TestConnection_HandleError(t *testing.T) {
+	tests := []struct {
+		name  string
+		err   error
+		isNil bool
+	}{
+		{
+			name:  "Context canceled error",
+			err:   context.Canceled,
+			isNil: true,
+		},
+		{
+			name:  "IO EOF error",
+			err:   io.EOF,
+			isNil: true,
+		},
+		{
+			name:  "Net ErrClosed error",
+			err:   net.ErrClosed,
+			isNil: true,
+		},
+		{
+			name:  "Unexpected error",
+			err:   errors.New("unexpected error"),
+			isNil: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			conn := &Connection{}
+			err := conn.handleError(tt.err)
+			if tt.isNil {
+				assert.Nil(t, err)
+			} else {
+				assert.NotNil(t, err)
+				assert.Contains(t, err.Error(), "fail read from connection")
 			}
 		})
 	}

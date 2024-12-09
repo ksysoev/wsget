@@ -40,6 +40,10 @@ type Options struct {
 // New creates a new WebSocket connection to the specified URL with the given options.
 // It returns a Connection object and an error if any occurred.
 func New(wsURL string, opts Options) (*Connection, error) {
+	if wsURL == "" {
+		return nil, errors.New("url is empty")
+	}
+
 	parsedURL, err := url.Parse(wsURL)
 	if err != nil {
 		return nil, err
