@@ -2,8 +2,6 @@ package core
 
 import (
 	"io"
-
-	"github.com/ksysoev/wsget/pkg/formater"
 )
 
 type executionContext struct {
@@ -31,7 +29,7 @@ func (ctx *executionContext) Output() io.Writer {
 	return ctx.cli.output
 }
 
-func (ctx *executionContext) Formater() formater.Formater {
+func (ctx *executionContext) Formater() Formater {
 	return ctx.cli.formater
 }
 

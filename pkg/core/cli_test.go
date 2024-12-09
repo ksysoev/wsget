@@ -55,7 +55,7 @@ func TestNewCLI(t *testing.T) {
 	defer server.Close()
 
 	url := "ws://" + server.Listener.Addr().String()
-	wsConn, err := ws.New(context.Background(), url, ws.Options{})
+	wsConn, err := ws.New(url, ws.Options{})
 
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
@@ -65,7 +65,7 @@ func TestNewCLI(t *testing.T) {
 	editor := NewMockEditor(t)
 
 	output := os.Stdout
-	cli, err := NewCLI(factory, wsConn, output, editor)
+	cli, err := NewCLI(factory, wsConn, output, editor, NewMockFormater(t))
 
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
@@ -110,7 +110,7 @@ func TestNewCLIRunWithCommands(t *testing.T) {
 	defer server.Close()
 
 	url := "ws://" + server.Listener.Addr().String()
-	wsConn, err := ws.New(context.Background(), url, ws.Options{})
+	wsConn, err := ws.New(url, ws.Options{})
 
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
@@ -119,7 +119,7 @@ func TestNewCLIRunWithCommands(t *testing.T) {
 	factory := NewMockCommandFactory(t)
 	editor := NewMockEditor(t)
 	output := os.Stdout
-	cli, err := NewCLI(factory, wsConn, output, editor)
+	cli, err := NewCLI(factory, wsConn, output, editor, NewMockFormater(t))
 
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)

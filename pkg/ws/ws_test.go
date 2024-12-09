@@ -2,7 +2,6 @@ package ws
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -56,7 +55,7 @@ func TestNewWS(t *testing.T) {
 	defer server.Close()
 
 	url := "ws://" + server.Listener.Addr().String()
-	ws, err := New(context.Background(), url, Options{})
+	ws, err := New(url, Options{})
 
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
@@ -77,7 +76,7 @@ func TestNewWS(t *testing.T) {
 }
 
 func TestNewWSWithInvalidURL(t *testing.T) {
-	_, err := New(context.Background(), "invalid", Options{})
+	_, err := New("invalid", Options{})
 
 	if err == nil {
 		t.Fatalf("Expected error, but got nil")
@@ -85,7 +84,7 @@ func TestNewWSWithInvalidURL(t *testing.T) {
 }
 
 func TestNewWSFailToConnect(t *testing.T) {
-	_, err := New(context.Background(), "ws://localhost:12345", Options{})
+	_, err := New("ws://localhost:12345", Options{})
 
 	if err == nil {
 		t.Fatalf("Expected error, but got nil")
@@ -97,7 +96,7 @@ func TestNewWSDisconnect(t *testing.T) {
 	defer server.Close()
 
 	url := "ws://" + server.Listener.Addr().String()
-	ws, err := New(context.Background(), url, Options{})
+	ws, err := New(url, Options{})
 
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
@@ -135,7 +134,7 @@ func TestNewWSWithHeaders(t *testing.T) {
 	defer server.Close()
 
 	url := "ws://" + server.Listener.Addr().String()
-	ws, err := New(context.Background(), url, Options{Headers: []string{"X-Test: Test"}})
+	ws, err := New(url, Options{Headers: []string{"X-Test: Test"}})
 
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
@@ -149,7 +148,7 @@ func TestNewWSWithInvalidHeaders(t *testing.T) {
 	defer server.Close()
 
 	url := "ws://" + server.Listener.Addr().String()
-	_, err := New(context.Background(), url, Options{Headers: []string{"X-Test"}})
+	_, err := New(url, Options{Headers: []string{"X-Test"}})
 
 	if err == nil {
 		t.Fatalf("Expected error, but got nil")
@@ -182,7 +181,6 @@ func TestHandleError(t *testing.T) {
 	}
 
 	// Test with closed connection
-	ws.isClosed.Store(true)
 	buf.Reset()
 	ws.handleError(fmt.Errorf("some error"))
 

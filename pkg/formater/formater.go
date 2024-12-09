@@ -5,11 +5,6 @@ import (
 	"fmt"
 )
 
-type Formater interface {
-	FormatMessage(msgType string, msgData string) (string, error)
-	FormatForFile(msgType string, msgData string) (string, error)
-}
-
 // Format is a struct that contains two formatters, one for text and one for JSON.
 type Format struct {
 	text *TextFormat

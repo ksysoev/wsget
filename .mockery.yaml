@@ -11,6 +11,7 @@ packages:
       CommandFactory:
       Executer:
       ExecutionContext:
+      Formater:
   github.com/ksysoev/wsget/pkg/core/edit:
     interfaces:
       HistoryRepo:

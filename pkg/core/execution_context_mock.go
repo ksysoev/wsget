@@ -7,8 +7,6 @@ package core
 import (
 	io "io"
 
-	formater "github.com/ksysoev/wsget/pkg/formater"
-
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -167,19 +165,19 @@ func (_c *MockExecutionContext_Factory_Call) RunAndReturn(run func() CommandFact
 }
 
 // Formater provides a mock function with given fields:
-func (_m *MockExecutionContext) Formater() formater.Formater {
+func (_m *MockExecutionContext) Formater() Formater {
 	ret := _m.Called()
 
 	if len(ret) == 0 {
 		panic("no return value specified for Formater")
 	}
 
-	var r0 formater.Formater
-	if rf, ok := ret.Get(0).(func() formater.Formater); ok {
+	var r0 Formater
+	if rf, ok := ret.Get(0).(func() Formater); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(formater.Formater)
+			r0 = ret.Get(0).(Formater)
 		}
 	}
 
@@ -203,12 +201,12 @@ func (_c *MockExecutionContext_Formater_Call) Run(run func()) *MockExecutionCont
 	return _c
 }
 
-func (_c *MockExecutionContext_Formater_Call) Return(_a0 formater.Formater) *MockExecutionContext_Formater_Call {
+func (_c *MockExecutionContext_Formater_Call) Return(_a0 Formater) *MockExecutionContext_Formater_Call {
 	_c.Call.Return(_a0)
 	return _c
 }
 
-func (_c *MockExecutionContext_Formater_Call) RunAndReturn(run func() formater.Formater) *MockExecutionContext_Formater_Call {
+func (_c *MockExecutionContext_Formater_Call) RunAndReturn(run func() Formater) *MockExecutionContext_Formater_Call {
 	_c.Call.Return(run)
 	return _c
 }
