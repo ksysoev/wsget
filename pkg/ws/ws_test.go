@@ -58,27 +58,18 @@ func TestNewWS(t *testing.T) {
 	defer server.Close()
 
 	url := "ws://" + server.Listener.Addr().String()
+
 	ws, err := New(url, Options{})
-	if err != nil {
-		t.Fatalf("Unexpected error: %v", err)
-	}
+	require.NoError(t, err)
 
-	if err := ws.Connect(context.Background()); err != nil {
-		t.Fatalf("Unexpected error: %v", err)
-	}
-
-	if ws == nil {
-		t.Fatalf("Expected ws connection, but got nil")
-	}
+	err = ws.Connect(context.Background())
+	require.NoError(t, err)
+	require.NotNil(t, ws.ws)
 
 	msg, err := ws.Send("Hello, world!")
-	if err != nil {
-		t.Fatalf("Unexpected error: %v", err)
-	}
+	require.NoError(t, err)
 
-	if msg.Data != "Hello, world!" {
-		t.Errorf("Expected message data to be 'Hello, world!', but got %v", msg.Data)
-	}
+	assert.Equal(t, "Hello, world!", msg.Data)
 }
 
 func TestNewWSWithInvalidURL(t *testing.T) {
@@ -103,7 +94,9 @@ func TestNewWSDisconnect(t *testing.T) {
 	defer server.Close()
 
 	url := "ws://" + server.Listener.Addr().String()
+
 	ws, err := New(url, Options{})
+	require.NoError(t, err)
 
 	err = ws.Connect(context.Background())
 	require.NoError(t, err)
