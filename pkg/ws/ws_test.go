@@ -7,8 +7,11 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/coder/websocket"
 	"github.com/stretchr/testify/assert"
@@ -226,6 +229,22 @@ func TestConnection_HandleError(t *testing.T) {
 			err:   errors.New("unexpected error"),
 			isNil: false,
 		},
+		{
+			name: "Nolmal Closure error",
+			err: websocket.CloseError{
+				Code:   websocket.StatusNormalClosure,
+				Reason: "normal closure",
+			},
+			isNil: true,
+		},
+		{
+			name: "Unexpected Close error",
+			err: websocket.CloseError{
+				Code:   websocket.StatusPolicyViolation,
+				Reason: "unexpected close",
+			},
+			isNil: false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -233,11 +252,73 @@ func TestConnection_HandleError(t *testing.T) {
 			conn := &Connection{}
 			err := conn.handleError(tt.err)
 			if tt.isNil {
-				assert.Nil(t, err)
+				assert.NoError(t, err)
 			} else {
-				assert.NotNil(t, err)
-				assert.Contains(t, err.Error(), "fail read from connection")
+				assert.Error(t, err)
 			}
 		})
 	}
+}
+
+func TestConnection_Connect_Success(t *testing.T) {
+	s := httptest.NewServer(createEchoWSHandler())
+	defer s.Close()
+
+	conn, err := New("ws://"+s.Listener.Addr().String(), Options{})
+	assert.NoError(t, err)
+
+	expectedData := "test data"
+	respRecieved := make(chan struct{})
+
+	conn.SetOnMessage(func(data []byte) {
+		assert.Equal(t, expectedData, string(data))
+		close(respRecieved)
+	})
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+
+	defer wg.Wait()
+	defer conn.Close()
+
+	go func() {
+		defer wg.Done()
+
+		err := conn.Connect(context.Background())
+		assert.NoError(t, err)
+	}()
+
+	select {
+	case <-conn.ready:
+	case <-time.After(1 * time.Second):
+		t.Fatal("timeout waiting for connection")
+	}
+
+	err = conn.Send(context.Background(), expectedData)
+	assert.NoError(t, err)
+
+	select {
+	case <-respRecieved:
+	case <-time.After(5 * time.Second):
+		t.Fatal("timeout waiting for response")
+	}
+}
+
+func TestConnection_Send_ContextCancelled(t *testing.T) {
+	conn, err := New("ws://localhost:0", Options{})
+	assert.NoError(t, err)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	err = conn.Send(ctx, "test data")
+	assert.Error(t, err)
+}
+
+func TestConnection_Close_NotConnected(t *testing.T) {
+	conn, err := New("ws://localhost:0", Options{})
+	assert.NoError(t, err)
+
+	err = conn.Close()
+	assert.EqualError(t, err, "connection is not established")
 }

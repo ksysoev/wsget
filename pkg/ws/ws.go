@@ -153,6 +153,15 @@ func (c *Connection) handleError(err error) error {
 		return nil
 	}
 
+	var ce websocket.CloseError
+	if errors.As(err, &ce) {
+		if ce.Code == websocket.StatusNormalClosure {
+			return nil
+		}
+
+		return fmt.Errorf("connection closed: %s %s", ce.Code, ce.Reason)
+	}
+
 	return fmt.Errorf("fail read from connection: %w", err)
 }
 
