@@ -12,12 +12,13 @@ import (
 
 func TestNewCLI(t *testing.T) {
 	wsConn := NewMockConnectionHandler(t)
-
 	wsConn.EXPECT().Send(context.Background(), mock.Anything).Return(nil)
 	wsConn.EXPECT().SetOnMessage(mock.Anything)
 
 	factory := NewMockCommandFactory(t)
+
 	editor := NewMockEditor(t)
+	editor.EXPECT().SetInput(mock.Anything)
 
 	output := os.Stdout
 	cli := NewCLI(factory, wsConn, output, editor, NewMockFormater(t))
@@ -62,7 +63,10 @@ func TestNewCLIRunWithCommands(t *testing.T) {
 	wsConn.EXPECT().SetOnMessage(mock.Anything)
 
 	factory := NewMockCommandFactory(t)
+
 	editor := NewMockEditor(t)
+	editor.EXPECT().SetInput(mock.Anything)
+
 	output := os.Stdout
 	cli := NewCLI(factory, wsConn, output, editor, NewMockFormater(t))
 

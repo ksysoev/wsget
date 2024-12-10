@@ -90,6 +90,8 @@ func NewCLI(cmdFactory CommandFactory, wsConn ConnectionHandler, output io.Write
 		})
 	})
 
+	editor.SetInput(c.inputStream)
+
 	return c
 }
 

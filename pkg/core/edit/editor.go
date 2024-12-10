@@ -246,17 +246,17 @@ func (ed *Editor) newLineOrDone(isPasting bool) (isDone bool) {
 		return true
 	}
 
+	if isPasting {
+		fmt.Fprint(ed.output, ed.content.InsertSymbol('\n'))
+		return false
+	}
+
 	isDone = prev != '\\'
 	if !isDone {
 		fmt.Fprint(ed.output, ed.content.RemovePrevSymbol())
 		fmt.Fprint(ed.output, ed.content.InsertSymbol('\n'))
 
 		return isDone
-	}
-
-	if isPasting {
-		fmt.Fprint(ed.output, ed.content.InsertSymbol('\n'))
-		return false
 	}
 
 	return isDone
