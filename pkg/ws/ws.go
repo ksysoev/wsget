@@ -25,16 +25,16 @@ const (
 type Connection struct {
 	url       *url.URL
 	ws        *websocket.Conn
-	onMessage func([]byte)
+	onMessage func(context.Context, []byte)
 	opts      *websocket.DialOptions
 	ready     chan struct{}
 	l         sync.Mutex
 }
 
 type Options struct {
+	Output              io.Writer
 	Headers             []string
 	SkipSSLVerification bool
-	Verbose             bool
 }
 
 // New creates a new WebSocket connection to the specified URL with the given options.
@@ -50,7 +50,7 @@ func New(wsURL string, opts Options) (*Connection, error) {
 	}
 
 	httpCli := &http.Client{
-		Transport: newRequestLogger(opts.Verbose, opts.SkipSSLVerification),
+		Transport: newRequestLogger(opts.Output, opts.SkipSSLVerification),
 		Timeout:   dialTimeout,
 	}
 
@@ -82,7 +82,7 @@ func New(wsURL string, opts Options) (*Connection, error) {
 	}, nil
 }
 
-func (c *Connection) SetOnMessage(onMessage func([]byte)) {
+func (c *Connection) SetOnMessage(onMessage func(context.Context, []byte)) {
 	c.l.Lock()
 	defer c.l.Unlock()
 
@@ -142,7 +142,7 @@ func (c *Connection) handleResponses(ctx context.Context, ws *websocket.Conn) er
 			return c.handleError(err)
 		}
 
-		c.onMessage(data)
+		c.onMessage(ctx, data)
 	}
 
 	return nil

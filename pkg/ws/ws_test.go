@@ -111,32 +111,32 @@ func TestNew(t *testing.T) {
 
 func TestSetOnMessage(t *testing.T) {
 	tests := []struct {
-		initialFunc  func([]byte)
-		newFunc      func([]byte)
-		expectedFunc func([]byte)
+		initialFunc  func(context.Context, []byte)
+		newFunc      func(context.Context, []byte)
+		expectedFunc func(context.Context, []byte)
 		name         string
 	}{
 		{
 			name:         "Set new simple function",
 			initialFunc:  nil,
-			newFunc:      func(_ []byte) {},
-			expectedFunc: func(_ []byte) {},
+			newFunc:      func(_ context.Context, _ []byte) {},
+			expectedFunc: func(_ context.Context, _ []byte) {},
 		},
 		{
 			name:         "Set nil function",
-			initialFunc:  func(_ []byte) {},
+			initialFunc:  func(_ context.Context, _ []byte) {},
 			newFunc:      nil,
 			expectedFunc: nil,
 		},
 		{
 			name: "Replace existing function",
-			initialFunc: func(_ []byte) {
+			initialFunc: func(_ context.Context, _ []byte) {
 				fmt.Println("Old")
 			},
-			newFunc: func(_ []byte) {
+			newFunc: func(_ context.Context, _ []byte) {
 				fmt.Println("New")
 			},
-			expectedFunc: func(_ []byte) {
+			expectedFunc: func(_ context.Context, _ []byte) {
 				fmt.Println("New")
 			},
 		},
@@ -271,7 +271,7 @@ func TestConnection_Connect_Success(t *testing.T) {
 	expectedData := "test data"
 	respRecieved := make(chan struct{})
 
-	conn.SetOnMessage(func(data []byte) {
+	conn.SetOnMessage(func(_ context.Context, data []byte) {
 		assert.Equal(t, expectedData, string(data))
 		close(respRecieved)
 	})
@@ -320,7 +320,7 @@ func TestConnection_Connect_AlreadyConnected(t *testing.T) {
 	conn, err := New("ws://"+s.Listener.Addr().String(), Options{})
 	assert.NoError(t, err)
 
-	conn.SetOnMessage(func([]byte) {})
+	conn.SetOnMessage(func(context.Context, []byte) {})
 
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
@@ -348,7 +348,7 @@ func TestConnection_Connect_ContextCancelled(t *testing.T) {
 	conn, err := New("ws://localhost:0", Options{})
 	assert.NoError(t, err)
 
-	conn.SetOnMessage(func([]byte) {})
+	conn.SetOnMessage(func(context.Context, []byte) {})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()

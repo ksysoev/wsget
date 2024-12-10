@@ -71,7 +71,7 @@ func (_c *MockConnectionHandler_Send_Call) RunAndReturn(run func(context.Context
 }
 
 // SetOnMessage provides a mock function with given fields: _a0
-func (_m *MockConnectionHandler) SetOnMessage(_a0 func([]byte)) {
+func (_m *MockConnectionHandler) SetOnMessage(_a0 func(context.Context, []byte)) {
 	_m.Called(_a0)
 }
 
@@ -81,14 +81,14 @@ type MockConnectionHandler_SetOnMessage_Call struct {
 }
 
 // SetOnMessage is a helper method to define mock.On call
-//   - _a0 func([]byte)
+//   - _a0 func(context.Context , []byte)
 func (_e *MockConnectionHandler_Expecter) SetOnMessage(_a0 interface{}) *MockConnectionHandler_SetOnMessage_Call {
 	return &MockConnectionHandler_SetOnMessage_Call{Call: _e.mock.On("SetOnMessage", _a0)}
 }
 
-func (_c *MockConnectionHandler_SetOnMessage_Call) Run(run func(_a0 func([]byte))) *MockConnectionHandler_SetOnMessage_Call {
+func (_c *MockConnectionHandler_SetOnMessage_Call) Run(run func(_a0 func(context.Context, []byte))) *MockConnectionHandler_SetOnMessage_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(func([]byte)))
+		run(args[0].(func(context.Context, []byte)))
 	})
 	return _c
 }
@@ -98,7 +98,7 @@ func (_c *MockConnectionHandler_SetOnMessage_Call) Return() *MockConnectionHandl
 	return _c
 }
 
-func (_c *MockConnectionHandler_SetOnMessage_Call) RunAndReturn(run func(func([]byte))) *MockConnectionHandler_SetOnMessage_Call {
+func (_c *MockConnectionHandler_SetOnMessage_Call) RunAndReturn(run func(func(context.Context, []byte))) *MockConnectionHandler_SetOnMessage_Call {
 	_c.Call.Return(run)
 	return _c
 }

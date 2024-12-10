@@ -2,6 +2,7 @@ package ws
 
 import (
 	"crypto/tls"
+	"io"
 	"net/http"
 	"sort"
 
@@ -10,41 +11,43 @@ import (
 
 type requestLogger struct {
 	transport *http.Transport
-	verbose   bool
+	output    io.Writer
 }
 
 // newRequestLogger creates a new request logger with the given verbosity and SSL verification settings.
-func newRequestLogger(verbose, skipSSLVerification bool) *requestLogger {
+func newRequestLogger(output io.Writer, skipSSLVerification bool) *requestLogger {
 	return &requestLogger{
 		transport: &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: skipSSLVerification}, //nolint:gosec // Skip SSL verification
 		},
-		verbose: verbose,
+		output: output,
 	}
 }
 
 // RoundTrip logs the request and response details.
-func (t *requestLogger) RoundTrip(req *http.Request) (*http.Response, error) {
-	if t.verbose {
+func (rl *requestLogger) RoundTrip(req *http.Request) (*http.Response, error) {
+	if rl.output != nil {
 		tx := color.New(color.FgGreen)
+		tx.SetWriter(rl.output)
 
-		tx.Printf("> %s %s %s\n", req.Method, req.URL.String(), req.Proto)
+		_, _ = tx.Printf("> %s %s %s\n", req.Method, req.URL.String(), req.Proto)
 		printHeaders(req.Header, tx, ">")
-		tx.Println()
+		_, _ = tx.Println()
 	}
 
-	resp, err := t.transport.RoundTrip(req)
+	resp, err := rl.transport.RoundTrip(req)
 
 	if err != nil {
 		return nil, err
 	}
 
-	if t.verbose {
+	if rl.output != nil {
 		rx := color.New(color.FgYellow)
+		rx.SetWriter(rl.output)
 
-		rx.Printf("< %s %s\n", resp.Proto, resp.Status)
+		_, _ = rx.Printf("< %s %s\n", resp.Proto, resp.Status)
 		printHeaders(resp.Header, rx, "<")
-		rx.Println()
+		_, _ = rx.Println()
 	}
 
 	return resp, nil

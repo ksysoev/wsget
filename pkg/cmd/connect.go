@@ -51,14 +51,16 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 		return err
 	}
 
-	wsConn, err := ws.New(
-		wsURL,
-		ws.Options{
-			SkipSSLVerification: args.insecure,
-			Headers:             args.headers,
-			Verbose:             args.verbose,
-		},
-	)
+	wsOpts := ws.Options{
+		SkipSSLVerification: args.insecure,
+		Headers:             args.headers,
+	}
+
+	if args.verbose {
+		wsOpts.Output = os.Stdout
+	}
+
+	wsConn, err := ws.New(wsURL, wsOpts)
 	if err != nil {
 		return fmt.Errorf("unable to connect to the server: %w", err)
 	}

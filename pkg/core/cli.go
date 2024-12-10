@@ -64,7 +64,7 @@ type Executer interface {
 }
 
 type ConnectionHandler interface {
-	SetOnMessage(func([]byte))
+	SetOnMessage(func(context.Context, []byte))
 	Send(ctx context.Context, msg string) error
 }
 
@@ -83,8 +83,8 @@ func NewCLI(cmdFactory CommandFactory, wsConn ConnectionHandler, output io.Write
 		cmdFactory:  cmdFactory,
 	}
 
-	wsConn.SetOnMessage(func(msg []byte) {
-		c.onMessage(Message{
+	wsConn.SetOnMessage(func(ctx context.Context, msg []byte) {
+		c.onMessage(ctx, Message{
 			Data: string(msg),
 			Type: Response,
 		})
@@ -97,8 +97,11 @@ func (c *CLI) OnKeyEvent(event KeyEvent) {
 	c.inputStream <- event
 }
 
-func (c *CLI) onMessage(msg Message) {
-	c.messages <- msg
+func (c *CLI) onMessage(ctx context.Context, msg Message) {
+	select {
+	case c.messages <- msg:
+	case <-ctx.Done():
+	}
 }
 
 func (c *CLI) WaitForMessage(ctx context.Context) (Message, error) {
