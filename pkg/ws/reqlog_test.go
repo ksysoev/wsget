@@ -143,7 +143,7 @@ func TestRequestLogger_RoundTrip(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
 			}))
 
@@ -155,16 +155,18 @@ func TestRequestLogger_RoundTrip(t *testing.T) {
 
 			tt.request.URL, _ = url.Parse(s.URL)
 
-			_, err := cl.Do(tt.request)
+			resp, err := cl.Do(tt.request)
 
 			if tt.expectError {
-				assert.NotNil(t, err)
+				assert.Error(t, err)
 			} else {
-				assert.Nil(t, err)
+				assert.NoError(t, err)
+
+				_ = resp.Body.Close()
 			}
 
 			if tt.output != nil {
-				expected := strings.Replace(tt.expectedLogLines, "%%URL%%", s.URL, -1)
+				expected := strings.ReplaceAll(tt.expectedLogLines, "%%URL%%", s.URL)
 
 				output := tt.output.(*bytes.Buffer).String()
 

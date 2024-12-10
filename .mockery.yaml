@@ -16,3 +16,6 @@ packages:
   github.com/ksysoev/wsget/pkg/core/edit:
     interfaces:
       HistoryRepo:
+  github.com/ksysoev/wsget/pkg/ws:
+    interfaces:
+      reader:

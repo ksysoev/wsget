@@ -15,6 +15,7 @@ import (
 
 	"github.com/coder/websocket"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func createEchoWSHandler() http.HandlerFunc {
@@ -24,7 +25,9 @@ func createEchoWSHandler() http.HandlerFunc {
 			return
 		}
 
-		defer c.Close(websocket.StatusNormalClosure, "")
+		defer func() {
+			_ = c.Close(websocket.StatusNormalClosure, "")
+		}()
 
 		for {
 			_, wsr, err := c.Reader(r.Context())
@@ -50,6 +53,60 @@ func createEchoWSHandler() http.HandlerFunc {
 			}
 		}
 	})
+}
+
+func TestConnection_HandleMessage(t *testing.T) {
+	tests := []struct {
+		name       string
+		msgContent string
+		msgType    websocket.MessageType
+		expectErr  bool
+	}{
+		{
+			name:      "Unexpected binary message",
+			msgType:   websocket.MessageBinary,
+			expectErr: true,
+		},
+		{
+			name:       "Successful text message",
+			msgType:    websocket.MessageText,
+			msgContent: "",
+			expectErr:  false,
+		},
+		{
+			name:      "Read error occurs",
+			msgType:   websocket.MessageText,
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			msgReader := NewMockreader(t)
+
+			if tt.msgType == websocket.MessageText && tt.expectErr {
+				msgReader.On("Read", mock.Anything).Return(0, assert.AnError)
+			} else if tt.msgType == websocket.MessageText {
+				msgReader.On("Read", mock.Anything).Return(0, io.EOF)
+			}
+
+			conn := &Connection{
+				onMessage: func(_ context.Context, data []byte) {
+					if tt.msgContent != "" {
+						assert.Equal(t, tt.msgContent, string(data))
+					}
+				},
+			}
+
+			err := conn.handleMessage(context.Background(), tt.msgType, msgReader)
+
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
 }
 
 func TestNew(t *testing.T) {
@@ -279,8 +336,11 @@ func TestConnection_Connect_Success(t *testing.T) {
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 
-	defer wg.Wait()
-	defer conn.Close()
+	defer func() {
+		_ = conn.Close()
+
+		wg.Wait()
+	}()
 
 	go func() {
 		defer wg.Done()
@@ -325,8 +385,11 @@ func TestConnection_Connect_AlreadyConnected(t *testing.T) {
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 
-	defer wg.Wait()
-	defer conn.Close()
+	defer func() {
+		_ = conn.Close()
+
+		wg.Wait()
+	}()
 
 	go func() {
 		defer wg.Done()

@@ -16,11 +16,14 @@ import (
 )
 
 const (
-	wsMessageBufferSize   = 100
 	headerPartsNumber     = 2
 	dialTimeout           = 15 * time.Second
 	defaultMaxMessageSize = 1024 * 1024
 )
+
+type reader interface {
+	Read(p []byte) (n int, err error)
+}
 
 type Connection struct {
 	url       *url.URL
@@ -100,7 +103,7 @@ func (c *Connection) Connect(ctx context.Context) error {
 	}
 
 	if resp.Body != nil {
-		resp.Body.Close()
+		_ = resp.Body.Close()
 	}
 
 	c.l.Lock()
@@ -133,17 +136,25 @@ func (c *Connection) handleResponses(ctx context.Context, ws *websocket.Conn) er
 			return c.handleError(err)
 		}
 
-		if msgType == websocket.MessageBinary {
-			return c.handleError(fmt.Errorf("unexpected binary message"))
-		}
-
-		data, err := io.ReadAll(reader)
-		if err != nil {
+		if err := c.handleMessage(ctx, msgType, reader); err != nil {
 			return c.handleError(err)
 		}
-
-		c.onMessage(ctx, data)
 	}
+
+	return nil
+}
+
+func (c *Connection) handleMessage(ctx context.Context, msgType websocket.MessageType, msgReader reader) error {
+	if msgType == websocket.MessageBinary {
+		return fmt.Errorf("unexpected binary message")
+	}
+
+	data, err := io.ReadAll(msgReader)
+	if err != nil {
+		return fmt.Errorf("fail to read message: %w", err)
+	}
+
+	c.onMessage(ctx, data)
 
 	return nil
 }
