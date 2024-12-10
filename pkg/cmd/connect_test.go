@@ -279,7 +279,8 @@ func TestRunConnectCmd_SuccessConnect(t *testing.T) {
 
 	ctx := context.Background()
 	args := &flags{
-		request: "test request",
+		request:      "test request",
+		waitResponse: 1,
 	}
 
 	// tty is not available in the test environment
