@@ -258,10 +258,7 @@ func TestCreateConnectRunner(t *testing.T) {
 }
 func TestRunConnectCmd_FailToConnect(t *testing.T) {
 	ctx := context.Background()
-	args := &flags{
-		request: "test request",
-	}
-	err := runConnectCmd(ctx, args, []string{"ws://localhost:0"})
+	err := runConnectCmd(ctx, &flags{}, []string{"ws://localhost:0"})
 	assert.Error(t, err)
 }
 

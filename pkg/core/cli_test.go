@@ -11,7 +11,6 @@ import (
 )
 
 func TestNewCLI(t *testing.T) {
-	msgChan := make(chan Message)
 	wsConn := NewMockConnectionHandler(t)
 
 	wsConn.EXPECT().Send(context.Background(), mock.Anything).Return(nil)
@@ -39,16 +38,17 @@ func TestNewCLI(t *testing.T) {
 		t.Fatalf("Unexpected error: %v", err)
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
 	done := make(chan bool)
 	go func() {
-		err := cli.Run(context.Background(), RunOptions{})
+		err := cli.Run(ctx, RunOptions{})
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
 		}
 		done <- true
 	}()
-
-	close(msgChan)
 
 	select {
 	case <-done:
