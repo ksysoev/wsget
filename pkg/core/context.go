@@ -1,10 +1,8 @@
 package core
 
 import (
+	"context"
 	"io"
-
-	"github.com/ksysoev/wsget/pkg/formater"
-	"github.com/ksysoev/wsget/pkg/ws"
 )
 
 type executionContext struct {
@@ -32,12 +30,16 @@ func (ctx *executionContext) Output() io.Writer {
 	return ctx.cli.output
 }
 
-func (ctx *executionContext) Formater() formater.Formater {
+func (ctx *executionContext) Formater() Formater {
 	return ctx.cli.formater
 }
 
-func (ctx *executionContext) Connection() ws.ConnectionHandler {
+func (ctx *executionContext) Connection() ConnectionHandler {
 	return ctx.cli.wsConn
+}
+
+func (ctx *executionContext) WaitForMessage(c context.Context) (Message, error) {
+	return ctx.cli.WaitForMessage(c)
 }
 
 func (ctx *executionContext) Editor() Editor {

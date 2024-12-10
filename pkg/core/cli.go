@@ -5,9 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-
-	"github.com/ksysoev/wsget/pkg/formater"
-	"github.com/ksysoev/wsget/pkg/ws"
 )
 
 const (
@@ -22,10 +19,11 @@ var (
 )
 
 type CLI struct {
-	formater    *formater.Format
-	wsConn      ws.ConnectionHandler
+	formater    Formater
+	wsConn      ConnectionHandler
 	editor      Editor
 	inputStream chan KeyEvent
+	messages    chan Message
 	output      io.Writer
 	commands    chan Executer
 	cmdFactory  CommandFactory
@@ -37,8 +35,8 @@ type RunOptions struct {
 }
 
 type Formater interface {
-	FormatMessage(wsMsg ws.Message) (string, error)
-	FormatForFile(wsMsg ws.Message) (string, error)
+	FormatMessage(msgType string, msgData string) (string, error)
+	FormatForFile(msgType string, msgData string) (string, error)
 }
 
 type CommandFactory interface {
@@ -49,8 +47,9 @@ type ExecutionContext interface {
 	Input() <-chan KeyEvent
 	OutputFile() io.Writer
 	Output() io.Writer
-	Formater() formater.Formater
-	Connection() ws.ConnectionHandler
+	Formater() Formater
+	Connection() ConnectionHandler
+	WaitForMessage(context.Context) (Message, error)
 	Editor() Editor
 	Factory() CommandFactory
 }
@@ -64,23 +63,54 @@ type Executer interface {
 	Execute(ExecutionContext) (Executer, error)
 }
 
+type ConnectionHandler interface {
+	SetOnMessage(func(context.Context, []byte))
+	Send(ctx context.Context, msg string) error
+}
+
 // NewCLI creates a new CLI instance with the given wsConn, input, and output.
 // It returns an error if it fails to get the current user, create the necessary directories,
 // load the macro for the domain, or initialize the CLI instance.
-func NewCLI(cmdFactory CommandFactory, wsConn ws.ConnectionHandler, output io.Writer, editor Editor) (*CLI, error) {
-	return &CLI{
-		formater:    formater.NewFormat(),
+func NewCLI(cmdFactory CommandFactory, wsConn ConnectionHandler, output io.Writer, editor Editor, formater Formater) *CLI {
+	c := &CLI{
+		formater:    formater,
 		editor:      editor,
 		wsConn:      wsConn,
 		inputStream: make(chan KeyEvent),
+		messages:    make(chan Message),
 		output:      output,
 		commands:    make(chan Executer, CommandsLimit),
 		cmdFactory:  cmdFactory,
-	}, nil
+	}
+
+	wsConn.SetOnMessage(func(ctx context.Context, msg []byte) {
+		c.onMessage(ctx, Message{
+			Data: string(msg),
+			Type: Response,
+		})
+	})
+
+	return c
 }
 
 func (c *CLI) OnKeyEvent(event KeyEvent) {
 	c.inputStream <- event
+}
+
+func (c *CLI) onMessage(ctx context.Context, msg Message) {
+	select {
+	case c.messages <- msg:
+	case <-ctx.Done():
+	}
+}
+
+func (c *CLI) WaitForMessage(ctx context.Context) (Message, error) {
+	select {
+	case msg := <-c.messages:
+		return msg, nil
+	case <-ctx.Done():
+		return Message{}, ctx.Err()
+	}
 }
 
 // Run runs the CLI with the provided options.
@@ -88,6 +118,7 @@ func (c *CLI) OnKeyEvent(event KeyEvent) {
 func (c *CLI) Run(ctx context.Context, opts RunOptions) error {
 	defer func() {
 		c.showCursor()
+		close(c.messages)
 	}()
 
 	c.hideCursor()
@@ -145,7 +176,7 @@ func (c *CLI) Run(ctx context.Context, opts RunOptions) error {
 				}
 			}
 
-		case msg, ok := <-c.wsConn.Messages():
+		case msg, ok := <-c.messages:
 			if !ok {
 				return nil
 			}
@@ -172,4 +203,28 @@ func (c *CLI) hideCursor() {
 // showCursor shows the cursor in the terminal output.
 func (c *CLI) showCursor() {
 	fmt.Fprint(c.output, ShowCursor)
+}
+
+type MessageType uint8
+
+const (
+	NotDefined MessageType = iota
+	Request
+	Response
+)
+
+func (mt MessageType) String() string {
+	switch mt {
+	case Request:
+		return "Request"
+	case Response:
+		return "Response"
+	default:
+		return "Not defined"
+	}
+}
+
+type Message struct {
+	Data string      `json:"data"`
+	Type MessageType `json:"type"`
 }

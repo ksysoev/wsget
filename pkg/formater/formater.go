@@ -3,14 +3,7 @@ package formater
 import (
 	"encoding/json"
 	"fmt"
-
-	"github.com/ksysoev/wsget/pkg/ws"
 )
-
-type Formater interface {
-	FormatMessage(wsMsg ws.Message) (string, error)
-	FormatForFile(wsMsg ws.Message) (string, error)
-}
 
 // Format is a struct that contains two formatters, one for text and one for JSON.
 type Format struct {
@@ -29,58 +22,54 @@ func NewFormat() *Format {
 // FormatMessage formats the given WebSocket message based on its type and data.
 // If the data is a valid JSON, it will be formatted using the JSON formatter.
 // Otherwise, it will be formatted using the text formatter.
-func (f *Format) FormatMessage(wsMsg ws.Message) (string, error) {
-	wsMsgData := wsMsg.Data
-
-	obj, ok := f.parseJSON(wsMsgData)
+func (f *Format) FormatMessage(msgType, msgData string) (string, error) {
+	obj, ok := f.parseJSON(msgData)
 
 	if !ok {
-		return f.formatTextMessage(wsMsg.Type, wsMsgData)
+		return f.formatTextMessage(msgType, msgData)
 	}
 
-	return f.formatJSONMessage(wsMsg.Type, obj)
+	return f.formatJSONMessage(msgType, obj)
 }
 
 // FormatForFile formats the given WebSocket message for a file.
 // It first tries to parse the message data as JSON, and if successful, formats it as JSON.
 // If parsing fails, it formats the message data as plain text.
-func (f *Format) FormatForFile(wsMsg ws.Message) (string, error) {
-	wsMsgData := wsMsg.Data
-
-	obj, ok := f.parseJSON(wsMsgData)
+func (f *Format) FormatForFile(_, msgData string) (string, error) {
+	obj, ok := f.parseJSON(msgData)
 
 	if !ok {
-		return f.text.FormatForFile(wsMsgData)
+		return f.text.FormatForFile(msgData)
 	}
 
 	return f.json.FormatForFile(obj)
 }
 
 // formatTextMessage formats the given WebSocket message data as text based on its type.
-func (f *Format) formatTextMessage(msgType ws.MessageType, data string) (string, error) {
+func (f *Format) formatTextMessage(msgType, data string) (string, error) {
 	switch msgType {
-	case ws.Request:
+	case "Request":
 		return f.text.FormatRequest(data)
-	case ws.Response:
+	case "Response":
 		return f.text.FormatResponse(data)
-	case ws.NotDefined:
+	case "NotDefined":
 		return "", fmt.Errorf("unknown message type")
 	default:
-		panic("Unexpected message type: " + string(msgType))
+		panic("Unexpected message type: " + msgType)
 	}
 }
 
 // formatJSONMessage formats the given WebSocket message data as JSON based on its type.
-func (f *Format) formatJSONMessage(msgType ws.MessageType, data any) (string, error) {
+func (f *Format) formatJSONMessage(msgType string, data any) (string, error) {
 	switch msgType {
-	case ws.Request:
+	case "Request":
 		return f.json.FormatRequest(data)
-	case ws.Response:
+	case "Response":
 		return f.json.FormatResponse(data)
-	case ws.NotDefined:
+	case "NotDefined":
 		return "", fmt.Errorf("unknown message type")
 	default:
-		panic("Unexpected message type: " + string(msgType))
+		panic("Unexpected message type: " + msgType)
 	}
 }
 
