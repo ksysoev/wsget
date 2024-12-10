@@ -2,6 +2,7 @@ package ws
 
 import (
 	"crypto/tls"
+	"fmt"
 	"io"
 	"net/http"
 	"sort"
@@ -30,9 +31,11 @@ func (rl *requestLogger) RoundTrip(req *http.Request) (*http.Response, error) {
 		tx := color.New(color.FgGreen)
 		tx.SetWriter(rl.output)
 
-		_, _ = tx.Printf("> %s %s %s\n", req.Method, req.URL.String(), req.Proto)
-		printHeaders(req.Header, tx, ">")
-		_, _ = tx.Println()
+		_, _ = fmt.Fprintf(rl.output, "> %s %s %s\n", req.Method, req.URL.String(), req.Proto)
+		printHeaders(req.Header, rl.output, ">")
+		_, _ = fmt.Fprintln(rl.output)
+
+		tx.UnsetWriter(rl.output)
 	}
 
 	resp, err := rl.transport.RoundTrip(req)
@@ -45,16 +48,17 @@ func (rl *requestLogger) RoundTrip(req *http.Request) (*http.Response, error) {
 		rx := color.New(color.FgYellow)
 		rx.SetWriter(rl.output)
 
-		_, _ = rx.Printf("< %s %s\n", resp.Proto, resp.Status)
-		printHeaders(resp.Header, rx, "<")
-		_, _ = rx.Println()
+		_, _ = fmt.Fprintf(rl.output, "< %s %s\n", resp.Proto, resp.Status)
+		printHeaders(resp.Header, rl.output, "<")
+		_, _ = fmt.Fprintln(rl.output)
+		rx.UnsetWriter(rl.output)
 	}
 
 	return resp, nil
 }
 
 // printHeaders prints the headers to the output with the given prefix.
-func printHeaders(headers http.Header, out *color.Color, prefix string) {
+func printHeaders(headers http.Header, out io.Writer, prefix string) {
 	// Sort headers for consistent output
 	headerNames := make([]string, 0, len(headers))
 	for header := range headers {
@@ -66,7 +70,7 @@ func printHeaders(headers http.Header, out *color.Color, prefix string) {
 	for _, header := range headerNames {
 		values := headers[header]
 		for _, value := range values {
-			out.Printf("%s %s: %s\n", prefix, header, value)
+			_, _ = fmt.Fprintf(out, "%s %s: %s\n", prefix, header, value)
 		}
 	}
 }
