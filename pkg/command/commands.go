@@ -1,6 +1,7 @@
 package command
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"reflect"
@@ -8,7 +9,6 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/ksysoev/wsget/pkg/core"
-	"github.com/ksysoev/wsget/pkg/ws"
 	"gopkg.in/yaml.v3"
 )
 
@@ -57,19 +57,19 @@ func NewSend(request string) *Send {
 // Execute sends the request using the WebSocket connection and returns a PrintMsg to print the response message.
 // It implements the Execute method of the core.Executer interface.
 func (c *Send) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
-	msg, err := exCtx.Connection().Send(c.request)
+	err := exCtx.Connection().Send(context.TODO(), c.request)
 	if err != nil {
 		return nil, err
 	}
 
-	return NewPrintMsg(*msg), nil
+	return NewPrintMsg(core.Message{Type: core.Request, Data: c.request}), nil
 }
 
 type PrintMsg struct {
-	msg ws.Message
+	msg core.Message
 }
 
-func NewPrintMsg(msg ws.Message) *PrintMsg {
+func NewPrintMsg(msg core.Message) *PrintMsg {
 	return &PrintMsg{msg}
 }
 
@@ -78,16 +78,16 @@ func NewPrintMsg(msg ws.Message) *PrintMsg {
 // If an output file is provided, it writes the formatted message to the file.
 func (c *PrintMsg) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 	msg := c.msg
-	output, err := exCtx.Formater().FormatMessage(msg)
+	output, err := exCtx.Formater().FormatMessage(msg.Type.String(), msg.Data)
 
 	if err != nil {
 		return nil, err
 	}
 
 	switch msg.Type {
-	case ws.Request:
+	case core.Request:
 		color.New(color.FgGreen).Fprintln(exCtx.Output(), "->")
-	case ws.Response:
+	case core.Response:
 		color.New(color.FgRed).Fprintln(exCtx.Output(), "<-")
 	default:
 		return nil, &ErrUnsupportedMessageType{msg.Type.String()}
@@ -97,7 +97,7 @@ func (c *PrintMsg) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 
 	outputFile := exCtx.OutputFile()
 	if outputFile != nil && !reflect.ValueOf(outputFile).IsNil() {
-		output, err := exCtx.Formater().FormatForFile(msg)
+		output, err := exCtx.Formater().FormatForFile(msg.Type.String(), msg.Data)
 		if err != nil {
 			return nil, err
 		}
@@ -136,25 +136,20 @@ func NewWaitForResp(timeout time.Duration) *WaitForResp {
 // If a response is received, it will return a new PrintMsg command with the received message.
 // If the WebSocket connection is closed, it will return an error.
 func (c *WaitForResp) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
-	if c.timeout.Seconds() == 0 {
-		msg, ok := <-exCtx.Connection().Messages()
-		if !ok {
-			return nil, &ErrConnectionClosed{}
-		}
+	ctx := context.TODO()
 
-		return NewPrintMsg(msg), nil
+	if c.timeout.Seconds() != 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(context.Background(), c.timeout)
+		defer cancel()
 	}
 
-	select {
-	case <-time.After(c.timeout):
-		return nil, &ErrTimeout{}
-	case msg, ok := <-exCtx.Connection().Messages():
-		if !ok {
-			return nil, &ErrConnectionClosed{}
-		}
-
-		return NewPrintMsg(msg), nil
+	msg, err := exCtx.WaitForMessage(ctx)
+	if err != nil {
+		return nil, err
 	}
+
+	return NewPrintMsg(msg), nil
 }
 
 type CmdEdit struct{}

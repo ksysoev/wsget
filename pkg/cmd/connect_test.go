@@ -258,10 +258,7 @@ func TestCreateConnectRunner(t *testing.T) {
 }
 func TestRunConnectCmd_FailToConnect(t *testing.T) {
 	ctx := context.Background()
-	args := &flags{
-		request: "test request",
-	}
-	err := runConnectCmd(ctx, args, []string{"ws://localhost:0"})
+	err := runConnectCmd(ctx, &flags{}, []string{"ws://localhost:0"})
 	assert.Error(t, err)
 }
 
@@ -282,7 +279,8 @@ func TestRunConnectCmd_SuccessConnect(t *testing.T) {
 
 	ctx := context.Background()
 	args := &flags{
-		request: "test request",
+		request:      "test request",
+		waitResponse: 1,
 	}
 
 	// tty is not available in the test environment

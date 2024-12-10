@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/ksysoev/wsget/pkg/core"
-	"github.com/ksysoev/wsget/pkg/ws"
 )
 
 type Factory struct {
@@ -55,20 +54,20 @@ func (f *Factory) Create(raw string) (core.Executer, error) {
 			return nil, fmt.Errorf("not enough arguments for print command: %s", raw)
 		}
 
-		var msgType ws.MessageType
+		var msgType core.MessageType
 
 		switch args[0] {
 		case "Request":
-			msgType = ws.Request
+			msgType = core.Request
 		case "Response":
-			msgType = ws.Response
+			msgType = core.Response
 		default:
 			return nil, fmt.Errorf("invalid message type: %s", parts[0])
 		}
 
 		msg := args[1]
 
-		return NewPrintMsg(ws.Message{Type: msgType, Data: msg}), nil
+		return NewPrintMsg(core.Message{Type: msgType, Data: msg}), nil
 	case "wait":
 		timeout := time.Duration(0)
 

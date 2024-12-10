@@ -11,6 +11,7 @@ import (
 	"github.com/ksysoev/wsget/pkg/command"
 	"github.com/ksysoev/wsget/pkg/core"
 	"github.com/ksysoev/wsget/pkg/core/edit"
+	"github.com/ksysoev/wsget/pkg/formater"
 	"github.com/ksysoev/wsget/pkg/input"
 	"github.com/ksysoev/wsget/pkg/repo"
 	"github.com/ksysoev/wsget/pkg/ws"
@@ -50,15 +51,16 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 		return err
 	}
 
-	wsConn, err := ws.NewWS(
-		ctx,
-		wsURL,
-		ws.Options{
-			SkipSSLVerification: args.insecure,
-			Headers:             args.headers,
-			Verbose:             args.verbose,
-		},
-	)
+	wsOpts := ws.Options{
+		SkipSSLVerification: args.insecure,
+		Headers:             args.headers,
+	}
+
+	if args.verbose {
+		wsOpts.Output = os.Stdout
+	}
+
+	wsConn, err := ws.New(wsURL, wsOpts)
 	if err != nil {
 		return fmt.Errorf("unable to connect to the server: %w", err)
 	}
@@ -102,10 +104,7 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 	editor := edit.NewMultiMode(os.Stdout, history, cmdHistory, dict)
 	cmdFactory := command.NewFactory(macro)
 
-	client, err := core.NewCLI(cmdFactory, wsConn, os.Stdout, editor)
-	if err != nil {
-		return fmt.Errorf("unable to start CLI: %w", err)
-	}
+	client := core.NewCLI(cmdFactory, wsConn, os.Stdout, editor, formater.NewFormat())
 
 	keyboard := input.NewKeyboard(client)
 	defer keyboard.Close()
@@ -115,10 +114,17 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 		return err
 	}
 
-	errs := make(chan error, 2)
+	errs := make(chan error, 3)
 
 	go func() {
 		defer cancel()
+
+		select {
+		case <-ctx.Done():
+			errs <- nil
+			return
+		case <-wsConn.Ready():
+		}
 
 		err := client.Run(ctx, *opts)
 		if err != nil && !errors.Is(err, core.ErrInterrupted) {
@@ -131,7 +137,7 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 	go func() {
 		defer cancel()
 
-		if err = keyboard.Run(ctx); err != nil {
+		if err := keyboard.Run(ctx); err != nil {
 			errs <- fmt.Errorf("keyboard run error: %w", err)
 			return
 		}
@@ -139,8 +145,19 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 		errs <- nil
 	}()
 
+	go func() {
+		defer cancel()
+
+		if err = wsConn.Connect(ctx); err != nil {
+			errs <- fmt.Errorf("fail to connect to the server: %w", err)
+			return
+		}
+
+		errs <- nil
+	}()
+
 	var errToReturn error
-	for i := 0; i < 2; i++ {
+	for i := 0; i < 3; i++ {
 		if err := <-errs; err != nil && errToReturn == nil {
 			errToReturn = err
 		}

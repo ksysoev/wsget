@@ -3,73 +3,24 @@ package core
 import (
 	"context"
 	"errors"
-	"io"
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"testing"
 	"time"
 
-	"github.com/coder/websocket"
-	"github.com/ksysoev/wsget/pkg/ws"
 	"github.com/stretchr/testify/mock"
 )
 
-func createEchoWSHandler() http.HandlerFunc {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		c, err := websocket.Accept(w, r, nil)
-		if err != nil {
-			return
-		}
-
-		defer c.Close(websocket.StatusNormalClosure, "")
-
-		for {
-			_, wsr, err := c.Reader(r.Context())
-			if err != nil {
-				if err == io.EOF {
-					return
-				}
-
-				return
-			}
-
-			wsw, err := c.Writer(r.Context(), websocket.MessageText)
-			if err != nil {
-				return
-			}
-
-			if _, err := io.Copy(wsw, wsr); err != nil {
-				return
-			}
-
-			if err := wsw.Close(); err != nil {
-				return
-			}
-		}
-	})
-}
-
 func TestNewCLI(t *testing.T) {
-	server := httptest.NewServer(createEchoWSHandler())
-	defer server.Close()
+	wsConn := NewMockConnectionHandler(t)
 
-	url := "ws://" + server.Listener.Addr().String()
-	wsConn, err := ws.NewWS(context.Background(), url, ws.Options{})
-
-	if err != nil {
-		t.Fatalf("Unexpected error: %v", err)
-	}
+	wsConn.EXPECT().Send(context.Background(), mock.Anything).Return(nil)
+	wsConn.EXPECT().SetOnMessage(mock.Anything)
 
 	factory := NewMockCommandFactory(t)
 	editor := NewMockEditor(t)
 
 	output := os.Stdout
-	cli, err := NewCLI(factory, wsConn, output, editor)
-
-	if err != nil {
-		t.Fatalf("Unexpected error: %v", err)
-	}
+	cli := NewCLI(factory, wsConn, output, editor, NewMockFormater(t))
 
 	if cli.formater == nil {
 		t.Error("Expected non-nil formater")
@@ -83,20 +34,21 @@ func TestNewCLI(t *testing.T) {
 		t.Error("Expected non-nil editor")
 	}
 
-	if _, err = wsConn.Send("Hello, world!"); err != nil {
+	if err := wsConn.Send(context.Background(), "Hello, world!"); err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
 	done := make(chan bool)
 	go func() {
-		err := cli.Run(context.Background(), RunOptions{})
+		err := cli.Run(ctx, RunOptions{})
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
 		}
 		done <- true
 	}()
-
-	wsConn.Close()
 
 	select {
 	case <-done:
@@ -106,29 +58,18 @@ func TestNewCLI(t *testing.T) {
 }
 
 func TestNewCLIRunWithCommands(t *testing.T) {
-	server := httptest.NewServer(createEchoWSHandler())
-	defer server.Close()
-
-	url := "ws://" + server.Listener.Addr().String()
-	wsConn, err := ws.NewWS(context.Background(), url, ws.Options{})
-
-	if err != nil {
-		t.Fatalf("Unexpected error: %v", err)
-	}
+	wsConn := NewMockConnectionHandler(t)
+	wsConn.EXPECT().SetOnMessage(mock.Anything)
 
 	factory := NewMockCommandFactory(t)
 	editor := NewMockEditor(t)
 	output := os.Stdout
-	cli, err := NewCLI(factory, wsConn, output, editor)
-
-	if err != nil {
-		t.Fatalf("Unexpected error: %v", err)
-	}
+	cli := NewCLI(factory, wsConn, output, editor, NewMockFormater(t))
 
 	cmd := NewMockExecuter(t)
 	cmd.EXPECT().Execute(mock.Anything).Return(nil, ErrInterrupted)
 
-	err = cli.Run(context.Background(), RunOptions{Commands: []Executer{cmd}})
+	err := cli.Run(context.Background(), RunOptions{Commands: []Executer{cmd}})
 
 	if err == nil {
 		t.Fatalf("Expected error, but got nothing")

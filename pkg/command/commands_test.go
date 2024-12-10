@@ -8,7 +8,6 @@ import (
 
 	"github.com/ksysoev/wsget/pkg/core"
 	"github.com/ksysoev/wsget/pkg/formater"
-	"github.com/ksysoev/wsget/pkg/ws"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -96,13 +95,13 @@ func TestPrintMsg_Execute(t *testing.T) {
 	tests := []struct {
 		name        string
 		expectedOut string
-		msg         ws.Message
+		msg         core.Message
 		wantErr     bool
 	}{
 		{
 			name: "request message",
-			msg: ws.Message{
-				Type: ws.Request,
+			msg: core.Message{
+				Type: core.Request,
 				Data: "some request data",
 			},
 			wantErr:     false,
@@ -110,8 +109,8 @@ func TestPrintMsg_Execute(t *testing.T) {
 		},
 		{
 			name: "response message",
-			msg: ws.Message{
-				Type: ws.Response,
+			msg: core.Message{
+				Type: core.Response,
 				Data: "some response data",
 			},
 			wantErr:     false,
