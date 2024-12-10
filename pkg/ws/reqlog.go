@@ -15,7 +15,9 @@ type requestLogger struct {
 	output    io.Writer
 }
 
-// newRequestLogger creates a new request logger with the given verbosity and SSL verification settings.
+// newRequestLogger creates a new requestLogger for HTTP client request logging.
+// It takes an output of type io.Writer for logging and a skipSSLVerification of type bool to control SSL verification.
+// It returns a pointer to a requestLogger configured to log requests and responses without SSL verification if specified.
 func newRequestLogger(output io.Writer, skipSSLVerification bool) *requestLogger {
 	return &requestLogger{
 		transport: &http.Transport{
@@ -25,7 +27,10 @@ func newRequestLogger(output io.Writer, skipSSLVerification bool) *requestLogger
 	}
 }
 
-// RoundTrip logs the request and response details.
+// RoundTrip executes a single HTTP transaction with logging.
+// It takes a parameter req of type *http.Request.
+// It returns an *http.Response and an error.
+// It returns an error if the underlying transport fails to complete the request.
 func (rl *requestLogger) RoundTrip(req *http.Request) (*http.Response, error) {
 	if rl.output != nil {
 		tx := color.New(color.FgGreen)
@@ -57,7 +62,9 @@ func (rl *requestLogger) RoundTrip(req *http.Request) (*http.Response, error) {
 	return resp, nil
 }
 
-// printHeaders prints the headers to the output with the given prefix.
+// printHeaders writes HTTP headers to the specified output with each line prefixed by the provided prefix string.
+// It takes headers of type http.Header, out of type io.Writer, and prefix of type string.
+// It returns no values. The function performs no error handling internally.
 func printHeaders(headers http.Header, out io.Writer, prefix string) {
 	// Sort headers for consistent output
 	headerNames := make([]string, 0, len(headers))

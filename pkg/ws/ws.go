@@ -40,8 +40,9 @@ type Options struct {
 	SkipSSLVerification bool
 }
 
-// New creates a new WebSocket connection to the specified URL with the given options.
-// It returns a Connection object and an error if any occurred.
+// New initializes a new WebSocket connection configuration with specified URL and options.
+// It takes wsURL, a string representing the WebSocket URL, and opts, an instance of Options with custom settings.
+// It returns a pointer to a Connection and possible error if the URL is empty, poorly formatted, or headers are invalid.
 func New(wsURL string, opts Options) (*Connection, error) {
 	if wsURL == "" {
 		return nil, errors.New("url is empty")
@@ -85,6 +86,9 @@ func New(wsURL string, opts Options) (*Connection, error) {
 	}, nil
 }
 
+// SetOnMessage sets the callback function to handle incoming messages on the connection.
+// It takes onMessage, a function with parameters context.Context and a byte slice [], as input.
+// The method does not return any value and is thread-safe, locking access to the callback function.
 func (c *Connection) SetOnMessage(onMessage func(context.Context, []byte)) {
 	c.l.Lock()
 	defer c.l.Unlock()
@@ -92,6 +96,10 @@ func (c *Connection) SetOnMessage(onMessage func(context.Context, []byte)) {
 	c.onMessage = onMessage
 }
 
+// Connect establishes a WebSocket connection using the specified context.
+// It returns an error if the onMessage callback is not set, the connection attempt fails,
+// or if a connection is already established.
+// The method locks the connection during setup to ensure thread safety and sets a default read limit on the WebSocket.
 func (c *Connection) Connect(ctx context.Context) error {
 	if c.onMessage == nil {
 		return fmt.Errorf("onMessage callback is not set")
@@ -122,13 +130,16 @@ func (c *Connection) Connect(ctx context.Context) error {
 	return c.handleResponses(ctx, ws)
 }
 
-// Hostname returns the hostname of the WebSocket server.
+// Hostname retrieves the host name part of the URL stored in the Connection struct.
+// It returns a string representing the host name.
 func (c *Connection) Hostname() string {
 	return c.url.Hostname()
 }
 
-// handleResponses reads messages from the websocket connection and sends them to the Messages channel.
-// It runs in a loop until the connection is closed or an error occurs.
+// handleResponses manages incoming messages on a WebSocket connection until the context is canceled.
+// It takes a context (ctx) for cancellation control and a websocket connection (ws) for message communication.
+// It returns an error if there is an issue reading from the WebSocket or if handling a message fails.
+// The function terminates without error if the context is canceled.
 func (c *Connection) handleResponses(ctx context.Context, ws *websocket.Conn) error {
 	for ctx.Err() == nil {
 		msgType, reader, err := ws.Reader(ctx)
@@ -144,6 +155,10 @@ func (c *Connection) handleResponses(ctx context.Context, ws *websocket.Conn) er
 	return nil
 }
 
+// handleMessage processes an incoming WebSocket message for the Connection.
+// It takes ctx of type context.Context, msgType of type websocket.MessageType, and msgReader of type reader.
+// It returns an error if the message type is binary or if reading from the reader fails.
+// The function reads all data from msgReader and invokes the onMessage callback with the read data.
 func (c *Connection) handleMessage(ctx context.Context, msgType websocket.MessageType, msgReader reader) error {
 	if msgType == websocket.MessageBinary {
 		return fmt.Errorf("unexpected binary message")
@@ -159,6 +174,10 @@ func (c *Connection) handleMessage(ctx context.Context, msgType websocket.Messag
 	return nil
 }
 
+// handleError processes an error arising from a WebSocket connection.
+// It takes an err parameter of type error and returns an error value.
+// The method returns nil if the error is context.Canceled, io.EOF, net.ErrClosed or a websocket.StatusNormalClosure.
+// It returns a formatted error message if the error is a websocket.CloseError with any other close code.
 func (c *Connection) handleError(err error) error {
 	if errors.Is(err, context.Canceled) || errors.Is(err, io.EOF) || errors.Is(err, net.ErrClosed) {
 		return nil
@@ -176,9 +195,10 @@ func (c *Connection) handleError(err error) error {
 	return fmt.Errorf("fail read from connection: %w", err)
 }
 
-// Send sends a message to the websocket connection and returns a Message and an error.
-// It takes a string message as input and returns a pointer to a Message struct and an error.
-// The Message struct contains the message type and data.
+// Send transmits a message over an established WebSocket connection within a given context.
+// It takes ctx of type context.Context and msg of type string as parameters.
+// It returns an error if the context is canceled or if there is a failure writing to the WebSocket.
+// The function waits for the connection to be ready before sending the message.
 func (c *Connection) Send(ctx context.Context, msg string) error {
 	select {
 	case <-c.ready:
@@ -189,8 +209,9 @@ func (c *Connection) Send(ctx context.Context, msg string) error {
 	return c.ws.Write(ctx, websocket.MessageText, []byte(msg))
 }
 
-// Close closes the WebSocket connection.
-// If the connection is already closed, it returns immediately.
+// Close shuts down an established WebSocket connection gracefully.
+// It returns an error if the connection is not yet established.
+// The function ensures a normal closure status is sent to the WebSocket server.
 func (c *Connection) Close() error {
 	select {
 	case <-c.ready:
