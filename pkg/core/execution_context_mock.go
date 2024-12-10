@@ -212,53 +212,6 @@ func (_c *MockExecutionContext_Formater_Call) RunAndReturn(run func() Formater) 
 	return _c
 }
 
-// Input provides a mock function with given fields:
-func (_m *MockExecutionContext) Input() <-chan KeyEvent {
-	ret := _m.Called()
-
-	if len(ret) == 0 {
-		panic("no return value specified for Input")
-	}
-
-	var r0 <-chan KeyEvent
-	if rf, ok := ret.Get(0).(func() <-chan KeyEvent); ok {
-		r0 = rf()
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(<-chan KeyEvent)
-		}
-	}
-
-	return r0
-}
-
-// MockExecutionContext_Input_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Input'
-type MockExecutionContext_Input_Call struct {
-	*mock.Call
-}
-
-// Input is a helper method to define mock.On call
-func (_e *MockExecutionContext_Expecter) Input() *MockExecutionContext_Input_Call {
-	return &MockExecutionContext_Input_Call{Call: _e.mock.On("Input")}
-}
-
-func (_c *MockExecutionContext_Input_Call) Run(run func()) *MockExecutionContext_Input_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run()
-	})
-	return _c
-}
-
-func (_c *MockExecutionContext_Input_Call) Return(_a0 <-chan KeyEvent) *MockExecutionContext_Input_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *MockExecutionContext_Input_Call) RunAndReturn(run func() <-chan KeyEvent) *MockExecutionContext_Input_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // Output provides a mock function with given fields:
 func (_m *MockExecutionContext) Output() io.Writer {
 	ret := _m.Called()

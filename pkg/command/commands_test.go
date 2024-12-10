@@ -149,7 +149,6 @@ func TestCmdEdit_Execute(t *testing.T) {
 	editor := core.NewMockEditor(t)
 	editor.EXPECT().CommandMode(mock.Anything, "").Return("", nil)
 
-	exCtx.EXPECT().Input().Return(input)
 	exCtx.EXPECT().Output().Return(output)
 	exCtx.EXPECT().Editor().Return(editor)
 	exCtx.EXPECT().Factory().Return(NewFactory(nil))

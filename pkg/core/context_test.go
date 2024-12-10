@@ -17,10 +17,6 @@ func TestNewExecutionContext(t *testing.T) {
 		t.Errorf("Unexpected CLI: %v", executionContext.cli)
 	}
 
-	if executionContext.Input() != cli.inputStream {
-		t.Errorf("Unexpected input channel: %v", executionContext.input)
-	}
-
 	if executionContext.outputFile != outputFile {
 		t.Errorf("Unexpected output file: %v", executionContext.outputFile)
 	}
@@ -77,18 +73,5 @@ func TestExecutionContext_RequestEditor(t *testing.T) {
 
 	if executionContext.Editor() != cli.editor {
 		t.Errorf("Unexpected connection: %v", executionContext.Editor())
-	}
-}
-
-func TestExecutionContext_Input(t *testing.T) {
-	cli := &CLI{
-		inputStream: make(chan KeyEvent),
-	}
-	outputFile := &bytes.Buffer{}
-
-	executionContext := newExecutionContext(cli, outputFile)
-
-	if executionContext.Input() != cli.inputStream {
-		t.Errorf("Unexpected connection: %v", executionContext.Input())
 	}
 }

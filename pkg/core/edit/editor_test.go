@@ -2,6 +2,7 @@ package edit
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"os"
 	"testing"
@@ -23,7 +24,7 @@ func TestNewEditor(t *testing.T) {
 		t.Error("Expected output to be set")
 	}
 
-	if editor.History != history {
+	if editor.history != history {
 		t.Error("Expected history to be set")
 	}
 
@@ -55,6 +56,8 @@ func TestEdit(t *testing.T) {
 	keyStream := make(chan core.KeyEvent)
 	defer close(keyStream)
 
+	editor.SetInput(keyStream)
+
 	go func() {
 		for _, key := range "request" {
 			keyStream <- core.KeyEvent{Rune: key}
@@ -63,7 +66,7 @@ func TestEdit(t *testing.T) {
 		keyStream <- core.KeyEvent{Key: core.KeyCtrlS}
 	}()
 
-	req, err := editor.Edit(keyStream, "")
+	req, err := editor.Edit(context.Background(), "")
 
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -92,11 +95,13 @@ func TestEditInterrupted(t *testing.T) {
 	keyStream := make(chan core.KeyEvent)
 	defer close(keyStream)
 
+	editor.SetInput(keyStream)
+
 	go func() {
 		keyStream <- core.KeyEvent{Key: core.KeyCtrlC}
 	}()
 
-	req, err := editor.Edit(keyStream, "")
+	req, err := editor.Edit(context.Background(), "")
 
 	if err == nil {
 		t.Error("Expected error")
@@ -110,7 +115,7 @@ func TestEditInterrupted(t *testing.T) {
 		keyStream <- core.KeyEvent{Key: core.KeyCtrlD}
 	}()
 
-	req, err = editor.Edit(keyStream, "")
+	req, err = editor.Edit(context.Background(), "")
 
 	if !errors.Is(err, core.ErrInterrupted) {
 		t.Error("Expected error")
@@ -139,11 +144,13 @@ func TestEditExitEditor(t *testing.T) {
 	keyStream := make(chan core.KeyEvent)
 	defer close(keyStream)
 
+	editor.SetInput(keyStream)
+
 	go func() {
 		keyStream <- core.KeyEvent{Key: core.KeyEsc}
 	}()
 
-	req, err := editor.Edit(keyStream, "")
+	req, err := editor.Edit(context.Background(), "")
 
 	if err != nil {
 		t.Error("Expected no error")
@@ -165,7 +172,9 @@ func TestEditClosingKeyboard(t *testing.T) {
 	keyStream := make(chan core.KeyEvent)
 	close(keyStream)
 
-	req, err := editor.Edit(keyStream, "")
+	editor.SetInput(keyStream)
+
+	req, err := editor.Edit(context.Background(), "")
 
 	if err == nil {
 		t.Error("Expected error")
@@ -192,6 +201,9 @@ func TestEditSpecialKeys(t *testing.T) {
 	editor := NewEditor(output, history, false)
 
 	keyStream := make(chan core.KeyEvent)
+	defer close(keyStream)
+
+	editor.SetInput(keyStream)
 
 	go func() {
 		for _, key := range []core.Key{
@@ -203,7 +215,7 @@ func TestEditSpecialKeys(t *testing.T) {
 		}
 	}()
 
-	req, err := editor.Edit(keyStream, "")
+	req, err := editor.Edit(context.Background(), "")
 
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -218,16 +230,6 @@ func TestEditSpecialKeys(t *testing.T) {
 	if outputStr != " "+LineClear+"\r" {
 		t.Errorf("Unexpected output: %q", outputStr)
 	}
-
-	go func() {
-		for _, key := range []core.Key{
-			core.KeySpace,
-			core.KeyCtrlU,
-			core.KeyEsc,
-		} {
-			keyStream <- core.KeyEvent{Key: key}
-		}
-	}()
 }
 func TestHandleEscKey(t *testing.T) {
 	tests := []struct {

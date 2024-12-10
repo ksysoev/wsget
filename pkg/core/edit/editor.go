@@ -1,6 +1,7 @@
 package edit
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"time"
@@ -22,7 +23,8 @@ const (
 )
 
 type Editor struct {
-	History         HistoryRepo
+	input           <-chan core.KeyEvent
+	history         HistoryRepo
 	content         *Content
 	Dictionary      *Dictionary
 	output          io.Writer
@@ -38,7 +40,7 @@ type Editor struct {
 // It returns a pointer to the created Editor struct.
 func NewEditor(output io.Writer, history HistoryRepo, isSingleLine bool) *Editor {
 	return &Editor{
-		History:         history,
+		history:         history,
 		content:         NewContent(),
 		buffer:          make([]rune, 0),
 		pos:             0,
@@ -48,84 +50,114 @@ func NewEditor(output io.Writer, history HistoryRepo, isSingleLine bool) *Editor
 	}
 }
 
+func (ed *Editor) SetInput(input <-chan core.KeyEvent) {
+	ed.input = input
+}
+
 // Edit reads input from the user via a keyboard stream and returns the resulting string.
 // It takes a channel of keyboard events and an initial buffer string as input.
 // It returns the resulting string and an error if any.
-func (ed *Editor) Edit(keyStream <-chan core.KeyEvent, initBuffer string) (string, error) {
-	ed.History.ResetPosition()
+func (ed *Editor) Edit(ctx context.Context, initBuffer string) (string, error) {
+	ed.history.ResetPosition()
 	fmt.Fprint(ed.output, ed.content.ReplaceText(initBuffer))
 
-	for e := range keyStream {
-		isPasting := ed.isPasting()
-
-		switch e.Key {
-		case core.KeyAltBackspace:
-			fmt.Fprint(ed.output, ed.content.DeleteToPrevWord())
-			continue
-		case core.KeyCtrlC, core.KeyCtrlD:
-			return "", core.ErrInterrupted
-		case core.KeyCtrlS:
-			return ed.done()
-		case core.KeyEsc:
-			if handleEscKey(e, ed) {
-				continue
-			}
-
-			return "", nil
-		case core.KeyCtrlU:
-			fmt.Fprint(ed.output, ed.content.Clear())
-		case core.KeySpace:
-			fmt.Fprint(ed.output, ed.content.InsertSymbol(' '))
-		case core.KeyEnter:
-			if ed.newLineOrDone(isPasting) {
-				return ed.done()
-			}
-		case core.KeyBackspace, MacOSDeleteKey:
-			fmt.Fprint(ed.output, ed.content.RemovePrevSymbol())
-		case core.KeyDelete:
-			fmt.Fprint(ed.output, ed.content.RemoveNextSymbol())
-		case core.KeyArrowLeft:
-			fmt.Fprint(ed.output, ed.content.MovePositionLeft())
-		case core.KeyArrowRight:
-			fmt.Fprint(ed.output, ed.content.MovePositionRight())
-		case core.KeyArrowUp:
-			ed.prevFromHistory()
-		case core.KeyArrowDown:
-			ed.nextFromHistory()
-		case core.KeyTab:
-			content := ed.content.String()
-			if ed.Dictionary == nil || content == "" {
-				continue
-			}
-
-			match := ed.Dictionary.Search(content)
-			if match == "" || match == content {
-				continue
-			}
-
-			diff := match[len(content):]
-
-			for _, r := range diff {
-				fmt.Fprint(ed.output, ed.content.InsertSymbol(r))
-			}
-		case core.KeyHome:
-			fmt.Fprint(ed.output, ed.content.MoveToRowStart())
-		case core.KeyEnd:
-			fmt.Fprint(ed.output, ed.content.MoveToRowEnd())
-		default:
-			if e.Key > 0 {
-				continue
-			}
-
-			if ed.isSingleLine && e.Rune == '\n' {
-				continue
-			}
-
-			fmt.Fprint(ed.output, ed.content.InsertSymbol(e.Rune))
-		}
+	if ed.input == nil {
+		return "", fmt.Errorf("input stream is not set")
 	}
 
-	return "", fmt.Errorf("keyboard stream was unexpectably closed")
+	for {
+		select {
+		case <-ctx.Done():
+			return "", core.ErrInterrupted
+		case e, ok := <-ed.input:
+			if !ok {
+				return "", fmt.Errorf("keyboard stream was unexpectedly closed")
+			}
+
+			next, s, err := ed.handleKey(e)
+
+			switch {
+			case err != nil:
+				return "", err
+			case next:
+				continue
+			default:
+				return s, nil
+			}
+		}
+	}
+}
+
+func (ed *Editor) handleKey(e core.KeyEvent) (next bool, res string, err error) {
+	isPasting := ed.isPasting()
+
+	switch e.Key {
+	case core.KeyAltBackspace:
+		fmt.Fprint(ed.output, ed.content.DeleteToPrevWord())
+		return true, "", nil
+	case core.KeyCtrlC, core.KeyCtrlD:
+		return false, "", core.ErrInterrupted
+	case core.KeyCtrlS:
+		return false, ed.done(), nil
+	case core.KeyEsc:
+		if handleEscKey(e, ed) {
+			return true, "", nil
+		}
+
+		return false, "", nil
+	case core.KeyCtrlU:
+		fmt.Fprint(ed.output, ed.content.Clear())
+	case core.KeySpace:
+		fmt.Fprint(ed.output, ed.content.InsertSymbol(' '))
+	case core.KeyEnter:
+		if ed.newLineOrDone(isPasting) {
+			return false, ed.done(), nil
+		}
+	case core.KeyBackspace, MacOSDeleteKey:
+		fmt.Fprint(ed.output, ed.content.RemovePrevSymbol())
+	case core.KeyDelete:
+		fmt.Fprint(ed.output, ed.content.RemoveNextSymbol())
+	case core.KeyArrowLeft:
+		fmt.Fprint(ed.output, ed.content.MovePositionLeft())
+	case core.KeyArrowRight:
+		fmt.Fprint(ed.output, ed.content.MovePositionRight())
+	case core.KeyArrowUp:
+		ed.prevFromHistory()
+	case core.KeyArrowDown:
+		ed.nextFromHistory()
+	case core.KeyTab:
+		content := ed.content.String()
+		if ed.Dictionary == nil || content == "" {
+			return true, "", nil
+		}
+
+		match := ed.Dictionary.Search(content)
+		if match == "" || match == content {
+			return true, "", nil
+		}
+
+		diff := match[len(content):]
+
+		for _, r := range diff {
+			fmt.Fprint(ed.output, ed.content.InsertSymbol(r))
+		}
+	case core.KeyHome:
+		fmt.Fprint(ed.output, ed.content.MoveToRowStart())
+	case core.KeyEnd:
+		fmt.Fprint(ed.output, ed.content.MoveToRowEnd())
+	default:
+		if e.Key > 0 {
+			return true, "", nil
+		}
+
+		if ed.isSingleLine && e.Rune == '\n' {
+			return true, "", nil
+		}
+
+		fmt.Fprint(ed.output, ed.content.InsertSymbol(e.Rune))
+	}
+
+	return true, "", nil
 }
 
 // handleEscKey processes keyboard events involving the Escape key and updates the editor state accordingly.
@@ -163,24 +195,24 @@ func handleEscKey(e core.KeyEvent, ed *Editor) bool {
 // done returns the current request and clears the editor content.
 // If the editor content is empty, it returns an empty string.
 // It also adds the request to the editor's history.
-func (ed *Editor) done() (string, error) {
+func (ed *Editor) done() string {
 	req := ed.content.ToRequest()
 
 	fmt.Fprint(ed.output, ed.content.Clear())
 
 	if req == "" {
-		return req, nil
+		return req
 	}
 
-	ed.History.AddRequest(req)
+	ed.history.AddRequest(req)
 
-	return req, nil
+	return req
 }
 
 // prevFromHistory retrieves the previous request from the history and replaces the current content with it.
 // If there is no previous request, it prints a bell character and returns.
 func (ed *Editor) prevFromHistory() {
-	req := ed.History.PrevRequest()
+	req := ed.history.PrevRequest()
 
 	if req == "" {
 		fmt.Fprint(ed.output, Bell)
@@ -193,7 +225,7 @@ func (ed *Editor) prevFromHistory() {
 // nextFromHistory retrieves the next request from the history and replaces the current content with it.
 // If there are no more requests in the history, it prints a bell character and returns.
 func (ed *Editor) nextFromHistory() {
-	req := ed.History.NextRequest()
+	req := ed.history.NextRequest()
 
 	if req == "" {
 		fmt.Fprint(ed.output, Bell)
