@@ -350,7 +350,7 @@ func TestConnection_Connect_Success(t *testing.T) {
 	}()
 
 	select {
-	case <-conn.ready:
+	case <-conn.Ready():
 	case <-time.After(1 * time.Second):
 		t.Fatal("timeout waiting for connection")
 	}
@@ -399,7 +399,7 @@ func TestConnection_Connect_AlreadyConnected(t *testing.T) {
 	}()
 
 	select {
-	case <-conn.ready:
+	case <-conn.Ready():
 	case <-time.After(1 * time.Second):
 	}
 

@@ -119,6 +119,13 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 	go func() {
 		defer cancel()
 
+		select {
+		case <-ctx.Done():
+			errs <- nil
+			return
+		case <-wsConn.Ready():
+		}
+
 		err := client.Run(ctx, *opts)
 		if err != nil && !errors.Is(err, core.ErrInterrupted) {
 			errs <- fmt.Errorf("client run error: %w", err)

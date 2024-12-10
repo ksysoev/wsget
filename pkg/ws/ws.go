@@ -221,3 +221,8 @@ func (c *Connection) Close() error {
 
 	return c.ws.Close(websocket.StatusNormalClosure, "closing connection")
 }
+
+// Ready returns a channel that is closed when the WebSocket connection is established.
+func (c *Connection) Ready() <-chan struct{} {
+	return c.ready
+}
