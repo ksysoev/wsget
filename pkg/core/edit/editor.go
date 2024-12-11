@@ -62,8 +62,8 @@ func (ed *Editor) SetInput(input <-chan core.KeyEvent) {
 // It returns the final edited string content or an error if input is unavailable, keyboard stream is closed, or an interrupt occurs.
 func (ed *Editor) Edit(ctx context.Context, initBuffer string) (string, error) {
 	ed.history.ResetPosition()
-	_, err := fmt.Fprint(ed.output, ed.content.ReplaceText(initBuffer))
-	if err != nil {
+
+	if _, err := fmt.Fprint(ed.output, ed.content.ReplaceText(initBuffer)); err != nil {
 		return "", fmt.Errorf("failed to write initial buffer: %w", err)
 	}
 
