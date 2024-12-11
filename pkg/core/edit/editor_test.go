@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"os"
+	"io"
 	"testing"
 
 	"github.com/ksysoev/wsget/pkg/core"
@@ -39,13 +39,6 @@ func TestNewEditor(t *testing.T) {
 }
 
 func TestEdit(t *testing.T) {
-	tmpfile, err := os.CreateTemp("", "test_history")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	defer os.Remove(tmpfile.Name())
-
 	output := new(bytes.Buffer)
 
 	history := NewMockHistoryRepo(t)
@@ -79,19 +72,10 @@ func TestEdit(t *testing.T) {
 }
 
 func TestEditInterrupted(t *testing.T) {
-	tmpfile, err := os.CreateTemp("", "test_history")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	defer os.Remove(tmpfile.Name())
-
-	output := new(bytes.Buffer)
-
 	history := NewMockHistoryRepo(t)
 	history.EXPECT().ResetPosition()
 
-	editor := NewEditor(output, history, false)
+	editor := NewEditor(io.Discard, history, false)
 
 	keyStream := make(chan core.KeyEvent)
 	defer close(keyStream)
@@ -127,39 +111,61 @@ func TestEditInterrupted(t *testing.T) {
 	}
 }
 
-func TestEditExitEditor(t *testing.T) {
-	tmpfile, err := os.CreateTemp("", "test_history")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	defer os.Remove(tmpfile.Name())
-
-	output := new(bytes.Buffer)
-
+func TestEdit_CancelledContext(t *testing.T) {
 	history := NewMockHistoryRepo(t)
 	history.EXPECT().ResetPosition()
 
-	editor := NewEditor(output, history, false)
+	editor := NewEditor(io.Discard, history, false)
 
 	keyStream := make(chan core.KeyEvent)
 	defer close(keyStream)
 
 	editor.SetInput(keyStream)
 
-	go func() {
-		keyStream <- core.KeyEvent{Key: core.KeyEsc}
-	}()
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
 
-	req, err := editor.Edit(context.Background(), "")
+	req, err := editor.Edit(ctx, "")
 
-	if err != nil {
-		t.Error("Expected no error")
+	if !errors.Is(err, core.ErrInterrupted) {
+		t.Error("Expected error")
 	}
 
 	if req != "" {
 		t.Errorf("Expected empty request, got %s", req)
 	}
+}
+
+func TestEdit_NoInput(t *testing.T) {
+	history := NewMockHistoryRepo(t)
+	history.EXPECT().ResetPosition()
+
+	editor := NewEditor(io.Discard, history, false)
+
+	req, err := editor.Edit(context.Background(), "")
+
+	assert.EqualError(t, err, "input stream is not set")
+	assert.Empty(t, req)
+}
+
+func TestEditExitEditor(t *testing.T) {
+	history := NewMockHistoryRepo(t)
+	history.EXPECT().ResetPosition()
+
+	editor := NewEditor(io.Discard, history, false)
+
+	keyStream := make(chan core.KeyEvent)
+	defer close(keyStream)
+
+	editor.SetInput(keyStream)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	req, err := editor.Edit(ctx, "")
+
+	assert.ErrorIs(t, err, core.ErrInterrupted)
+	assert.Empty(t, req)
 }
 
 func TestEditClosingKeyboard(t *testing.T) {
@@ -187,13 +193,6 @@ func TestEditClosingKeyboard(t *testing.T) {
 }
 
 func TestEditSpecialKeys(t *testing.T) {
-	tmpfile, err := os.CreateTemp("", "test_history")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	defer os.Remove(tmpfile.Name())
-
 	output := new(bytes.Buffer)
 
 	history := NewMockHistoryRepo(t)
