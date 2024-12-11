@@ -125,7 +125,7 @@ func (c *CLI) Run(ctx context.Context, opts RunOptions) error {
 
 	c.hideCursor()
 
-	fmt.Fprintln(c.output, "Use Enter to input request and send it, Ctrl+C to exit")
+	_, _ = fmt.Fprintln(c.output, "Use Enter to input request and send it, Ctrl+C to exit")
 
 	for _, cmd := range opts.Commands {
 		c.commands <- cmd
@@ -199,19 +199,18 @@ func (c *CLI) Run(ctx context.Context, opts RunOptions) error {
 
 // hideCursor hides the cursor in the terminal output.
 func (c *CLI) hideCursor() {
-	fmt.Fprint(c.output, HideCursor)
+	_, _ = fmt.Fprint(c.output, HideCursor)
 }
 
 // showCursor shows the cursor in the terminal output.
 func (c *CLI) showCursor() {
-	fmt.Fprint(c.output, ShowCursor)
+	_, _ = fmt.Fprint(c.output, ShowCursor)
 }
 
 type MessageType uint8
 
 const (
-	NotDefined MessageType = iota
-	Request
+	Request MessageType = iota
 	Response
 )
 

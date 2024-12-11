@@ -30,7 +30,7 @@ func (d *Dictionary) Search(prefix string) string {
 		return d.words[i] >= prefix
 	})
 
-	match := []string{}
+	match := make([]string, 0)
 
 	for i := startPos; i < len(d.words); i++ {
 		word := d.words[i]

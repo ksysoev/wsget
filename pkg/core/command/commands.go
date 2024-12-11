@@ -13,11 +13,11 @@ import (
 )
 
 const (
-	CommandPartsNumber = 2
-	LineUp             = "\x1b[1A"
-	LineClear          = "\x1b[2K"
-	HideCursor         = "\x1b[?25l"
-	ShowCursor         = "\x1b[?25h"
+	PartsNumber = 2
+	LineUp      = "\x1b[1A"
+	LineClear   = "\x1b[2K"
+	HideCursor  = "\x1b[?25l"
+	ShowCursor  = "\x1b[?25h"
 )
 
 type Edit struct {
@@ -31,13 +31,12 @@ func NewEdit(content string) *Edit {
 // Execute executes the edit command and returns a Send command id editing was successful or an error in other case.
 func (c *Edit) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 	output := exCtx.Output()
-	color.New(color.FgGreen).Fprint(output, "->\n")
-	fmt.Fprint(output, ShowCursor)
+	_, _ = color.New(color.FgGreen).Fprint(output, "->\n")
+	_, _ = fmt.Fprint(output, ShowCursor)
 
 	req, err := exCtx.Editor().Edit(context.TODO(), c.content)
 
-	fmt.Fprint(output, LineUp+LineClear)
-	fmt.Fprint(output, HideCursor)
+	_, _ = fmt.Fprint(output, LineUp+LineClear+HideCursor)
 
 	if err != nil || req == "" {
 		return nil, err
@@ -86,14 +85,14 @@ func (c *PrintMsg) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 
 	switch msg.Type {
 	case core.Request:
-		color.New(color.FgGreen).Fprintln(exCtx.Output(), "->")
+		_, _ = color.New(color.FgGreen).Fprintln(exCtx.Output(), "->")
 	case core.Response:
-		color.New(color.FgRed).Fprintln(exCtx.Output(), "<-")
+		_, _ = color.New(color.FgRed).Fprintln(exCtx.Output(), "<-")
 	default:
 		return nil, &ErrUnsupportedMessageType{msg.Type.String()}
 	}
 
-	fmt.Fprintf(exCtx.Output(), "%s\n", output)
+	_, _ = fmt.Fprintf(exCtx.Output(), "%s\n", output)
 
 	outputFile := exCtx.OutputFile()
 	if outputFile != nil && !reflect.ValueOf(outputFile).IsNil() {
@@ -158,18 +157,16 @@ func NewCmdEdit() *CmdEdit {
 	return &CmdEdit{}
 }
 
-// Execute executes the CmdEdit and returns an core.Executer and an error.
+// Execute executes the CmdEdit and returns a core.Executer and an error.
 // It prompts the user to edit a command and returns the corresponding Command object.
 func (c *CmdEdit) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 	output := exCtx.Output()
 
-	fmt.Fprint(output, ":")
-	fmt.Fprint(output, ShowCursor)
+	_, _ = fmt.Fprint(output, ":"+ShowCursor)
 
 	rawCmd, err := exCtx.Editor().CommandMode(context.TODO(), "")
 
-	fmt.Fprint(output, LineClear+"\r")
-	fmt.Fprint(output, HideCursor)
+	_, _ = fmt.Fprint(output, LineClear+"\r"+HideCursor)
 
 	if err != nil {
 		return nil, err
@@ -178,7 +175,7 @@ func (c *CmdEdit) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 	cmd, err := exCtx.Factory().Create(rawCmd)
 
 	if err != nil {
-		color.New(color.FgRed).Fprintln(output, err)
+		_, _ = color.New(color.FgRed).Fprintln(output, err)
 		return nil, nil
 	}
 
@@ -194,7 +191,7 @@ func NewSequence(subCommands []core.Executer) *Sequence {
 }
 
 // Execute executes the command sequence by iterating over all sub-commands and executing them recursively.
-// It takes an core.ExecutionContext as input and returns an core.Executer and an error.
+// It takes a core.ExecutionContext as input and returns a core.Executer and an error.
 func (c *Sequence) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 	for _, cmd := range c.subCommands {
 		for cmd != nil {
@@ -216,7 +213,7 @@ func NewInputFileCommand(filePath string) *InputFileCommand {
 	return &InputFileCommand{filePath}
 }
 
-// Execute executes the InputFileCommand and returns an core.Executer and an error.
+// Execute executes the InputFileCommand and returns a core.Executer and an error.
 // It reads the file and executes the commands in the file.
 func (c *InputFileCommand) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 	data, err := os.ReadFile(c.filePath)
@@ -252,7 +249,7 @@ func NewRepeatCommand(times int, subCommand core.Executer) *RepeatCommand {
 	return &RepeatCommand{subCommand, times}
 }
 
-// Execute executes the RepeatCommand and returns an core.Executer and an error.
+// Execute executes the RepeatCommand and returns a core.Executer and an error.
 // It executes the sub-command the specified number of times.
 func (c *RepeatCommand) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 	for i := 0; i < c.times; i++ {
@@ -276,7 +273,7 @@ func NewSleepCommand(duration time.Duration) *SleepCommand {
 	return &SleepCommand{duration}
 }
 
-// Execute executes the SleepCommand and returns an core.Executer and an error.
+// Execute executes the SleepCommand and returns a core.Executer and an error.
 // It sleeps for the specified duration.
 func (c *SleepCommand) Execute(_ core.ExecutionContext) (core.Executer, error) {
 	time.Sleep(c.duration)

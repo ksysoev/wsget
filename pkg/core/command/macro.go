@@ -83,7 +83,7 @@ func (m *Macro) Get(name, argString string) (core.Executer, error) {
 }
 
 func (m *Macro) GetNames() []string {
-	names := []string{}
+	names := make([]string, 0, len(m.macro))
 
 	for name := range m.macro {
 		names = append(names, name)
