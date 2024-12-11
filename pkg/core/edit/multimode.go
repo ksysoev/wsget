@@ -1,6 +1,7 @@
 package edit
 
 import (
+	"context"
 	"io"
 
 	"github.com/ksysoev/wsget/pkg/core"
@@ -28,12 +29,18 @@ func NewMultiMode(output io.Writer, reqHistory, cmdHistory HistoryRepo, cmdDict 
 
 // CommandMode activates the command mode, reading user input from keyStream with an initial buffer initBuffer.
 // It returns the resulting command string or an error if any issue occurs.
-func (m *MultiMode) CommandMode(keyStream <-chan core.KeyEvent, initBuffer string) (string, error) {
-	return m.commandMode.Edit(keyStream, initBuffer)
+func (m *MultiMode) CommandMode(ctx context.Context, initBuffer string) (string, error) {
+	return m.commandMode.Edit(ctx, initBuffer)
 }
 
 // Edit switches the editor to edit mode, processing user input from keyStream with an initial buffer.
 // It returns the final string after editing or an error if an issue occurs.
-func (m *MultiMode) Edit(keyStream <-chan core.KeyEvent, initBuffer string) (string, error) {
-	return m.editMode.Edit(keyStream, initBuffer)
+func (m *MultiMode) Edit(ctx context.Context, initBuffer string) (string, error) {
+	return m.editMode.Edit(ctx, initBuffer)
+}
+
+// SetInput sets the input channel for both command and edit modes.
+func (m *MultiMode) SetInput(input <-chan core.KeyEvent) {
+	m.commandMode.SetInput(input)
+	m.editMode.SetInput(input)
 }

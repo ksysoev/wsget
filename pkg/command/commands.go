@@ -34,7 +34,7 @@ func (c *Edit) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 	color.New(color.FgGreen).Fprint(output, "->\n")
 	fmt.Fprint(output, ShowCursor)
 
-	req, err := exCtx.Editor().Edit(exCtx.Input(), c.content)
+	req, err := exCtx.Editor().Edit(context.TODO(), c.content)
 
 	fmt.Fprint(output, LineUp+LineClear)
 	fmt.Fprint(output, HideCursor)
@@ -166,7 +166,7 @@ func (c *CmdEdit) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 	fmt.Fprint(output, ":")
 	fmt.Fprint(output, ShowCursor)
 
-	rawCmd, err := exCtx.Editor().CommandMode(exCtx.Input(), "")
+	rawCmd, err := exCtx.Editor().CommandMode(context.TODO(), "")
 
 	fmt.Fprint(output, LineClear+"\r")
 	fmt.Fprint(output, HideCursor)

@@ -1,6 +1,7 @@
 package edit
 
 import (
+	"context"
 	"io"
 	"testing"
 
@@ -26,6 +27,7 @@ func TestMultiMode_CommandMode(t *testing.T) {
 	history.EXPECT().AddRequest("initial")
 
 	multiMode := &MultiMode{
+		editMode:    NewEditor(io.Discard, history, true),
 		commandMode: NewEditor(io.Discard, history, true),
 	}
 	keyStream := make(chan core.KeyEvent, 1)
@@ -34,7 +36,9 @@ func TestMultiMode_CommandMode(t *testing.T) {
 
 	keyStream <- core.KeyEvent{Key: core.KeyEnter}
 
-	result, err := multiMode.CommandMode(keyStream, "initial")
+	multiMode.SetInput(keyStream)
+
+	result, err := multiMode.CommandMode(context.Background(), "initial")
 	assert.NoError(t, err)
 	assert.Equal(t, "initial", result)
 }
@@ -45,7 +49,8 @@ func TestMultiMode_Edit(t *testing.T) {
 	history.EXPECT().AddRequest("edit")
 
 	multiMode := &MultiMode{
-		editMode: NewEditor(io.Discard, history, true),
+		commandMode: NewEditor(io.Discard, history, true),
+		editMode:    NewEditor(io.Discard, history, true),
 	}
 
 	keyStream := make(chan core.KeyEvent, 1)
@@ -54,7 +59,9 @@ func TestMultiMode_Edit(t *testing.T) {
 
 	keyStream <- core.KeyEvent{Key: core.KeyEnter}
 
-	result, err := multiMode.Edit(keyStream, "edit")
+	multiMode.SetInput(keyStream)
+
+	result, err := multiMode.Edit(context.Background(), "edit")
 	assert.NoError(t, err)
 	assert.Equal(t, "edit", result)
 }

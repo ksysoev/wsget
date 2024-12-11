@@ -6,7 +6,6 @@ import (
 )
 
 type executionContext struct {
-	input      <-chan KeyEvent
 	cli        *CLI
 	outputFile io.Writer
 }
@@ -16,10 +15,6 @@ func newExecutionContext(cli *CLI, outputFile io.Writer) *executionContext {
 		cli:        cli,
 		outputFile: outputFile,
 	}
-}
-
-func (ctx *executionContext) Input() <-chan KeyEvent {
-	return ctx.cli.inputStream
 }
 
 func (ctx *executionContext) OutputFile() io.Writer {

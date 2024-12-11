@@ -44,7 +44,6 @@ type CommandFactory interface {
 }
 
 type ExecutionContext interface {
-	Input() <-chan KeyEvent
 	OutputFile() io.Writer
 	Output() io.Writer
 	Formater() Formater
@@ -55,8 +54,9 @@ type ExecutionContext interface {
 }
 
 type Editor interface {
-	Edit(keyStream <-chan KeyEvent, initBuffer string) (string, error)
-	CommandMode(keyStream <-chan KeyEvent, initBuffer string) (string, error)
+	Edit(ctx context.Context, initBuffer string) (string, error)
+	CommandMode(ctx context.Context, initBuffer string) (string, error)
+	SetInput(input <-chan KeyEvent)
 }
 
 type Executer interface {
@@ -89,6 +89,8 @@ func NewCLI(cmdFactory CommandFactory, wsConn ConnectionHandler, output io.Write
 			Type: Response,
 		})
 	})
+
+	editor.SetInput(c.inputStream)
 
 	return c
 }
