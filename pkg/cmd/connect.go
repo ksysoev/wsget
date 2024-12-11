@@ -8,10 +8,10 @@ import (
 	"os/user"
 	"time"
 
-	"github.com/ksysoev/wsget/pkg/command"
 	"github.com/ksysoev/wsget/pkg/core"
+	command2 "github.com/ksysoev/wsget/pkg/core/command"
 	"github.com/ksysoev/wsget/pkg/core/edit"
-	"github.com/ksysoev/wsget/pkg/formater"
+	"github.com/ksysoev/wsget/pkg/core/formater"
 	"github.com/ksysoev/wsget/pkg/input"
 	"github.com/ksysoev/wsget/pkg/repo"
 	"github.com/ksysoev/wsget/pkg/ws"
@@ -91,7 +91,7 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 
 	defer cmdHistory.Close()
 
-	macro, err := command.LoadMacroForDomain(homeDir+"/"+ConfigDir+"/"+MacroDir, wsConn.Hostname())
+	macro, err := command2.LoadMacroForDomain(homeDir+"/"+ConfigDir+"/"+MacroDir, wsConn.Hostname())
 	if err != nil {
 		return fmt.Errorf("fail to load macro: %s", err)
 	}
@@ -102,7 +102,7 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 	}
 
 	editor := edit.NewMultiMode(os.Stdout, history, cmdHistory, dict)
-	cmdFactory := command.NewFactory(macro)
+	cmdFactory := command2.NewFactory(macro)
 
 	client := core.NewCLI(cmdFactory, wsConn, os.Stdout, editor, formater.NewFormat())
 
@@ -216,19 +216,19 @@ func createCommands(args *flags) []core.Executer {
 
 	switch {
 	case args.request != "":
-		executers = []core.Executer{command.NewSend(args.request)}
+		executers = []core.Executer{command2.NewSend(args.request)}
 
 		if args.waitResponse >= 0 {
 			executers = append(
 				executers,
-				command.NewWaitForResp(time.Duration(args.waitResponse)*time.Second),
-				command.NewExit(),
+				command2.NewWaitForResp(time.Duration(args.waitResponse)*time.Second),
+				command2.NewExit(),
 			)
 		}
 	case args.inputFile != "":
-		executers = []core.Executer{command.NewInputFileCommand(args.inputFile)}
+		executers = []core.Executer{command2.NewInputFileCommand(args.inputFile)}
 	default:
-		executers = []core.Executer{command.NewEdit("")}
+		executers = []core.Executer{command2.NewEdit("")}
 	}
 
 	return executers
