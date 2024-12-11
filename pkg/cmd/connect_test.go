@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/coder/websocket"
-	"github.com/ksysoev/wsget/pkg/command"
 	"github.com/ksysoev/wsget/pkg/core"
+	"github.com/ksysoev/wsget/pkg/core/command"
 	"github.com/stretchr/testify/assert"
 )
 

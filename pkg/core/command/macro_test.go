@@ -266,8 +266,6 @@ func TestLoadFromFile(t *testing.T) {
 		t.Fatalf("Failed to create temporary test file: %v", err)
 	}
 
-	defer os.Remove(tempFile.Name())
-
 	// Write test data to the temporary test file
 	_, err = tempFile.WriteString(`
 version: 1
@@ -322,8 +320,6 @@ func TestLoadFromFile_InvalidFile(t *testing.T) {
 		t.Fatalf("Failed to create temporary test file: %v", err)
 	}
 
-	defer os.Remove(tempFile.Name())
-
 	// Write test data to the temporary test file
 	_, err = tempFile.WriteString("Some\n  - invalid\n    data")
 	if err != nil {
@@ -345,8 +341,6 @@ func TestLoadFromFile_InvalidVersion(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temporary test file: %v", err)
 	}
-
-	defer os.Remove(tempFile.Name())
 
 	// Write test data to the temporary test file
 	_, err = tempFile.WriteString(`

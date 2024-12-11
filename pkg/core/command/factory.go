@@ -22,7 +22,7 @@ func (f *Factory) Create(raw string) (core.Executer, error) {
 		return nil, &ErrEmptyCommand{}
 	}
 
-	parts := strings.SplitN(raw, " ", CommandPartsNumber)
+	parts := strings.SplitN(raw, " ", PartsNumber)
 	cmd := parts[0]
 
 	switch cmd {
@@ -48,9 +48,9 @@ func (f *Factory) Create(raw string) (core.Executer, error) {
 			return nil, &ErrEmptyRequest{}
 		}
 
-		args := strings.SplitN(parts[1], " ", CommandPartsNumber)
+		args := strings.SplitN(parts[1], " ", PartsNumber)
 
-		if len(args) < CommandPartsNumber {
+		if len(args) < PartsNumber {
 			return nil, fmt.Errorf("not enough arguments for print command: %s", raw)
 		}
 
@@ -83,13 +83,13 @@ func (f *Factory) Create(raw string) (core.Executer, error) {
 		return NewWaitForResp(timeout), nil
 
 	case "repeat":
-		if len(parts) < CommandPartsNumber {
+		if len(parts) < PartsNumber {
 			return nil, fmt.Errorf("not enough arguments for repeat command: %s", raw)
 		}
 
-		repeatParts := strings.SplitN(parts[1], " ", CommandPartsNumber)
+		repeatParts := strings.SplitN(parts[1], " ", PartsNumber)
 
-		if len(parts) < CommandPartsNumber {
+		if len(parts) < PartsNumber {
 			return nil, fmt.Errorf("not enough arguments for repeat command: %s", raw)
 		}
 
@@ -106,7 +106,7 @@ func (f *Factory) Create(raw string) (core.Executer, error) {
 		return NewRepeatCommand(times, subCommand), nil
 
 	case "sleep":
-		if len(parts) < CommandPartsNumber {
+		if len(parts) < PartsNumber {
 			return nil, fmt.Errorf("not enough arguments for sleep command: %s", raw)
 		}
 

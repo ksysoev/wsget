@@ -11,7 +11,7 @@ const (
 	LineUp         = "\x1b[1A"
 	LineClear      = "\x1b[2K"
 	NewLine        = '\n'
-	ReturnCarriege = "\r"
+	ReturnCarriage = "\r"
 	Backspace      = "\b"
 )
 
@@ -135,7 +135,7 @@ func (c *Content) MoveToPrevWord() string {
 
 	buf := bytes.NewBufferString("")
 	for i := c.pos - 1; pos <= i; i-- {
-		fmt.Fprint(buf, c.MovePositionLeft())
+		_, _ = fmt.Fprint(buf, c.MovePositionLeft())
 	}
 
 	return buf.String()
@@ -166,7 +166,7 @@ func (c *Content) DeleteToPrevWord() string {
 
 	buf := bytes.NewBufferString("")
 	for i := c.pos - 1; pos <= i; i-- {
-		fmt.Fprint(buf, c.RemovePrevSymbol())
+		_, _ = fmt.Fprint(buf, c.RemovePrevSymbol())
 	}
 
 	return buf.String()
@@ -192,7 +192,7 @@ func (c *Content) DeleteToNextWord() string {
 
 	buf := bytes.NewBufferString("")
 	for i := c.pos; i < pos; i++ {
-		fmt.Fprint(buf, c.RemoveNextSymbol())
+		_, _ = fmt.Fprint(buf, c.RemoveNextSymbol())
 	}
 
 	return buf.String()
@@ -206,11 +206,11 @@ func (c *Content) Clear() string {
 	}
 
 	output := c.MoveToEnd()
-	output += LineClear + ReturnCarriege
+	output += LineClear + ReturnCarriage
 
 	for i := 0; i < len(c.text); i++ {
 		if c.text[i] == NewLine {
-			output += LineUp + LineClear + ReturnCarriege
+			output += LineUp + LineClear + ReturnCarriage
 		}
 	}
 
@@ -287,20 +287,20 @@ func (c *Content) RemovePrevSymbol() string {
 
 	if symbol != NewLine {
 		endCurrentLine := startCurrentLine + len(lines[0])
-		return LineClear + ReturnCarriege + string(c.text[startCurrentLine:endCurrentLine-1]) + ReturnCarriege + string(c.text[startCurrentLine:c.pos])
+		return LineClear + ReturnCarriage + string(c.text[startCurrentLine:endCurrentLine-1]) + ReturnCarriage + string(c.text[startCurrentLine:c.pos])
 	}
 
-	output := LineUp + LineClear + ReturnCarriege + lines[0]
+	output := LineUp + LineClear + ReturnCarriage + lines[0]
 	moveUp := ""
 
 	for i := 1; i < len(lines); i++ {
-		output += lines[i] + string(NewLine) + LineClear + ReturnCarriege
+		output += lines[i] + string(NewLine) + LineClear + ReturnCarriage
 		moveUp += LineUp
 	}
 
 	if moveUp != "" {
 		output += moveUp
-		output += ReturnCarriege + lines[0]
+		output += ReturnCarriage + lines[0]
 	}
 
 	return output
@@ -330,20 +330,20 @@ func (c *Content) RemoveNextSymbol() string {
 
 	if symbol != NewLine {
 		endCurrentLine := startCurrentLine + len(lines[0])
-		return LineClear + ReturnCarriege + string(c.text[startCurrentLine:endCurrentLine-1]) + ReturnCarriege + string(c.text[startCurrentLine:c.pos])
+		return LineClear + ReturnCarriage + string(c.text[startCurrentLine:endCurrentLine-1]) + ReturnCarriage + string(c.text[startCurrentLine:c.pos])
 	}
 
 	output := ""
 	moveUp := ""
 
 	for i := 1; i < len(lines); i++ {
-		output += lines[i] + string(NewLine) + LineClear + ReturnCarriege
+		output += lines[i] + string(NewLine) + LineClear + ReturnCarriage
 		moveUp += LineUp
 	}
 
 	if moveUp != "" {
 		output += moveUp
-		output += ReturnCarriege + lines[0]
+		output += ReturnCarriage + lines[0]
 	}
 
 	return output
@@ -379,14 +379,14 @@ func (c *Content) InsertSymbol(symbol rune) string {
 	startCurrentLine, lines := c.GetLinesAfterPosition(c.pos - 1)
 
 	if symbol != NewLine {
-		// here probably i have a room for optimization
+		// here probably I have a room for optimization
 		endCurrentLine := startCurrentLine + len(lines[0])
-		return LineClear + ReturnCarriege + string(c.text[startCurrentLine:endCurrentLine]) + ReturnCarriege + string(c.text[startCurrentLine:c.pos])
+		return LineClear + ReturnCarriage + string(c.text[startCurrentLine:endCurrentLine]) + ReturnCarriage + string(c.text[startCurrentLine:c.pos])
 	}
 
 	output := ""
 	for i := 0; i < len(lines); i++ {
-		output += LineClear + ReturnCarriege + lines[i]
+		output += LineClear + ReturnCarriage + lines[i]
 		if i < len(lines)-1 {
 			output += string(NewLine)
 		}
@@ -397,7 +397,7 @@ func (c *Content) InsertSymbol(symbol rune) string {
 		moveUp += LineUp
 	}
 
-	output += moveUp + ReturnCarriege
+	output += moveUp + ReturnCarriage
 
 	return output
 }

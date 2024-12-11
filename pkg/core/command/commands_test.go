@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/ksysoev/wsget/pkg/core"
-	"github.com/ksysoev/wsget/pkg/formater"
+	"github.com/ksysoev/wsget/pkg/core/formater"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
