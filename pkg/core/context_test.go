@@ -2,76 +2,153 @@ package core
 
 import (
 	"bytes"
+	"context"
+	"fmt"
 	"testing"
+
+	"github.com/fatih/color"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewExecutionContext(t *testing.T) {
-	cli := &CLI{
-		inputStream: make(chan KeyEvent),
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		cli        *CLI
+		outputFile *bytes.Buffer
+	}{
+		{
+			name: "Valid CLI and OutputFile",
+			cli: &CLI{
+				inputStream: make(chan KeyEvent),
+			},
+			outputFile: &bytes.Buffer{},
+		},
+		{
+			name:       "Nil CLI",
+			cli:        nil,
+			outputFile: &bytes.Buffer{},
+		},
+		{
+			name:       "Nil OutputFile",
+			cli:        &CLI{},
+			outputFile: nil,
+		},
 	}
-	outputFile := &bytes.Buffer{}
 
-	executionContext := newExecutionContext(cli, outputFile)
-
-	if executionContext.cli != cli {
-		t.Errorf("Unexpected CLI: %v", executionContext.cli)
-	}
-
-	if executionContext.outputFile != outputFile {
-		t.Errorf("Unexpected output file: %v", executionContext.outputFile)
-	}
-}
-func TestExecutionContext_Connection(t *testing.T) {
-	cli := &CLI{}
-	outputFile := &bytes.Buffer{}
-
-	executionContext := newExecutionContext(cli, outputFile)
-
-	if executionContext.Connection() != cli.wsConn {
-		t.Errorf("Unexpected connection: %v", executionContext.Connection())
-	}
-}
-
-func TestExecutionContext_OutputFile(t *testing.T) {
-	cli := &CLI{}
-	outputFile := &bytes.Buffer{}
-
-	executionContext := newExecutionContext(cli, outputFile)
-
-	if executionContext.OutputFile() != outputFile {
-		t.Errorf("Unexpected connection: %v", executionContext.OutputFile())
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			executionContext := newExecutionContext(tt.cli, tt.outputFile)
+			assert.Equal(t, tt.cli, executionContext.cli, "CLI should match the input CLI")
+			assert.Equal(t, tt.outputFile, executionContext.outputFile, "Output file should match the input outputFile")
+		})
 	}
 }
 
-func TestExecutionContext_Output(t *testing.T) {
-	cli := &CLI{}
-	outputFile := &bytes.Buffer{}
+func TestExecutionContext_SendRequest(t *testing.T) {
+	tests := []struct {
+		name        string
+		setupCLI    func(ctx context.Context) *CLI
+		req         string
+		expectError bool
+	}{
+		{
+			name: "Valid request",
+			setupCLI: func(ctx context.Context) *CLI {
+				mockWsConn := NewMockConnectionHandler(t)
+				mockWsConn.EXPECT().Send(ctx, "valid request").Return(nil)
 
-	executionContext := newExecutionContext(cli, outputFile)
+				return &CLI{
+					wsConn: mockWsConn,
+				}
+			},
+			req:         "valid request",
+			expectError: false,
+		},
+		{
+			name: "Send failure",
+			setupCLI: func(ctx context.Context) *CLI {
+				mockWsConn := NewMockConnectionHandler(t)
+				mockWsConn.EXPECT().Send(ctx, "invalid request").Return(fmt.Errorf("send error"))
 
-	if executionContext.Output() != cli.output {
-		t.Errorf("Unexpected connection: %v", executionContext.Output())
+				return &CLI{
+					wsConn: mockWsConn,
+				}
+			},
+			req:         "invalid request",
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			cli := tt.setupCLI(ctx)
+			ec := &executionContext{
+				cli: cli,
+				ctx: ctx,
+			}
+
+			err := ec.SendRequest(tt.req)
+			if tt.expectError {
+				assert.Error(t, err, "Expected error but got none")
+			} else {
+				assert.NoError(t, err, "Did not expect an error")
+			}
+		})
 	}
 }
 
-func TestExecutionContext_Formater(t *testing.T) {
-	cli := &CLI{}
-	outputFile := &bytes.Buffer{}
+func TestExecutionContext_Print(t *testing.T) {
+	t.Parallel()
 
-	executionContext := newExecutionContext(cli, outputFile)
-
-	if executionContext.Formater() != cli.formater {
-		t.Errorf("Unexpected connection: %v", executionContext.Formater())
+	tests := []struct {
+		name        string
+		data        string
+		attributes  []color.Attribute
+		setupCLI    func() *CLI
+		expectError bool
+	}{
+		{
+			name:       "Valid case with no attributes",
+			data:       "test data",
+			attributes: nil,
+			setupCLI: func() *CLI {
+				return &CLI{
+					output: &bytes.Buffer{},
+				}
+			},
+		},
+		{
+			name:       "Valid case with attributes",
+			data:       "colored data",
+			attributes: []color.Attribute{color.FgBlue, color.Bold},
+			setupCLI: func() *CLI {
+				return &CLI{
+					output: &bytes.Buffer{},
+				}
+			},
+		},
 	}
-}
 
-func TestExecutionContext_RequestEditor(t *testing.T) {
-	cli := &CLI{}
-	outputFile := &bytes.Buffer{}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cli := tt.setupCLI()
+			ec := &executionContext{
+				cli: cli,
+			}
 
-	executionContext := newExecutionContext(cli, outputFile)
-
-	if executionContext.Editor() != cli.editor {
-		t.Errorf("Unexpected connection: %v", executionContext.Editor())
+			err := ec.Print(tt.data, tt.attributes...)
+			if tt.expectError {
+				assert.Error(t, err, "Expected error but got none")
+			} else {
+				assert.NoError(t, err, "Did not expect an error")
+				if cli.output != nil {
+					output := cli.output.(*bytes.Buffer).String()
+					assert.Contains(t, output, tt.data, "Expected output to contain data")
+				}
+			}
+		})
 	}
 }

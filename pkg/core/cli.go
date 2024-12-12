@@ -51,7 +51,6 @@ type ExecutionContext interface {
 	PrintMessage(msg Message) error
 	SendRequest(req string) error
 	WaitForResponse(timeout time.Duration) (Message, error)
-	WaitForMessage(context.Context) (Message, error)
 	EditorMode(initBuffer string) (string, error)
 	CommandMode(initBuffer string) (string, error)
 	CreateCommand(raw string) (Executer, error)
