@@ -152,3 +152,59 @@ func TestExecutionContext_Print(t *testing.T) {
 		})
 	}
 }
+
+func TestExecutionContext_EditorMode(t *testing.T) {
+	mockEditor := NewMockEditor(t)
+	ctx := context.Background()
+
+	mockEditor.EXPECT().Edit(ctx, "test").Return("test", nil)
+
+	ec := &executionContext{
+		ctx: ctx,
+		cli: &CLI{
+			editor: mockEditor,
+		},
+	}
+
+	res, err := ec.EditorMode("test")
+	assert.NoError(t, err, "Expected no error")
+	assert.Equal(t, "test", res, "Expected response to match")
+}
+
+func TestExecutionContext_CommandMode(t *testing.T) {
+	mockEditor := NewMockEditor(t)
+	ctx := context.Background()
+
+	mockEditor.EXPECT().CommandMode(ctx, "test").Return("test", nil)
+
+	ec := &executionContext{
+		ctx: ctx,
+		cli: &CLI{
+			editor: mockEditor,
+		},
+	}
+
+	res, err := ec.CommandMode("test")
+	assert.NoError(t, err, "Expected no error")
+	assert.Equal(t, "test", res, "Expected response to match")
+}
+
+func TestExecutionContext_CreateCommand(t *testing.T) {
+	mockFactory := NewMockCommandFactory(t)
+	ctx := context.Background()
+
+	expectCmd := NewMockExecuter(t)
+
+	mockFactory.EXPECT().Create("test").Return(expectCmd, nil)
+
+	ec := &executionContext{
+		ctx: ctx,
+		cli: &CLI{
+			cmdFactory: mockFactory,
+		},
+	}
+
+	cmd, err := ec.CreateCommand("test")
+	assert.NoError(t, err, "Expected no error")
+	assert.Equal(t, expectCmd, cmd, "Expected command to match")
+}
