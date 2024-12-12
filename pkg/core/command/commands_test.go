@@ -1,85 +1,16 @@
 package command
 
 import (
-	"bytes"
 	"errors"
-	"fmt"
 	"testing"
+	"time"
 
 	"github.com/ksysoev/wsget/pkg/core"
-	"github.com/ksysoev/wsget/pkg/core/formater"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
 
-type mockCommand struct {
-	err error
-}
-
-func (c *mockCommand) Execute(_ core.ExecutionContext) (core.Executer, error) {
-	return nil, c.err
-}
-
-func TestSequence_Execute(t *testing.T) {
-	tests := []struct {
-		exCtx       core.ExecutionContext
-		name        string
-		subCommands []core.Executer
-		wantErr     bool
-	}{
-		{
-			name:        "empty command sequence",
-			subCommands: []core.Executer{},
-			exCtx:       core.NewMockExecutionContext(t),
-			wantErr:     false,
-		},
-		{
-			name: "command sequence with one command",
-			subCommands: []core.Executer{
-				&mockCommand{},
-			},
-			exCtx:   core.NewMockExecutionContext(t),
-			wantErr: false,
-		},
-		{
-			name: "command sequence with multiple commands",
-			subCommands: []core.Executer{
-				&mockCommand{},
-				&mockCommand{},
-				&mockCommand{},
-			},
-			exCtx:   core.NewMockExecutionContext(t),
-			wantErr: false,
-		},
-		{
-			name: "command sequence with error",
-			subCommands: []core.Executer{
-				&mockCommand{},
-				&mockCommand{err: fmt.Errorf("error")},
-				&mockCommand{},
-			},
-			exCtx:   core.NewMockExecutionContext(t),
-			wantErr: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cs := &Sequence{
-				subCommands: tt.subCommands,
-			}
-
-			_, err := cs.Execute(tt.exCtx)
-
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Sequence.Execute() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
 func TestExit_Execute(t *testing.T) {
-	c := &Exit{}
+	c := NewExit()
 	_, err := c.Execute(nil)
 
 	if err == nil {
@@ -92,75 +23,291 @@ func TestExit_Execute(t *testing.T) {
 }
 
 func TestPrintMsg_Execute(t *testing.T) {
+	expectedMsg := core.Message{Type: core.Request, Data: "test"}
+
+	exCtx := core.NewMockExecutionContext(t)
+	exCtx.EXPECT().PrintMessage(expectedMsg).Return(nil)
+
+	c := NewPrintMsg(expectedMsg)
+	_, err := c.Execute(exCtx)
+
+	if err != nil {
+		t.Errorf("PrintMsg.Execute() error = %v, wantErr %v", err, nil)
+	}
+}
+
+func TestCmdEdit_Execute(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
-		name        string
-		expectedOut string
-		msg         core.Message
-		wantErr     bool
+		name             string
+		mockPrintError   error
+		mockCommandError error
+		mockCreateCmd    core.Executer
+		mockCreateCmdErr error
+		expectedNextCmd  core.Executer
+		expectedErr      error
+		mockRawCommand   string
 	}{
 		{
-			name: "request message",
-			msg: core.Message{
-				Type: core.Request,
-				Data: "some request data",
-			},
-			wantErr:     false,
-			expectedOut: "->\n" + "some request data\n",
+			name:             "ValidCommand",
+			mockPrintError:   nil,
+			mockCommandError: nil,
+			mockRawCommand:   "test-command",
+			mockCreateCmd:    NewPrintMsg(core.Message{Type: core.Request, Data: "mock"}),
+			expectedNextCmd:  NewPrintMsg(core.Message{Type: core.Request, Data: "mock"}),
+			expectedErr:      nil,
 		},
 		{
-			name: "response message",
-			msg: core.Message{
-				Type: core.Response,
-				Data: "some response data",
-			},
-			wantErr:     false,
-			expectedOut: "<-\n" + "some response data\n",
+			name:             "InvalidCommand",
+			mockPrintError:   nil,
+			mockCommandError: nil,
+			mockRawCommand:   "invalid-command",
+			mockCreateCmdErr: errors.New("invalid command"),
+			expectedNextCmd:  nil,
+			expectedErr:      errors.New("invalid command"),
+		},
+		{
+			name:             "ExecutionContextPrintError",
+			mockPrintError:   errors.New("print error"),
+			mockCommandError: nil,
+			mockRawCommand:   "",
+			expectedNextCmd:  nil,
+			expectedErr:      errors.New("print error"),
+		},
+		{
+			name:             "ExecutionContextCommandModeError",
+			mockPrintError:   nil,
+			mockCommandError: errors.New("command mode error"),
+			mockRawCommand:   "",
+			expectedNextCmd:  nil,
+			expectedErr:      errors.New("command mode error"),
 		},
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			c := &PrintMsg{
-				msg: tt.msg,
-			}
+			t.Parallel()
 
 			exCtx := core.NewMockExecutionContext(t)
-			exCtx.EXPECT().Formater().Return(formater.NewFormat())
-			exCtx.EXPECT().Output().Return(&bytes.Buffer{})
-			exCtx.EXPECT().OutputFile().Return(nil)
+			exCtx.EXPECT().Print(":\x1b[?25h").Return(tt.mockPrintError).Maybe()
+			exCtx.EXPECT().CommandMode("").Return(tt.mockRawCommand, tt.mockCommandError).Maybe()
+			exCtx.EXPECT().Print(LineClear + "\r" + HideCursor).Return(nil).Maybe()
+			exCtx.EXPECT().CreateCommand(tt.mockRawCommand).Return(tt.mockCreateCmd, tt.mockCreateCmdErr).Maybe()
 
-			_, err := c.Execute(exCtx)
+			cmd := NewCmdEdit()
+			nextCmd, err := cmd.Execute(exCtx)
 
-			if (err != nil) != tt.wantErr {
-				t.Errorf("PrintMsg.Execute() error = %v, wantErr %v", err, tt.wantErr)
-			}
-
-			if tt.wantErr {
-				return
+			if tt.expectedErr != nil {
+				assert.ErrorIs(t, err, tt.expectedErr)
+				assert.Nil(t, nextCmd)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expectedNextCmd, nextCmd)
 			}
 		})
 	}
 }
 
-func TestCmdEdit_Execute(t *testing.T) {
-	exCtx := core.NewMockExecutionContext(t)
-	output := &bytes.Buffer{}
-	input := make(chan core.KeyEvent)
-	editor := core.NewMockEditor(t)
-	editor.EXPECT().CommandMode(mock.Anything, "").Return("", nil)
+func TestNewWaitForResp_Execute(t *testing.T) {
+	t.Parallel()
 
-	exCtx.EXPECT().Output().Return(output)
-	exCtx.EXPECT().Editor().Return(editor)
-	exCtx.EXPECT().Factory().Return(NewFactory(nil))
+	tests := []struct {
+		name        string
+		timeout     time.Duration
+		expectedErr error
+	}{
+		{
+			name:        "ValidTimeout",
+			timeout:     5 * time.Second,
+			expectedErr: nil,
+		},
+		{
+			name:        "ZeroTimeout",
+			timeout:     0,
+			expectedErr: nil,
+		},
+		{
+			name:        "ErrorTimeout",
+			timeout:     5 * time.Second,
+			expectedErr: errors.New("response timeout"),
+		},
+	}
 
-	c := &CmdEdit{}
+	for _, tt := range tests {
+		tt := tt // capture range variable
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 
-	go func() {
-		input <- core.KeyEvent{}
-		close(input)
-	}()
+			var expectedMsg core.Message
+			if tt.expectedErr == nil {
+				expectedMsg = core.Message{Type: core.Response, Data: "test"}
+			}
 
-	cmd, err := c.Execute(exCtx)
-	assert.NoError(t, err)
-	assert.Nil(t, cmd)
+			exCtx := core.NewMockExecutionContext(t)
+			exCtx.EXPECT().WaitForResponse(tt.timeout).Return(expectedMsg, tt.expectedErr)
+
+			cmd := NewWaitForResp(tt.timeout)
+
+			cmd1, err := cmd.Execute(exCtx)
+
+			if tt.expectedErr != nil {
+				assert.ErrorIs(t, err, tt.expectedErr)
+				assert.Nil(t, cmd1)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, NewPrintMsg(expectedMsg), cmd1)
+			}
+		})
+	}
+}
+
+func TestSequence_Execute(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name             string
+		subCommands      []core.Executer
+		expectedNextCmd  core.Executer
+		expectedErr      error
+		mockExecutionCtx func(t *testing.T) core.ExecutionContext
+	}{
+		{
+			name:            "AllSubCommandsExecuteSuccessfully",
+			subCommands:     []core.Executer{NewPrintMsg(core.Message{Type: core.Request, Data: "test1"}), NewPrintMsg(core.Message{Type: core.Request, Data: "test2"})},
+			expectedNextCmd: nil,
+			expectedErr:     nil,
+			mockExecutionCtx: func(t *testing.T) core.ExecutionContext {
+				exCtx := core.NewMockExecutionContext(t)
+				exCtx.EXPECT().PrintMessage(core.Message{Type: core.Request, Data: "test1"}).Return(nil).Maybe()
+				exCtx.EXPECT().PrintMessage(core.Message{Type: core.Request, Data: "test2"}).Return(nil).Maybe()
+				return exCtx
+			},
+		},
+		{
+			name: "SubCommandReturnsAnotherCommand",
+			subCommands: []core.Executer{
+				NewPrintMsg(core.Message{Type: core.Request, Data: "test"}),
+				NewWaitForResp(5 * time.Second),
+			},
+			expectedNextCmd: nil,
+			expectedErr:     nil,
+			mockExecutionCtx: func(t *testing.T) core.ExecutionContext {
+				exCtx := core.NewMockExecutionContext(t)
+				exCtx.EXPECT().PrintMessage(core.Message{Type: core.Request, Data: "test"}).Return(nil).Maybe()
+				exCtx.EXPECT().PrintMessage(core.Message{Type: core.Response, Data: "response"}).Return(nil).Maybe()
+				expectedResponse := core.Message{Type: core.Response, Data: "response"}
+				exCtx.EXPECT().WaitForResponse(5*time.Second).Return(expectedResponse, nil).Maybe()
+				return exCtx
+			},
+		},
+		{
+			name: "SubCommandFailsWithError",
+			subCommands: []core.Executer{
+				NewPrintMsg(core.Message{Type: core.Request, Data: "test"}),
+				NewExit(),
+			},
+			expectedNextCmd: nil,
+			expectedErr:     errors.New("mock error"),
+			mockExecutionCtx: func(t *testing.T) core.ExecutionContext {
+				exCtx := core.NewMockExecutionContext(t)
+				exCtx.EXPECT().PrintMessage(core.Message{Type: core.Request, Data: "test"}).Return(nil).Maybe()
+				return exCtx
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			exCtx := tt.mockExecutionCtx(t)
+			seq := NewSequence(tt.subCommands)
+			nextCmd, err := seq.Execute(exCtx)
+
+			if tt.expectedErr != nil {
+				assert.Error(t, err)
+				assert.Nil(t, nextCmd)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expectedNextCmd, nextCmd)
+			}
+		})
+	}
+}
+
+func TestRepeat_Execute(t *testing.T) {
+	tests := []struct {
+		name                 string
+		times                int
+		subCommand           core.Executer
+		expectedErr          error
+		mockExecutionContext func(t *testing.T) core.ExecutionContext
+	}{
+		{
+			name:        "SubCommandExecutesOnce",
+			times:       1,
+			subCommand:  NewPrintMsg(core.Message{Type: core.Request, Data: "test"}),
+			expectedErr: nil,
+			mockExecutionContext: func(t *testing.T) core.ExecutionContext {
+				exCtx := core.NewMockExecutionContext(t)
+				exCtx.EXPECT().PrintMessage(core.Message{Type: core.Request, Data: "test"}).Return(nil).Maybe()
+				return exCtx
+			},
+		},
+		{
+			name:        "SubCommandExecutesMultipleTimes",
+			times:       3,
+			subCommand:  NewPrintMsg(core.Message{Type: core.Request, Data: "repeat"}),
+			expectedErr: nil,
+			mockExecutionContext: func(t *testing.T) core.ExecutionContext {
+				exCtx := core.NewMockExecutionContext(t)
+				exCtx.EXPECT().PrintMessage(core.Message{Type: core.Request, Data: "repeat"}).Return(nil).Times(3)
+				return exCtx
+			},
+		},
+		{
+			name:        "SubCommandFails",
+			times:       2,
+			subCommand:  NewPrintMsg(core.Message{Type: core.Request, Data: "fail"}),
+			expectedErr: errors.New("mock error"),
+			mockExecutionContext: func(t *testing.T) core.ExecutionContext {
+				exCtx := core.NewMockExecutionContext(t)
+				exCtx.EXPECT().PrintMessage(core.Message{Type: core.Request, Data: "fail"}).Return(errors.New("mock error")).Times(1)
+				return exCtx
+			},
+		},
+		{
+			name:        "ZeroExecutions",
+			times:       0,
+			subCommand:  NewPrintMsg(core.Message{Type: core.Request, Data: "skip"}),
+			expectedErr: nil,
+			mockExecutionContext: func(t *testing.T) core.ExecutionContext {
+				exCtx := core.NewMockExecutionContext(t) // Nothing should be called
+				return exCtx
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt // capture range variable
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			exCtx := tt.mockExecutionContext(t)
+			repeatCmd := NewRepeatCommand(tt.times, tt.subCommand)
+
+			nextCmd, err := repeatCmd.Execute(exCtx)
+
+			if tt.expectedErr != nil {
+				assert.Error(t, err)
+				assert.Nil(t, nextCmd)
+				assert.EqualError(t, err, tt.expectedErr.Error())
+			} else {
+				assert.NoError(t, err)
+				assert.Nil(t, nextCmd)
+			}
+		})
+	}
 }
