@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"testing"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/stretchr/testify/assert"
@@ -207,4 +209,234 @@ func TestExecutionContext_CreateCommand(t *testing.T) {
 	cmd, err := ec.CreateCommand("test")
 	assert.NoError(t, err, "Expected no error")
 	assert.Equal(t, expectCmd, cmd, "Expected command to match")
+}
+
+func TestExecutionContext_PrintMessage(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name           string
+		message        Message
+		setupCLI       func() *CLI
+		expectError    bool
+		validateOutput func(t *testing.T, cli *CLI)
+		outputFile     io.Writer
+	}{
+		{
+			name: "Valid request message",
+			message: Message{
+				Type: Request,
+				Data: "Test Request Data",
+			},
+			setupCLI: func() *CLI {
+				formatter := NewMockFormater(t)
+				formatter.EXPECT().FormatMessage("Request", "Test Request Data").Return("Formatted Request", nil)
+				return &CLI{
+					output:   &bytes.Buffer{},
+					formater: formatter,
+				}
+			},
+			expectError: false,
+			validateOutput: func(t *testing.T, cli *CLI) {
+				output := cli.output.(*bytes.Buffer).String()
+				assert.Contains(t, output, "->", "Expected formatted request indicator")
+				assert.Contains(t, output, "Formatted Request", "Expected formatted request data")
+			},
+		},
+		{
+			name: "Valid response message",
+			message: Message{
+				Type: Response,
+				Data: "Test Response Data",
+			},
+			setupCLI: func() *CLI {
+				formatter := NewMockFormater(t)
+				formatter.EXPECT().FormatMessage("Response", "Test Response Data").Return("Formatted Response", nil)
+				return &CLI{
+					output:   &bytes.Buffer{},
+					formater: formatter,
+				}
+			},
+			expectError: false,
+			validateOutput: func(t *testing.T, cli *CLI) {
+				output := cli.output.(*bytes.Buffer).String()
+				assert.Contains(t, output, "<-", "Expected formatted response indicator")
+				assert.Contains(t, output, "Formatted Response", "Expected formatted response data")
+			},
+		},
+		{
+			name: "Unsupported message type",
+			message: Message{
+				Type: MessageType(3),
+				Data: "Unsupported Data",
+			},
+			setupCLI: func() *CLI {
+				formatter := NewMockFormater(t)
+				formatter.EXPECT().FormatMessage("Not defined", "Unsupported Data").Return("", nil)
+
+				return &CLI{
+					formater: formatter,
+				}
+			},
+			expectError:    true,
+			validateOutput: nil,
+		},
+		{
+			name: "Error during formatting",
+			message: Message{
+				Type: Request,
+				Data: "Test Data",
+			},
+			setupCLI: func() *CLI {
+				formatter := NewMockFormater(t)
+				formatter.EXPECT().FormatMessage("Request", "Test Data").Return("", fmt.Errorf("formatting error"))
+				return &CLI{
+					formater: formatter,
+				}
+			},
+			expectError:    true,
+			validateOutput: nil,
+		},
+		{
+			name: "Output file handling",
+			message: Message{
+				Type: Response,
+				Data: "Test File Data",
+			},
+			setupCLI: func() *CLI {
+				formatter := NewMockFormater(t)
+				formatter.EXPECT().FormatMessage("Response", "Test File Data").Return("Formatted File Response", nil)
+				formatter.EXPECT().FormatForFile("Response", "Test File Data").Return("File Response Data", nil)
+
+				return &CLI{
+					output:   &bytes.Buffer{},
+					formater: formatter,
+				}
+			},
+			expectError: false,
+			validateOutput: func(t *testing.T, cli *CLI) {
+				output := cli.output.(*bytes.Buffer).String()
+				assert.Contains(t, output, "<-", "Expected formatted response indicator")
+				assert.Contains(t, output, "Formatted File Response", "Expected formatted response data")
+
+				// Validate output file content (if applicable, passing mock output file).
+			},
+			outputFile: &bytes.Buffer{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cli := tt.setupCLI()
+			ec := &executionContext{
+				cli:        cli,
+				outputFile: tt.outputFile,
+			}
+
+			err := ec.PrintMessage(tt.message)
+			if tt.expectError {
+				assert.Error(t, err, "Expected an error but got none")
+			} else {
+				assert.NoError(t, err, "Did not expect an error but got one")
+			}
+
+			if tt.validateOutput != nil {
+				tt.validateOutput(t, cli)
+			}
+		})
+	}
+}
+
+func TestExecutionContext_WaitForResponse(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name           string
+		timeout        time.Duration
+		setupCLI       func(ctx context.Context) *CLI
+		expectedResult Message
+		expectError    bool
+	}{
+		{
+			name:    "Valid response within timeout",
+			timeout: 2 * time.Second,
+			setupCLI: func(ctx context.Context) *CLI {
+				msgChan := make(chan Message, 1)
+				msgChan <- Message{Type: Response, Data: "Response Data"}
+
+				return &CLI{
+					messages: msgChan,
+				}
+			},
+			expectedResult: Message{Type: Response, Data: "Response Data"},
+			expectError:    false,
+		},
+		{
+			name:    "Timeout exceeded",
+			timeout: 1 * time.Millisecond,
+			setupCLI: func(ctx context.Context) *CLI {
+				msgChan := make(chan Message, 1)
+				go func() {
+					time.Sleep(2 * time.Millisecond)
+					msgChan <- Message{Type: Response, Data: "Response Data"}
+				}()
+
+				return &CLI{
+					messages: msgChan,
+				}
+			},
+			expectedResult: Message{},
+			expectError:    true,
+		},
+		{
+			name:    "Error from CLI",
+			timeout: 1 * time.Millisecond,
+			setupCLI: func(ctx context.Context) *CLI {
+				msgChan := make(chan Message, 1)
+				go func() {
+					time.Sleep(2 * time.Millisecond)
+					msgChan <- Message{Type: Response, Data: "Response Data"}
+				}()
+
+				return &CLI{
+					messages: msgChan,
+				}
+			},
+			expectedResult: Message{},
+			expectError:    true,
+		},
+		{
+			name:    "Zero timeout with valid response",
+			timeout: 0,
+			setupCLI: func(ctx context.Context) *CLI {
+				msgChan := make(chan Message, 1)
+				msgChan <- Message{Type: Request, Data: "Immediate Response"}
+
+				return &CLI{
+					messages: msgChan,
+				}
+			},
+			expectedResult: Message{Type: Request, Data: "Immediate Response"},
+			expectError:    false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			cli := tt.setupCLI(ctx)
+			ec := &executionContext{
+				cli: cli,
+				ctx: ctx,
+			}
+
+			result, err := ec.WaitForResponse(tt.timeout)
+			if tt.expectError {
+				assert.Error(t, err, "Expected an error but got none")
+			} else {
+				assert.NoError(t, err, "Did not expect an error but got one")
+				assert.Equal(t, tt.expectedResult, result, "Expected result to match")
+			}
+		})
+	}
 }
