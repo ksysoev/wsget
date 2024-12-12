@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"time"
+
+	"github.com/fatih/color"
 )
 
 const (
@@ -44,13 +47,14 @@ type CommandFactory interface {
 }
 
 type ExecutionContext interface {
-	OutputFile() io.Writer
-	Output() io.Writer
-	Formater() Formater
-	Connection() ConnectionHandler
+	Print(data string, attr ...color.Attribute) error
+	PrintMessage(msg Message) error
+	SendRequest(req string) error
+	WaitForResponse(timeout time.Duration) (Message, error)
 	WaitForMessage(context.Context) (Message, error)
-	Editor() Editor
-	Factory() CommandFactory
+	EditorMode(initBuffer string) (string, error)
+	CommandMode(initBuffer string) (string, error)
+	CreateCommand(raw string) (Executer, error)
 }
 
 type Editor interface {

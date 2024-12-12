@@ -23,8 +23,8 @@ func newExecutionContext(cli *CLI, outputFile io.Writer) *executionContext {
 	}
 }
 
-func (c *executionContext) Print(data string) error {
-	_, err := fmt.Fprintln(c.cli.output, data)
+func (c *executionContext) Print(data string, attr ...color.Attribute) error {
+	_, err := color.New(attr...).Fprintln(c.cli.output, data)
 	return err
 }
 
@@ -32,38 +32,43 @@ func (c *executionContext) PrintMessage(msg Message) error {
 	output, err := c.cli.formater.FormatMessage(msg.Type.String(), msg.Data)
 
 	if err != nil {
-		return err
+		return fmt.Errorf("fail to format message: %w", err)
 	}
 
 	switch msg.Type {
 	case Request:
-		_, _ = color.New(color.FgGreen).Fprintln(c.cli.output, "->")
+		err = c.Print("->", color.FgGreen)
 	case Response:
-		_, _ = color.New(color.FgRed).Fprintln(c.cli.output, "<-")
+		err = c.Print("<-", color.FgRed)
 	default:
 		return fmt.Errorf("unsupported message type: %s", msg.Type.String())
 	}
 
-	_, _ = fmt.Fprintf(c.cli.output, "%s\n", output)
+	if err != nil {
+		return fmt.Errorf("fail to print message: %w", err)
+	}
+
+	if err := c.Print("%s\n" + output); err != nil {
+		return fmt.Errorf("fail to print message: %w", err)
+	}
 
 	outputFile := c.outputFile
 	if outputFile != nil && !reflect.ValueOf(outputFile).IsNil() {
 		output, err := c.cli.formater.FormatForFile(msg.Type.String(), msg.Data)
 		if err != nil {
-			return err
+			return fmt.Errorf("fail to format message for file: %w", err)
 		}
 
-		_, err = fmt.Fprintln(outputFile, output)
-		if err != nil {
-			return err
+		if _, err := fmt.Fprintln(outputFile, output); err != nil {
+			return fmt.Errorf("fail to write to output file: %w", err)
 		}
 	}
 
 	return nil
 }
 
-func (c *executionContext) SendRequest(request string) error {
-	return c.cli.wsConn.Send(c.ctx, request)
+func (c *executionContext) SendRequest(req string) error {
+	return c.cli.wsConn.Send(c.ctx, req)
 }
 
 func (c *executionContext) WaitForResponse(timeout time.Duration) (Message, error) {
