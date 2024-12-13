@@ -13,12 +13,10 @@ import (
 )
 
 func TestNewExecutionContext(t *testing.T) {
-	t.Parallel()
-
 	tests := []struct {
-		name       string
 		cli        *CLI
 		outputFile *bytes.Buffer
+		name       string
 	}{
 		{
 			name: "Valid CLI and OutputFile",
@@ -103,13 +101,11 @@ func TestExecutionContext_SendRequest(t *testing.T) {
 }
 
 func TestExecutionContext_Print(t *testing.T) {
-	t.Parallel()
-
 	tests := []struct {
+		setupCLI    func() *CLI
 		name        string
 		data        string
 		attributes  []color.Attribute
-		setupCLI    func() *CLI
 		expectError bool
 	}{
 		{
@@ -146,6 +142,7 @@ func TestExecutionContext_Print(t *testing.T) {
 				assert.Error(t, err, "Expected error but got none")
 			} else {
 				assert.NoError(t, err, "Did not expect an error")
+
 				if cli.output != nil {
 					output := cli.output.(*bytes.Buffer).String()
 					assert.Contains(t, output, tt.data, "Expected output to contain data")
@@ -212,15 +209,13 @@ func TestExecutionContext_CreateCommand(t *testing.T) {
 }
 
 func TestExecutionContext_PrintMessage(t *testing.T) {
-	t.Parallel()
-
 	tests := []struct {
+		outputFile     io.Writer
+		setupCLI       func() *CLI
+		validateOutput func(t *testing.T, cli *CLI)
 		name           string
 		message        Message
-		setupCLI       func() *CLI
 		expectError    bool
-		validateOutput func(t *testing.T, cli *CLI)
-		outputFile     io.Writer
 	}{
 		{
 			name: "Valid request message",
@@ -238,6 +233,8 @@ func TestExecutionContext_PrintMessage(t *testing.T) {
 			},
 			expectError: false,
 			validateOutput: func(t *testing.T, cli *CLI) {
+				t.Helper()
+
 				output := cli.output.(*bytes.Buffer).String()
 				assert.Contains(t, output, "->", "Expected formatted request indicator")
 				assert.Contains(t, output, "Formatted Request", "Expected formatted request data")
@@ -259,6 +256,8 @@ func TestExecutionContext_PrintMessage(t *testing.T) {
 			},
 			expectError: false,
 			validateOutput: func(t *testing.T, cli *CLI) {
+				t.Helper()
+
 				output := cli.output.(*bytes.Buffer).String()
 				assert.Contains(t, output, "<-", "Expected formatted response indicator")
 				assert.Contains(t, output, "Formatted Response", "Expected formatted response data")
@@ -315,11 +314,11 @@ func TestExecutionContext_PrintMessage(t *testing.T) {
 			},
 			expectError: false,
 			validateOutput: func(t *testing.T, cli *CLI) {
+				t.Helper()
+
 				output := cli.output.(*bytes.Buffer).String()
 				assert.Contains(t, output, "<-", "Expected formatted response indicator")
 				assert.Contains(t, output, "Formatted File Response", "Expected formatted response data")
-
-				// Validate output file content (if applicable, passing mock output file).
 			},
 			outputFile: &bytes.Buffer{},
 		},
@@ -348,19 +347,17 @@ func TestExecutionContext_PrintMessage(t *testing.T) {
 }
 
 func TestExecutionContext_WaitForResponse(t *testing.T) {
-	t.Parallel()
-
 	tests := []struct {
-		name           string
-		timeout        time.Duration
 		setupCLI       func(ctx context.Context) *CLI
+		name           string
 		expectedResult Message
+		timeout        time.Duration
 		expectError    bool
 	}{
 		{
 			name:    "Valid response within timeout",
 			timeout: 2 * time.Second,
-			setupCLI: func(ctx context.Context) *CLI {
+			setupCLI: func(_ context.Context) *CLI {
 				msgChan := make(chan Message, 1)
 				msgChan <- Message{Type: Response, Data: "Response Data"}
 
@@ -374,7 +371,7 @@ func TestExecutionContext_WaitForResponse(t *testing.T) {
 		{
 			name:    "Timeout exceeded",
 			timeout: 1 * time.Millisecond,
-			setupCLI: func(ctx context.Context) *CLI {
+			setupCLI: func(_ context.Context) *CLI {
 				msgChan := make(chan Message, 1)
 				go func() {
 					time.Sleep(2 * time.Millisecond)
@@ -391,7 +388,7 @@ func TestExecutionContext_WaitForResponse(t *testing.T) {
 		{
 			name:    "Error from CLI",
 			timeout: 1 * time.Millisecond,
-			setupCLI: func(ctx context.Context) *CLI {
+			setupCLI: func(_ context.Context) *CLI {
 				msgChan := make(chan Message, 1)
 				go func() {
 					time.Sleep(2 * time.Millisecond)
@@ -408,7 +405,7 @@ func TestExecutionContext_WaitForResponse(t *testing.T) {
 		{
 			name:    "Zero timeout with valid response",
 			timeout: 0,
-			setupCLI: func(ctx context.Context) *CLI {
+			setupCLI: func(_ context.Context) *CLI {
 				msgChan := make(chan Message, 1)
 				msgChan <- Message{Type: Request, Data: "Immediate Response"}
 
