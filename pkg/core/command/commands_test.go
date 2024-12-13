@@ -2,12 +2,14 @@ package command
 
 import (
 	"errors"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/fatih/color"
 	"github.com/ksysoev/wsget/pkg/core"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func TestExit_Execute(t *testing.T) {
@@ -41,14 +43,15 @@ func TestCmdEdit_Execute(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name             string
-		mockPrintError   error
-		mockCommandError error
-		mockCreateCmd    core.Executer
-		mockCreateCmdErr error
-		expectedNextCmd  core.Executer
-		expectedErr      error
-		mockRawCommand   string
+		name                string
+		mockPrintError      error
+		mockPrintAfterError error
+		mockCommandError    error
+		mockCreateCmd       core.Executer
+		mockCreateCmdErr    error
+		expectedNextCmd     core.Executer
+		expectedErr         error
+		mockRawCommand      string
 	}{
 		{
 			name:             "ValidCommand",
@@ -58,6 +61,47 @@ func TestCmdEdit_Execute(t *testing.T) {
 			mockCreateCmd:    NewPrintMsg(core.Message{Type: core.Request, Data: "mock"}),
 			expectedNextCmd:  NewPrintMsg(core.Message{Type: core.Request, Data: "mock"}),
 			expectedErr:      nil,
+		},
+		{
+			name:             "CreateCommandError",
+			mockPrintError:   nil,
+			mockCommandError: nil,
+			mockRawCommand:   "invalid-command",
+			mockCreateCmd:    nil,
+			mockCreateCmdErr: assert.AnError,
+			expectedNextCmd:  nil,
+			expectedErr:      nil,
+		},
+		{
+			name:             "EmptyRawCommand",
+			mockPrintError:   nil,
+			mockCommandError: nil,
+			mockRawCommand:   "",
+			mockCreateCmd:    nil,
+			mockCreateCmdErr: nil,
+			expectedNextCmd:  nil,
+			expectedErr:      nil, // Assuming it's valid to return no command or error.
+		},
+		{
+			name:             "PrintErrorAtStart",
+			mockPrintError:   assert.AnError,
+			mockCommandError: nil,
+			mockRawCommand:   "test-command",
+			mockCreateCmd:    nil,
+			mockCreateCmdErr: nil,
+			expectedNextCmd:  nil,
+			expectedErr:      assert.AnError,
+		},
+		{
+			name:                "PrintErrorOnCursorHide",
+			mockPrintError:      nil,
+			mockCommandError:    nil,
+			mockPrintAfterError: assert.AnError,
+			mockRawCommand:      "test-command",
+			mockCreateCmd:       nil,
+			mockCreateCmdErr:    nil,
+			expectedNextCmd:     nil,
+			expectedErr:         assert.AnError,
 		},
 	}
 
@@ -69,8 +113,9 @@ func TestCmdEdit_Execute(t *testing.T) {
 			exCtx := core.NewMockExecutionContext(t)
 			exCtx.EXPECT().Print(":\x1b[?25h").Return(tt.mockPrintError).Maybe()
 			exCtx.EXPECT().CommandMode("").Return(tt.mockRawCommand, tt.mockCommandError).Maybe()
-			exCtx.EXPECT().Print(LineClear + "\r" + HideCursor).Return(nil).Maybe()
+			exCtx.EXPECT().Print(LineClear + "\r" + HideCursor).Return(tt.mockPrintAfterError).Maybe()
 			exCtx.EXPECT().CreateCommand(tt.mockRawCommand).Return(tt.mockCreateCmd, tt.mockCreateCmdErr).Maybe()
+			exCtx.EXPECT().Print("Invalid command: "+tt.mockRawCommand+"\n", color.FgRed).Return(nil).Maybe()
 
 			cmd := NewCmdEdit()
 			nextCmd, err := cmd.Execute(exCtx)
@@ -189,6 +234,21 @@ func TestSequence_Execute(t *testing.T) {
 			mockExecutionCtx: func(t *testing.T) core.ExecutionContext {
 				exCtx := core.NewMockExecutionContext(t)
 				exCtx.EXPECT().PrintMessage(core.Message{Type: core.Request, Data: "test"}).Return(nil).Maybe()
+				return exCtx
+			},
+		},
+		{
+			name: "FirstSubCommandFails",
+			subCommands: []core.Executer{
+				NewPrintMsg(core.Message{Type: core.Request, Data: "fail"}),
+				NewExit(),
+			},
+			expectedNextCmd: nil,
+			expectedErr:     errors.New("failure in subcommand"),
+			mockExecutionCtx: func(t *testing.T) core.ExecutionContext {
+				exCtx := core.NewMockExecutionContext(t)
+				exCtx.EXPECT().PrintMessage(core.Message{Type: core.Request, Data: "fail"}).
+					Return(errors.New("failure in subcommand"))
 				return exCtx
 			},
 		},
@@ -363,6 +423,180 @@ func TestEdit_Execute(t *testing.T) {
 
 			if tt.expectedErr != nil {
 				assert.ErrorIs(t, err, tt.expectedErr)
+				assert.Nil(t, nextCmd)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expectedNextCmd, nextCmd)
+			}
+		})
+	}
+}
+
+func TestSend_Execute(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name             string
+		mockRequest      string
+		expectedErr      error
+		expectedNextCmd  core.Executer
+		mockExecutionCtx func(t *testing.T, mockRequest string) core.ExecutionContext
+	}{
+		{
+			name:        "SuccessfulExecution",
+			mockRequest: "test-request",
+			expectedErr: nil,
+			expectedNextCmd: NewPrintMsg(core.Message{
+				Type: core.Request, Data: "test-request",
+			}),
+			mockExecutionCtx: func(t *testing.T, mockRequest string) core.ExecutionContext {
+				exCtx := core.NewMockExecutionContext(t)
+				exCtx.EXPECT().SendRequest(mockRequest).Return(nil)
+				return exCtx
+			},
+		},
+		{
+			name:            "SendRequestError",
+			mockRequest:     "error-request",
+			expectedErr:     assert.AnError,
+			expectedNextCmd: nil,
+			mockExecutionCtx: func(t *testing.T, mockRequest string) core.ExecutionContext {
+				exCtx := core.NewMockExecutionContext(t)
+				exCtx.EXPECT().SendRequest(mockRequest).Return(assert.AnError)
+				return exCtx
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			exCtx := tt.mockExecutionCtx(t, tt.mockRequest)
+			cmd := NewSend(tt.mockRequest)
+
+			nextCmd, err := cmd.Execute(exCtx)
+
+			if tt.expectedErr != nil {
+				assert.ErrorIs(t, err, tt.expectedErr)
+				assert.Nil(t, nextCmd)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expectedNextCmd, nextCmd)
+			}
+		})
+	}
+}
+
+func TestInputFileCommand_Execute(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name            string
+		filePath        string
+		fileContent     string
+		mockCreateCmd   func(cmd string) (core.Executer, error)
+		expectedErr     bool
+		expectedNextCmd core.Executer
+		prepareFile     func(t *testing.T, filePath, content string)
+		cleanupFile     func(filePath string)
+	}{
+		{
+			name:        "SuccessfulFileReadAndCommandExecution",
+			filePath:    "test-file.yaml",
+			fileContent: "- print-msg-1\n- print-msg-2\n",
+			mockCreateCmd: func(cmd string) (core.Executer, error) {
+				return NewPrintMsg(core.Message{Type: core.Request, Data: cmd}), nil
+			},
+			expectedErr: false,
+			expectedNextCmd: NewSequence([]core.Executer{
+				NewPrintMsg(core.Message{Type: core.Request, Data: "print-msg-1"}),
+				NewPrintMsg(core.Message{Type: core.Request, Data: "print-msg-2"}),
+			}),
+			prepareFile: func(t *testing.T, filePath string, content string) {
+				err := os.WriteFile(filePath, []byte(content), 0600)
+				assert.NoError(t, err)
+			},
+			cleanupFile: func(filePath string) {
+				_ = os.Remove(filePath)
+			},
+		},
+		{
+			name:            "InvalidFilePath",
+			filePath:        "invalid-file.yaml",
+			fileContent:     "",
+			mockCreateCmd:   nil,
+			expectedErr:     true,
+			expectedNextCmd: nil,
+			prepareFile:     func(t *testing.T, filePath string, content string) {}, // No file preparation
+			cleanupFile:     func(filePath string) {},                               // No cleanup needed
+		},
+		{
+			name:        "InvalidYAMLContent",
+			filePath:    "invalid-yaml-file.yaml",
+			fileContent: "not-a-valid-yaml",
+			mockCreateCmd: func(cmd string) (core.Executer, error) {
+				return nil, nil
+			},
+			expectedErr:     true,
+			expectedNextCmd: nil,
+			prepareFile: func(t *testing.T, filePath string, content string) {
+				err := os.WriteFile(filePath, []byte(content), 0600)
+				assert.NoError(t, err)
+			},
+			cleanupFile: func(filePath string) {
+				_ = os.Remove(filePath)
+			},
+		},
+		{
+			name:        "CommandCreationError",
+			filePath:    "commands.yaml",
+			fileContent: "- valid-command\n- invalid-command\n",
+			mockCreateCmd: func(cmd string) (core.Executer, error) {
+				if cmd == "valid-command" {
+					return NewPrintMsg(core.Message{Type: core.Request, Data: cmd}), nil
+				}
+				return nil, assert.AnError
+			},
+			expectedErr:     true,
+			expectedNextCmd: nil,
+			prepareFile: func(t *testing.T, filePath string, content string) {
+				err := os.WriteFile(filePath, []byte(content), 0600)
+				assert.NoError(t, err)
+			},
+			cleanupFile: func(filePath string) {
+				_ = os.Remove(filePath)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt // capture range variable
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Prepare environment
+			if tt.prepareFile != nil {
+				tt.prepareFile(t, tt.filePath, tt.fileContent)
+			}
+			if tt.cleanupFile != nil {
+				defer tt.cleanupFile(tt.filePath)
+			}
+
+			// Mock execution context
+			exCtx := core.NewMockExecutionContext(t)
+			if tt.mockCreateCmd != nil {
+				exCtx.EXPECT().CreateCommand(mock.Anything).RunAndReturn(tt.mockCreateCmd).Maybe()
+			}
+
+			// Execute InputFileCommand
+			cmd := NewInputFileCommand(tt.filePath)
+			nextCmd, err := cmd.Execute(exCtx)
+
+			// Assertions
+			if tt.expectedErr {
+				assert.Error(t, err)
 				assert.Nil(t, nextCmd)
 			} else {
 				assert.NoError(t, err)
