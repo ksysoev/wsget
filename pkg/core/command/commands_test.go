@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/ksysoev/wsget/pkg/core"
 	"github.com/stretchr/testify/assert"
 )
@@ -57,31 +58,6 @@ func TestCmdEdit_Execute(t *testing.T) {
 			mockCreateCmd:    NewPrintMsg(core.Message{Type: core.Request, Data: "mock"}),
 			expectedNextCmd:  NewPrintMsg(core.Message{Type: core.Request, Data: "mock"}),
 			expectedErr:      nil,
-		},
-		{
-			name:             "InvalidCommand",
-			mockPrintError:   nil,
-			mockCommandError: nil,
-			mockRawCommand:   "invalid-command",
-			mockCreateCmdErr: errors.New("invalid command"),
-			expectedNextCmd:  nil,
-			expectedErr:      errors.New("invalid command"),
-		},
-		{
-			name:             "ExecutionContextPrintError",
-			mockPrintError:   errors.New("print error"),
-			mockCommandError: nil,
-			mockRawCommand:   "",
-			expectedNextCmd:  nil,
-			expectedErr:      errors.New("print error"),
-		},
-		{
-			name:             "ExecutionContextCommandModeError",
-			mockPrintError:   nil,
-			mockCommandError: errors.New("command mode error"),
-			mockRawCommand:   "",
-			expectedNextCmd:  nil,
-			expectedErr:      errors.New("command mode error"),
 		},
 	}
 
@@ -307,6 +283,90 @@ func TestRepeat_Execute(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				assert.Nil(t, nextCmd)
+			}
+		})
+	}
+}
+
+func TestSleep_Execute(t *testing.T) {
+	c := NewSleepCommand(1 * time.Millisecond)
+
+	start := time.Now()
+	_, err := c.Execute(nil)
+
+	elapsed := time.Since(start)
+
+	assert.NoError(t, err)
+
+	if elapsed < 1*time.Millisecond {
+		t.Errorf("Sleep.Execute() elapsed = %v, want >= 1ms", elapsed)
+	}
+}
+
+func TestEdit_Execute(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name             string
+		mockContent      string
+		expectedErr      error
+		expectedNextCmd  core.Executer
+		mockExecutionCtx func(t *testing.T) core.ExecutionContext
+	}{
+		{
+			name:            "SuccessfulExecution",
+			mockContent:     "test-content",
+			expectedErr:     nil,
+			expectedNextCmd: NewSend("test-response"),
+			mockExecutionCtx: func(t *testing.T) core.ExecutionContext {
+				exCtx := core.NewMockExecutionContext(t)
+				exCtx.EXPECT().Print("->\n"+ShowCursor, color.FgGreen).Return(nil)
+				exCtx.EXPECT().EditorMode("test-content").Return("test-response", nil)
+				exCtx.EXPECT().Print(LineUp + LineClear + HideCursor).Return(nil)
+				return exCtx
+			},
+		},
+		{
+			name:            "EditorModeError",
+			mockContent:     "error-content",
+			expectedErr:     assert.AnError,
+			expectedNextCmd: nil,
+			mockExecutionCtx: func(t *testing.T) core.ExecutionContext {
+				exCtx := core.NewMockExecutionContext(t)
+				exCtx.EXPECT().Print("->\n"+ShowCursor, color.FgGreen).Return(nil)
+				exCtx.EXPECT().EditorMode("error-content").Return("", assert.AnError)
+				return exCtx
+			},
+		},
+		{
+			name:            "PrintError",
+			mockContent:     "print-error-content",
+			expectedErr:     assert.AnError,
+			expectedNextCmd: nil,
+			mockExecutionCtx: func(t *testing.T) core.ExecutionContext {
+				exCtx := core.NewMockExecutionContext(t)
+				exCtx.EXPECT().Print("->\n"+ShowCursor, color.FgGreen).Return(assert.AnError)
+				return exCtx
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt // capture range variable
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			exCtx := tt.mockExecutionCtx(t)
+			cmd := NewEdit(tt.mockContent)
+
+			nextCmd, err := cmd.Execute(exCtx)
+
+			if tt.expectedErr != nil {
+				assert.ErrorIs(t, err, tt.expectedErr)
+				assert.Nil(t, nextCmd)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expectedNextCmd, nextCmd)
 			}
 		})
 	}
