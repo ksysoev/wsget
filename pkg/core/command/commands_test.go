@@ -109,12 +109,12 @@ func TestPrintMsg_Execute(t *testing.T) {
 				switch tt.message.Type {
 				case core.Request:
 					exCtx.EXPECT().
-						Print("->", color.FgGreen).
+						Print("->\n", color.FgGreen).
 						Return(tt.mockPrintError).
 						Maybe()
 				case core.Response:
 					exCtx.EXPECT().
-						Print("<-", color.FgRed).
+						Print("<-\n", color.FgRed).
 						Return(tt.mockPrintError).
 						Maybe()
 				}
@@ -122,11 +122,11 @@ func TestPrintMsg_Execute(t *testing.T) {
 
 			if tt.mockPrintError == nil && tt.mockFormatError == nil {
 				exCtx.EXPECT().
-					Print("%s\n" + tt.mockFormatOutput).
+					Print(tt.mockFormatOutput + "\n").
 					Return(tt.mockPrintError).
 					Maybe()
 				exCtx.EXPECT().
-					PrintToFile(tt.mockFormatOutput).
+					PrintToFile(tt.mockFormatOutput + "\n").
 					Return(tt.mockPrintError).
 					Maybe()
 			}
@@ -480,7 +480,8 @@ func TestEdit_Execute(t *testing.T) {
 				t.Helper()
 
 				exCtx := core.NewMockExecutionContext(t)
-				exCtx.EXPECT().Print("->\n"+ShowCursor, color.FgGreen).Return(nil)
+				exCtx.EXPECT().Print("->", color.FgGreen).Return(nil)
+				exCtx.EXPECT().Print("\n" + ShowCursor).Return(nil)
 				exCtx.EXPECT().EditorMode("test-content").Return("test-response", nil)
 				exCtx.EXPECT().Print(LineUp + LineClear + HideCursor).Return(nil)
 				return exCtx
@@ -495,13 +496,14 @@ func TestEdit_Execute(t *testing.T) {
 				t.Helper()
 
 				exCtx := core.NewMockExecutionContext(t)
-				exCtx.EXPECT().Print("->\n"+ShowCursor, color.FgGreen).Return(nil)
+				exCtx.EXPECT().Print("->", color.FgGreen).Return(nil)
+				exCtx.EXPECT().Print("\n" + ShowCursor).Return(nil)
 				exCtx.EXPECT().EditorMode("error-content").Return("", assert.AnError)
 				return exCtx
 			},
 		},
 		{
-			name:            "PrintError",
+			name:            "PrintError 1",
 			mockContent:     "print-error-content",
 			expectedErr:     assert.AnError,
 			expectedNextCmd: nil,
@@ -509,7 +511,21 @@ func TestEdit_Execute(t *testing.T) {
 				t.Helper()
 
 				exCtx := core.NewMockExecutionContext(t)
-				exCtx.EXPECT().Print("->\n"+ShowCursor, color.FgGreen).Return(assert.AnError)
+				exCtx.EXPECT().Print("->", color.FgGreen).Return(assert.AnError)
+				return exCtx
+			},
+		},
+		{
+			name:            "PrintError 2",
+			mockContent:     "print-error-content",
+			expectedErr:     assert.AnError,
+			expectedNextCmd: nil,
+			mockExecutionCtx: func(t *testing.T) core.ExecutionContext {
+				t.Helper()
+
+				exCtx := core.NewMockExecutionContext(t)
+				exCtx.EXPECT().Print("->", color.FgGreen).Return(nil)
+				exCtx.EXPECT().Print("\n" + ShowCursor).Return(assert.AnError)
 				return exCtx
 			},
 		},

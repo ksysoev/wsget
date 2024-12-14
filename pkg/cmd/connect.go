@@ -141,7 +141,9 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 		return nil
 	}
 
-	return err
+	fmt.Println("Error:", err)
+
+	return nil
 }
 
 // validateArgs checks the validity of the provided WebSocket URL and flags.

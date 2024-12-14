@@ -30,7 +30,7 @@ func newExecutionContext(ctx context.Context, cli *CLI, outputFile io.Writer) *e
 // It takes data of type string, which is the text to be printed, and attr, variadic arguments of type color.Attribute for styling.
 // It returns an error if writing to the CLI's output fails.
 func (c *executionContext) Print(data string, attr ...color.Attribute) error {
-	_, err := color.New(attr...).Fprintln(c.cli.output, data)
+	_, err := color.New(attr...).Fprint(c.cli.output, data)
 	return err
 }
 
