@@ -31,7 +31,10 @@ func NewEdit(content string) *Edit {
 
 // Execute executes the edit command and returns a Send command id editing was successful or an error in other case.
 func (c *Edit) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
-	if err := exCtx.Print("->\n"+ShowCursor, color.FgGreen); err != nil {
+	if err := exCtx.Print("->", color.FgGreen); err != nil {
+		return nil, err
+	}
+	if err := exCtx.Print("\n" + ShowCursor); err != nil {
 		return nil, err
 	}
 
@@ -92,9 +95,9 @@ func (c *PrintMsg) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 
 	switch c.msg.Type {
 	case core.Request:
-		err = exCtx.Print("->", color.FgGreen)
+		err = exCtx.Print("->\n", color.FgGreen)
 	case core.Response:
-		err = exCtx.Print("<-", color.FgRed)
+		err = exCtx.Print("<-\n", color.FgRed)
 	default:
 		return nil, fmt.Errorf("unsupported message type: %s", c.msg.Type.String())
 	}
@@ -103,7 +106,7 @@ func (c *PrintMsg) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 		return nil, fmt.Errorf("fail to print message: %w", err)
 	}
 
-	if err := exCtx.Print("%s\n" + output); err != nil {
+	if err := exCtx.Print(output + "\n"); err != nil {
 		return nil, fmt.Errorf("fail to print message: %w", err)
 	}
 
@@ -112,7 +115,7 @@ func (c *PrintMsg) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 		return nil, fmt.Errorf("fail to format message for file: %w", err)
 	}
 
-	if err := exCtx.PrintToFile(fileOutput); err != nil {
+	if err := exCtx.PrintToFile(fileOutput + "\n"); err != nil {
 		return nil, fmt.Errorf("fail to write to output file: %w", err)
 	}
 
