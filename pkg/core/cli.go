@@ -48,7 +48,8 @@ type CommandFactory interface {
 
 type ExecutionContext interface {
 	Print(data string, attr ...color.Attribute) error
-	PrintMessage(msg Message) error
+	PrintToFile(data string) error
+	FormatMessage(msg Message, noColor bool) (string, error)
 	SendRequest(req string) error
 	WaitForResponse(timeout time.Duration) (Message, error)
 	EditorMode(initBuffer string) (string, error)
@@ -106,15 +107,6 @@ func (c *CLI) onMessage(ctx context.Context, msg Message) {
 	select {
 	case c.messages <- msg:
 	case <-ctx.Done():
-	}
-}
-
-func (c *CLI) WaitForMessage(ctx context.Context) (Message, error) {
-	select {
-	case msg := <-c.messages:
-		return msg, nil
-	case <-ctx.Done():
-		return Message{}, ctx.Err()
 	}
 }
 

@@ -75,7 +75,39 @@ func NewPrintMsg(msg core.Message) *PrintMsg {
 // It formats the message and prints it to the output file.
 // If an output file is provided, it writes the formatted message to the file.
 func (c *PrintMsg) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
-	return nil, exCtx.PrintMessage(c.msg)
+	output, err := exCtx.FormatMessage(c.msg, false)
+
+	if err != nil {
+		return nil, fmt.Errorf("fail to format message: %w", err)
+	}
+
+	switch c.msg.Type {
+	case core.Request:
+		err = exCtx.Print("->", color.FgGreen)
+	case core.Response:
+		err = exCtx.Print("<-", color.FgRed)
+	default:
+		return nil, fmt.Errorf("unsupported message type: %s", c.msg.Type.String())
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("fail to print message: %w", err)
+	}
+
+	if err := exCtx.Print("%s\n" + output); err != nil {
+		return nil, fmt.Errorf("fail to print message: %w", err)
+	}
+
+	fileOutput, err := exCtx.FormatMessage(c.msg, true)
+	if err != nil {
+		return nil, fmt.Errorf("fail to format message for file: %w", err)
+	}
+
+	if err := exCtx.PrintToFile(fileOutput); err != nil {
+		return nil, fmt.Errorf("fail to write to output file: %w", err)
+	}
+
+	return nil, nil
 }
 
 type Exit struct{}

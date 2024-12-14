@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"reflect"
 	"time"
 
 	"github.com/fatih/color"
@@ -34,46 +33,21 @@ func (c *executionContext) Print(data string, attr ...color.Attribute) error {
 	return err
 }
 
-// PrintMessage formats and prints a message based on its type and content.
-// It takes msg of type Message, which contains the message data and type.
-// It returns an error if the message type is unsupported, formatting fails, or writing to the output file fails.
-func (c *executionContext) PrintMessage(msg Message) error {
-	output, err := c.cli.formater.FormatMessage(msg.Type.String(), msg.Data)
-
-	if err != nil {
-		return fmt.Errorf("fail to format message: %w", err)
+func (c *executionContext) PrintToFile(data string) error {
+	if c.outputFile == nil {
+		return nil
 	}
 
-	switch msg.Type {
-	case Request:
-		err = c.Print("->", color.FgGreen)
-	case Response:
-		err = c.Print("<-", color.FgRed)
-	default:
-		return fmt.Errorf("unsupported message type: %s", msg.Type.String())
+	_, err := fmt.Fprintln(c.outputFile, data)
+	return err
+}
+
+func (c *executionContext) FormatMessage(msg Message, noColor bool) (string, error) {
+	if noColor {
+		return c.cli.formater.FormatForFile(msg.Type.String(), msg.Data)
 	}
 
-	if err != nil {
-		return fmt.Errorf("fail to print message: %w", err)
-	}
-
-	if err := c.Print("%s\n" + output); err != nil {
-		return fmt.Errorf("fail to print message: %w", err)
-	}
-
-	outputFile := c.outputFile
-	if outputFile != nil && !reflect.ValueOf(outputFile).IsNil() {
-		output, err := c.cli.formater.FormatForFile(msg.Type.String(), msg.Data)
-		if err != nil {
-			return fmt.Errorf("fail to format message for file: %w", err)
-		}
-
-		if _, err := fmt.Fprintln(outputFile, output); err != nil {
-			return fmt.Errorf("fail to write to output file: %w", err)
-		}
-	}
-
-	return nil
+	return c.cli.formater.FormatMessage(msg.Type.String(), msg.Data)
 }
 
 // SendRequest sends a request message through the execution context's WebSocket connection.
@@ -95,7 +69,12 @@ func (c *executionContext) WaitForResponse(timeout time.Duration) (Message, erro
 		defer cancel()
 	}
 
-	return c.cli.WaitForMessage(ctx)
+	select {
+	case msg := <-c.cli.messages:
+		return msg, nil
+	case <-ctx.Done():
+		return Message{}, ctx.Err()
+	}
 }
 
 // EditorMode allows the user to edit text in an editor with a provided initial buffer.
