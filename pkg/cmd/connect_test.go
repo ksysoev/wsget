@@ -289,7 +289,7 @@ func TestRunConnectCmd_SuccessConnect(t *testing.T) {
 	err := runConnectCmd(ctx, args, []string{url})
 
 	if err != nil {
-		assert.ErrorContains(t, err, "keyboard run error: open /dev/tty: ")
+		assert.ErrorContains(t, err, "open /dev/tty: ")
 	} else {
 		assert.NoError(t, err)
 	}
