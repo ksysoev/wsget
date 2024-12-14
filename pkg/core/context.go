@@ -33,6 +33,9 @@ func (c *executionContext) Print(data string, attr ...color.Attribute) error {
 	return err
 }
 
+// PrintToFile writes the given data to the specified output file in the execution context.
+// It takes data of type string, which is the content to be written to the file.
+// It returns an error if writing to the output file fails or if there is an I/O issue.
 func (c *executionContext) PrintToFile(data string) error {
 	if c.outputFile == nil {
 		return nil
@@ -42,6 +45,9 @@ func (c *executionContext) PrintToFile(data string) error {
 	return err
 }
 
+// FormatMessage formats a Message based on its type and data.
+// It takes msg of type Message and noColor of type bool to control if color formatting is applied.
+// It returns a string containing the formatted message and an error if message formatting fails.
 func (c *executionContext) FormatMessage(msg Message, noColor bool) (string, error) {
 	if noColor {
 		return c.cli.formater.FormatForFile(msg.Type.String(), msg.Data)

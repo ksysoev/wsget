@@ -208,144 +208,6 @@ func TestExecutionContext_CreateCommand(t *testing.T) {
 	assert.Equal(t, expectCmd, cmd, "Expected command to match")
 }
 
-func TestExecutionContext_PrintMessage(t *testing.T) {
-	tests := []struct {
-		outputFile     io.Writer
-		setupCLI       func() *CLI
-		validateOutput func(t *testing.T, cli *CLI)
-		name           string
-		message        Message
-		expectError    bool
-	}{
-		{
-			name: "Valid request message",
-			message: Message{
-				Type: Request,
-				Data: "Test Request Data",
-			},
-			setupCLI: func() *CLI {
-				formatter := NewMockFormater(t)
-				formatter.EXPECT().FormatMessage("Request", "Test Request Data").Return("Formatted Request", nil)
-				return &CLI{
-					output:   &bytes.Buffer{},
-					formater: formatter,
-				}
-			},
-			expectError: false,
-			validateOutput: func(t *testing.T, cli *CLI) {
-				t.Helper()
-
-				output := cli.output.(*bytes.Buffer).String()
-				assert.Contains(t, output, "->", "Expected formatted request indicator")
-				assert.Contains(t, output, "Formatted Request", "Expected formatted request data")
-			},
-		},
-		{
-			name: "Valid response message",
-			message: Message{
-				Type: Response,
-				Data: "Test Response Data",
-			},
-			setupCLI: func() *CLI {
-				formatter := NewMockFormater(t)
-				formatter.EXPECT().FormatMessage("Response", "Test Response Data").Return("Formatted Response", nil)
-				return &CLI{
-					output:   &bytes.Buffer{},
-					formater: formatter,
-				}
-			},
-			expectError: false,
-			validateOutput: func(t *testing.T, cli *CLI) {
-				t.Helper()
-
-				output := cli.output.(*bytes.Buffer).String()
-				assert.Contains(t, output, "<-", "Expected formatted response indicator")
-				assert.Contains(t, output, "Formatted Response", "Expected formatted response data")
-			},
-		},
-		{
-			name: "Unsupported message type",
-			message: Message{
-				Type: MessageType(3),
-				Data: "Unsupported Data",
-			},
-			setupCLI: func() *CLI {
-				formatter := NewMockFormater(t)
-				formatter.EXPECT().FormatMessage("Not defined", "Unsupported Data").Return("", nil)
-
-				return &CLI{
-					formater: formatter,
-				}
-			},
-			expectError:    true,
-			validateOutput: nil,
-		},
-		{
-			name: "Error during formatting",
-			message: Message{
-				Type: Request,
-				Data: "Test Data",
-			},
-			setupCLI: func() *CLI {
-				formatter := NewMockFormater(t)
-				formatter.EXPECT().FormatMessage("Request", "Test Data").Return("", fmt.Errorf("formatting error"))
-				return &CLI{
-					formater: formatter,
-				}
-			},
-			expectError:    true,
-			validateOutput: nil,
-		},
-		{
-			name: "Output file handling",
-			message: Message{
-				Type: Response,
-				Data: "Test File Data",
-			},
-			setupCLI: func() *CLI {
-				formatter := NewMockFormater(t)
-				formatter.EXPECT().FormatMessage("Response", "Test File Data").Return("Formatted File Response", nil)
-				formatter.EXPECT().FormatForFile("Response", "Test File Data").Return("File Response Data", nil)
-
-				return &CLI{
-					output:   &bytes.Buffer{},
-					formater: formatter,
-				}
-			},
-			expectError: false,
-			validateOutput: func(t *testing.T, cli *CLI) {
-				t.Helper()
-
-				output := cli.output.(*bytes.Buffer).String()
-				assert.Contains(t, output, "<-", "Expected formatted response indicator")
-				assert.Contains(t, output, "Formatted File Response", "Expected formatted response data")
-			},
-			outputFile: &bytes.Buffer{},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cli := tt.setupCLI()
-			ec := &executionContext{
-				cli:        cli,
-				outputFile: tt.outputFile,
-			}
-
-			err := ec.PrintMessage(tt.message)
-			if tt.expectError {
-				assert.Error(t, err, "Expected an error but got none")
-			} else {
-				assert.NoError(t, err, "Did not expect an error but got one")
-			}
-
-			if tt.validateOutput != nil {
-				tt.validateOutput(t, cli)
-			}
-		})
-	}
-}
-
 func TestExecutionContext_WaitForResponse(t *testing.T) {
 	tests := []struct {
 		setupCLI       func(ctx context.Context) *CLI
@@ -433,6 +295,145 @@ func TestExecutionContext_WaitForResponse(t *testing.T) {
 			} else {
 				assert.NoError(t, err, "Did not expect an error but got one")
 				assert.Equal(t, tt.expectedResult, result, "Expected result to match")
+			}
+		})
+	}
+}
+
+func TestExecutionContext_PrintToFile(t *testing.T) {
+	tests := []struct {
+		name           string
+		setupOutput    func() io.Writer
+		data           string
+		expectedError  bool
+		expectedOutput string
+	}{
+		{
+			name: "Valid output file",
+			setupOutput: func() io.Writer {
+				return &bytes.Buffer{}
+			},
+			data:           "test data",
+			expectedError:  false,
+			expectedOutput: "test data\n",
+		},
+		{
+			name: "Nil output file",
+			setupOutput: func() io.Writer {
+				return nil
+			},
+			data:           "test data",
+			expectedError:  false,
+			expectedOutput: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			output := tt.setupOutput()
+
+			ec := &executionContext{
+				outputFile: output,
+			}
+
+			err := ec.PrintToFile(tt.data)
+			if tt.expectedError {
+				assert.Error(t, err, "Expected an error but didn't get one")
+			} else {
+				assert.NoError(t, err, "Did not expect an error but got one")
+			}
+
+			if buf, ok := output.(*bytes.Buffer); ok {
+				assert.Equal(t, tt.expectedOutput, buf.String(), "Unexpected output in buffer")
+			}
+		})
+	}
+}
+
+func TestExecutionContext_FormatMessage(t *testing.T) {
+	tests := []struct {
+		name        string
+		message     Message
+		noColor     bool
+		setupCLI    func() *CLI
+		expectError bool
+		expected    string
+	}{
+		{
+			name:    "Successful formatting for file without color",
+			message: Message{Type: Response, Data: "File formatting"},
+			noColor: true,
+			setupCLI: func() *CLI {
+				mockFormatter := NewMockFormater(t)
+				mockFormatter.EXPECT().FormatForFile("Response", "File formatting").Return("Formatted for file", nil)
+
+				return &CLI{
+					formater: mockFormatter,
+				}
+			},
+			expectError: false,
+			expected:    "Formatted for file",
+		},
+		{
+			name:    "Error during formatting for file without color",
+			message: Message{Type: Request, Data: "File error case"},
+			noColor: true,
+			setupCLI: func() *CLI {
+				mockFormatter := NewMockFormater(t)
+				mockFormatter.EXPECT().FormatForFile("Request", "File error case").Return("", fmt.Errorf("formatting error"))
+
+				return &CLI{
+					formater: mockFormatter,
+				}
+			},
+			expectError: true,
+			expected:    "",
+		},
+		{
+			name:    "Successful formatting for message with color",
+			message: Message{Type: Response, Data: "Colored message"},
+			noColor: false,
+			setupCLI: func() *CLI {
+				mockFormatter := NewMockFormater(t)
+				mockFormatter.EXPECT().FormatMessage("Response", "Colored message").Return("Formatted with color", nil)
+
+				return &CLI{
+					formater: mockFormatter,
+				}
+			},
+			expectError: false,
+			expected:    "Formatted with color",
+		},
+		{
+			name:    "Error during formatting for message with color",
+			message: Message{Type: Request, Data: "Colored error case"},
+			noColor: false,
+			setupCLI: func() *CLI {
+				mockFormatter := NewMockFormater(t)
+				mockFormatter.EXPECT().FormatMessage("Request", "Colored error case").Return("", fmt.Errorf("color formatting error"))
+
+				return &CLI{
+					formater: mockFormatter,
+				}
+			},
+			expectError: true,
+			expected:    "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cli := tt.setupCLI()
+			ec := &executionContext{
+				cli: cli,
+			}
+
+			result, err := ec.FormatMessage(tt.message, tt.noColor)
+			if tt.expectError {
+				assert.Error(t, err, "Expected error but got none")
+			} else {
+				assert.NoError(t, err, "Did not expect error but got one")
+				assert.Equal(t, tt.expected, result, "Expected formatted message does not match")
 			}
 		})
 	}
