@@ -37,6 +37,7 @@ brews:
       owner: ksysoev
       name: homebrew-wsget
     skip_upload: auto
+    directory: Formula
     homepage: "https://gihub.com/ksysoev/wsget"
     description: "wsget binary"
     test: |
