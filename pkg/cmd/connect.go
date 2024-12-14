@@ -16,6 +16,7 @@ import (
 	"github.com/ksysoev/wsget/pkg/repo"
 	"github.com/ksysoev/wsget/pkg/ws"
 	"github.com/spf13/cobra"
+	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -65,7 +66,7 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 		return fmt.Errorf("unable to connect to the server: %w", err)
 	}
 
-	defer wsConn.Close()
+	defer func() { _ = wsConn.Close() }()
 
 	currentUser, err := user.Current()
 	if err != nil {
@@ -82,14 +83,14 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 		return fmt.Errorf("fail to load history: %s", err)
 	}
 
-	defer history.Close()
+	defer func() { _ = history.Close() }()
 
 	cmdHistory, err := repo.LoadHistory(homeDir + "/" + HistoryCmdFilename)
 	if err != nil {
 		return fmt.Errorf("fail to load command history: %s", err)
 	}
 
-	defer cmdHistory.Close()
+	defer func() { _ = cmdHistory.Close() }()
 
 	macro, err := command2.LoadMacroForDomain(homeDir+"/"+ConfigDir+"/"+MacroDir, wsConn.Hostname())
 	if err != nil {
@@ -114,60 +115,33 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 		return err
 	}
 
-	errs := make(chan error, 3)
+	eg, ctx := errgroup.WithContext(ctx)
 
-	go func() {
-		defer cancel()
+	eg.Go(func() error {
+		return keyboard.Run(ctx)
+	})
 
+	eg.Go(func() error {
+		return wsConn.Connect(ctx)
+	})
+
+	eg.Go(func() error {
 		select {
 		case <-ctx.Done():
-			errs <- nil
-			return
+			return nil
 		case <-wsConn.Ready():
 		}
 
-		err := client.Run(ctx, *opts)
-		if err != nil && !errors.Is(err, core.ErrInterrupted) {
-			errs <- fmt.Errorf("client run error: %w", err)
-		}
+		return client.Run(ctx, *opts)
+	})
 
-		errs <- nil
-	}()
+	err = eg.Wait()
 
-	go func() {
-		defer cancel()
-
-		if err := keyboard.Run(ctx); err != nil {
-			errs <- fmt.Errorf("keyboard run error: %w", err)
-			return
-		}
-
-		errs <- nil
-	}()
-
-	go func() {
-		defer cancel()
-
-		if err = wsConn.Connect(ctx); err != nil {
-			errs <- fmt.Errorf("fail to connect to the server: %w", err)
-			return
-		}
-
-		errs <- nil
-	}()
-
-	var errToReturn error
-	for i := 0; i < 3; i++ {
-		if err := <-errs; err != nil && errToReturn == nil {
-			errToReturn = err
-		}
+	if errors.Is(err, context.Canceled) || errors.Is(err, core.ErrInterrupted) {
+		return nil
 	}
 
-	if errToReturn != nil {
-		return errToReturn
-	}
-
-	return nil
+	return err
 }
 
 // validateArgs checks the validity of the provided WebSocket URL and flags.
