@@ -3,16 +3,12 @@ name: goreleaser
 
 on:
   push:
-    branches:
-      - main
     tags:
       - v*
 
 permissions:
   contents: write
   packages: write
-  # issues: write
-  # id-token: write
 
 jobs:
   goreleaser:
