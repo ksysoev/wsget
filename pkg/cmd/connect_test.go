@@ -22,7 +22,9 @@ func createEchoWSHandler() http.HandlerFunc {
 			return
 		}
 
-		defer c.Close(websocket.StatusNormalClosure, "")
+		defer func() {
+			_ = c.Close(websocket.StatusNormalClosure, "")
+		}()
 
 		for {
 			_, wsr, err := c.Reader(r.Context())
@@ -191,7 +193,6 @@ func TestInitRunOptions(t *testing.T) {
 
 				if tt.expected.OutputFile != nil {
 					assert.NotNil(t, opts.OutputFile)
-					opts.OutputFile.Close()
 				}
 			}
 		})

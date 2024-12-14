@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
+	"time"
+
+	"github.com/fatih/color"
 )
 
 const (
@@ -30,7 +32,7 @@ type CLI struct {
 }
 
 type RunOptions struct {
-	OutputFile *os.File
+	OutputFile io.Writer
 	Commands   []Executer
 }
 
@@ -44,13 +46,14 @@ type CommandFactory interface {
 }
 
 type ExecutionContext interface {
-	OutputFile() io.Writer
-	Output() io.Writer
-	Formater() Formater
-	Connection() ConnectionHandler
-	WaitForMessage(context.Context) (Message, error)
-	Editor() Editor
-	Factory() CommandFactory
+	Print(data string, attr ...color.Attribute) error
+	PrintToFile(data string) error
+	FormatMessage(msg Message, noColor bool) (string, error)
+	SendRequest(req string) error
+	WaitForResponse(timeout time.Duration) (Message, error)
+	EditorMode(initBuffer string) (string, error)
+	CommandMode(initBuffer string) (string, error)
+	CreateCommand(raw string) (Executer, error)
 }
 
 type Editor interface {
@@ -106,15 +109,6 @@ func (c *CLI) onMessage(ctx context.Context, msg Message) {
 	}
 }
 
-func (c *CLI) WaitForMessage(ctx context.Context) (Message, error) {
-	select {
-	case msg := <-c.messages:
-		return msg, nil
-	case <-ctx.Done():
-		return Message{}, ctx.Err()
-	}
-}
-
 // Run runs the CLI with the provided options.
 // It listens for user input and executes commands accordingly.
 func (c *CLI) Run(ctx context.Context, opts RunOptions) error {
@@ -131,7 +125,7 @@ func (c *CLI) Run(ctx context.Context, opts RunOptions) error {
 		c.commands <- cmd
 	}
 
-	exCtx := newExecutionContext(c, opts.OutputFile)
+	exCtx := newExecutionContext(ctx, c, opts.OutputFile)
 
 	for {
 		select {
