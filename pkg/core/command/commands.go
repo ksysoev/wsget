@@ -34,6 +34,7 @@ func (c *Edit) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 	if err := exCtx.Print("->", color.FgGreen); err != nil {
 		return nil, err
 	}
+
 	if err := exCtx.Print("\n" + ShowCursor); err != nil {
 		return nil, err
 	}
