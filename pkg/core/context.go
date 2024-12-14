@@ -18,8 +18,9 @@ type executionContext struct {
 // newExecutionContext creates a new executionContext instance for the provided CLI and output file.
 // It takes cli of type *CLI, which manages command-line interactions, and outputFile of type io.Writer for output operations.
 // It returns an *executionContext initialized with the given CLI and output writer.
-func newExecutionContext(cli *CLI, outputFile io.Writer) *executionContext {
+func newExecutionContext(ctx context.Context, cli *CLI, outputFile io.Writer) *executionContext {
 	return &executionContext{
+		ctx:        ctx,
 		cli:        cli,
 		outputFile: outputFile,
 	}
@@ -42,6 +43,7 @@ func (c *executionContext) PrintToFile(data string) error {
 	}
 
 	_, err := fmt.Fprintln(c.outputFile, data)
+
 	return err
 }
 

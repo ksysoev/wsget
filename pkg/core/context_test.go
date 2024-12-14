@@ -39,7 +39,7 @@ func TestNewExecutionContext(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			executionContext := newExecutionContext(tt.cli, tt.outputFile)
+			executionContext := newExecutionContext(context.Background(), tt.cli, tt.outputFile)
 			assert.Equal(t, tt.cli, executionContext.cli, "CLI should match the input CLI")
 			assert.Equal(t, tt.outputFile, executionContext.outputFile, "Output file should match the input outputFile")
 		})
@@ -302,11 +302,11 @@ func TestExecutionContext_WaitForResponse(t *testing.T) {
 
 func TestExecutionContext_PrintToFile(t *testing.T) {
 	tests := []struct {
-		name           string
 		setupOutput    func() io.Writer
+		name           string
 		data           string
-		expectedError  bool
 		expectedOutput string
+		expectedError  bool
 	}{
 		{
 			name: "Valid output file",
@@ -352,12 +352,12 @@ func TestExecutionContext_PrintToFile(t *testing.T) {
 
 func TestExecutionContext_FormatMessage(t *testing.T) {
 	tests := []struct {
+		setupCLI    func() *CLI
 		name        string
+		expected    string
 		message     Message
 		noColor     bool
-		setupCLI    func() *CLI
 		expectError bool
-		expected    string
 	}{
 		{
 			name:    "Successful formatting for file without color",

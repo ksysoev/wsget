@@ -22,6 +22,9 @@ type Edit struct {
 	content string
 }
 
+// NewEdit creates a new Edit command with the specified content.
+// It takes a single parameter, content, of type string, which represents the initial content for editing.
+// It returns a pointer to an Edit struct initialized with the provided content.
 func NewEdit(content string) *Edit {
 	return &Edit{content}
 }
@@ -48,6 +51,9 @@ type Send struct {
 	request string
 }
 
+// NewSend creates a new Send command with the provided request string.
+// It takes a single parameter request of type string.
+// It returns a pointer to a Send instance initialized with the given request.
 func NewSend(request string) *Send {
 	return &Send{request}
 }
@@ -67,6 +73,9 @@ type PrintMsg struct {
 	msg core.Message
 }
 
+// NewPrintMsg creates a new PrintMsg instance with the provided core.Message.
+// It takes a msg parameter of type core.Message, representing the message to be printed.
+// It returns a pointer to a PrintMsg struct initialized with the given message.
 func NewPrintMsg(msg core.Message) *PrintMsg {
 	return &PrintMsg{msg}
 }
@@ -112,6 +121,8 @@ func (c *PrintMsg) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 
 type Exit struct{}
 
+// NewExit creates and returns a new instance of the Exit command.
+// It takes no parameters and returns a pointer to an Exit struct.
 func NewExit() *Exit {
 	return &Exit{}
 }
@@ -126,6 +137,9 @@ type WaitForResp struct {
 	timeout time.Duration
 }
 
+// NewWaitForResp creates a new WaitForResp command with the specified timeout duration.
+// It takes a single parameter timeout of type time.Duration, determining how long to wait for a response.
+// It returns a pointer to a WaitForResp instance.
 func NewWaitForResp(timeout time.Duration) *WaitForResp {
 	return &WaitForResp{timeout}
 }
@@ -145,6 +159,9 @@ func (c *WaitForResp) Execute(exCtx core.ExecutionContext) (core.Executer, error
 
 type CmdEdit struct{}
 
+// NewCmdEdit initializes and returns a new instance of CmdEdit.
+// It does not take any parameters.
+// It returns a pointer to CmdEdit, which can execute an edit command.
 func NewCmdEdit() *CmdEdit {
 	return &CmdEdit{}
 }
@@ -179,6 +196,9 @@ type Sequence struct {
 	subCommands []core.Executer
 }
 
+// NewSequence creates a new Sequence containing a list of sub-commands.
+// It takes subCommands, a slice of core.Executer, which represents the commands to be executed in order.
+// It returns a pointer to a Sequence that will execute the sub-commands sequentially.
 func NewSequence(subCommands []core.Executer) *Sequence {
 	return &Sequence{subCommands}
 }
@@ -202,6 +222,9 @@ type InputFileCommand struct {
 	filePath string
 }
 
+// NewInputFileCommand creates a new InputFileCommand instance.
+// It takes filePath of type string, which specifies the path to the input file.
+// It returns a pointer to an InputFileCommand initialized with the given file path.
 func NewInputFileCommand(filePath string) *InputFileCommand {
 	return &InputFileCommand{filePath}
 }
@@ -238,6 +261,9 @@ type RepeatCommand struct {
 	times      int
 }
 
+// NewRepeatCommand creates a new RepeatCommand to execute a sub-command multiple times.
+// It takes times of type int, which specifies the number of repetitions, and subCommand of type core.Executer to repeat.
+// It returns a pointer to a RepeatCommand initialized with the given subCommand and times.
 func NewRepeatCommand(times int, subCommand core.Executer) *RepeatCommand {
 	return &RepeatCommand{subCommand, times}
 }
@@ -262,6 +288,9 @@ type SleepCommand struct {
 	duration time.Duration
 }
 
+// NewSleepCommand creates a new SleepCommand that pauses execution for a specified duration.
+// It takes a duration parameter of type time.Duration.
+// It returns a pointer to a SleepCommand instance.
 func NewSleepCommand(duration time.Duration) *SleepCommand {
 	return &SleepCommand{duration}
 }

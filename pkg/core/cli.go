@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
 	"time"
 
 	"github.com/fatih/color"
@@ -33,7 +32,7 @@ type CLI struct {
 }
 
 type RunOptions struct {
-	OutputFile *os.File
+	OutputFile io.Writer
 	Commands   []Executer
 }
 
@@ -126,7 +125,7 @@ func (c *CLI) Run(ctx context.Context, opts RunOptions) error {
 		c.commands <- cmd
 	}
 
-	exCtx := newExecutionContext(c, opts.OutputFile)
+	exCtx := newExecutionContext(ctx, c, opts.OutputFile)
 
 	for {
 		select {

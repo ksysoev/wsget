@@ -30,12 +30,12 @@ func TestPrintMsg_Execute(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name             string
-		message          core.Message
 		mockFormatError  error
-		mockFormatOutput string
 		mockPrintError   error
+		name             string
+		mockFormatOutput string
 		expectedErr      string
+		message          core.Message
 	}{
 		{
 			name: "RequestMessage_Success",
@@ -294,10 +294,10 @@ func TestSequence_Execute(t *testing.T) {
 
 	tests := []struct {
 		expectedNextCmd  core.Executer
-		expectedErr      bool
 		mockExecutionCtx func(t *testing.T) core.ExecutionContext
 		name             string
 		subCommands      []core.Executer
+		expectedErr      bool
 	}{
 		{
 			name:            "AllSubCommandsExecuteSuccessfully",
