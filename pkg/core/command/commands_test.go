@@ -2,6 +2,7 @@ package command
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -26,16 +27,120 @@ func TestExit_Execute(t *testing.T) {
 }
 
 func TestPrintMsg_Execute(t *testing.T) {
-	expectedMsg := core.Message{Type: core.Request, Data: "test"}
+	t.Parallel()
 
-	exCtx := core.NewMockExecutionContext(t)
-	exCtx.EXPECT().PrintMessage(expectedMsg).Return(nil)
+	tests := []struct {
+		name             string
+		message          core.Message
+		mockFormatError  error
+		mockFormatOutput string
+		mockPrintError   error
+		expectedErr      string
+	}{
+		{
+			name: "RequestMessage_Success",
+			message: core.Message{
+				Type: core.Request,
+				Data: "test request",
+			},
+			mockFormatError:  nil,
+			mockFormatOutput: "formatted request",
+			mockPrintError:   nil,
+			expectedErr:      "",
+		},
+		{
+			name: "ResponseMessage_Success",
+			message: core.Message{
+				Type: core.Response,
+				Data: "test response",
+			},
+			mockFormatError:  nil,
+			mockFormatOutput: "formatted response",
+			mockPrintError:   nil,
+			expectedErr:      "",
+		},
+		{
+			name: "UnsupportedMessageType",
+			message: core.Message{
+				Type: core.MessageType(3),
+				Data: "unsupported",
+			},
+			expectedErr: "unsupported message type",
+		},
+		{
+			name: "FormatMessage_Error",
+			message: core.Message{
+				Type: core.Request,
+				Data: "test request",
+			},
+			mockFormatError: fmt.Errorf("format error"),
+			expectedErr:     "fail to format message: format error",
+		},
+		{
+			name: "Print_Error",
+			message: core.Message{
+				Type: core.Request,
+				Data: "test request",
+			},
+			mockFormatError:  nil,
+			mockFormatOutput: "formatted request",
+			mockPrintError:   fmt.Errorf("print error"),
+			expectedErr:      "fail to print message: print error",
+		},
+	}
 
-	c := NewPrintMsg(expectedMsg)
-	_, err := c.Execute(exCtx)
+	for _, tt := range tests {
+		tt := tt // capture range variable
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 
-	if err != nil {
-		t.Errorf("PrintMsg.Execute() error = %v, wantErr %v", err, nil)
+			exCtx := core.NewMockExecutionContext(t)
+			exCtx.EXPECT().
+				FormatMessage(tt.message, false).
+				Return(tt.mockFormatOutput, tt.mockFormatError).
+				Maybe()
+
+			exCtx.EXPECT().
+				FormatMessage(tt.message, true).
+				Return(tt.mockFormatOutput, tt.mockFormatError).
+				Maybe()
+
+			if tt.mockFormatError == nil {
+				switch tt.message.Type {
+				case core.Request:
+					exCtx.EXPECT().
+						Print("->", color.FgGreen).
+						Return(tt.mockPrintError).
+						Maybe()
+				case core.Response:
+					exCtx.EXPECT().
+						Print("<-", color.FgRed).
+						Return(tt.mockPrintError).
+						Maybe()
+				}
+			}
+
+			if tt.mockPrintError == nil && tt.mockFormatError == nil {
+				exCtx.EXPECT().
+					Print("%s\n" + tt.mockFormatOutput).
+					Return(tt.mockPrintError).
+					Maybe()
+				exCtx.EXPECT().
+					PrintToFile(tt.mockFormatOutput).
+					Return(tt.mockPrintError).
+					Maybe()
+			}
+
+			cmd := NewPrintMsg(tt.message)
+			_, err := cmd.Execute(exCtx)
+
+			if tt.expectedErr != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedErr)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
 	}
 }
 
@@ -189,75 +294,54 @@ func TestSequence_Execute(t *testing.T) {
 
 	tests := []struct {
 		expectedNextCmd  core.Executer
-		expectedErr      error
+		expectedErr      bool
 		mockExecutionCtx func(t *testing.T) core.ExecutionContext
 		name             string
 		subCommands      []core.Executer
 	}{
 		{
 			name:            "AllSubCommandsExecuteSuccessfully",
-			subCommands:     []core.Executer{NewPrintMsg(core.Message{Type: core.Request, Data: "test1"}), NewPrintMsg(core.Message{Type: core.Request, Data: "test2"})},
+			subCommands:     []core.Executer{NewSleepCommand(time.Millisecond), NewSleepCommand(time.Millisecond)},
 			expectedNextCmd: nil,
-			expectedErr:     nil,
+			expectedErr:     false,
 			mockExecutionCtx: func(t *testing.T) core.ExecutionContext {
 				t.Helper()
 
-				exCtx := core.NewMockExecutionContext(t)
-				exCtx.EXPECT().PrintMessage(core.Message{Type: core.Request, Data: "test1"}).Return(nil).Maybe()
-				exCtx.EXPECT().PrintMessage(core.Message{Type: core.Request, Data: "test2"}).Return(nil).Maybe()
-				return exCtx
+				return core.NewMockExecutionContext(t)
 			},
 		},
 		{
 			name: "SubCommandReturnsAnotherCommand",
 			subCommands: []core.Executer{
-				NewPrintMsg(core.Message{Type: core.Request, Data: "test"}),
-				NewWaitForResp(5 * time.Second),
+				NewSleepCommand(time.Millisecond),
+				NewCmdEdit(),
 			},
 			expectedNextCmd: nil,
-			expectedErr:     nil,
+			expectedErr:     false,
 			mockExecutionCtx: func(t *testing.T) core.ExecutionContext {
 				t.Helper()
 
 				exCtx := core.NewMockExecutionContext(t)
-				exCtx.EXPECT().PrintMessage(core.Message{Type: core.Request, Data: "test"}).Return(nil).Maybe()
-				exCtx.EXPECT().PrintMessage(core.Message{Type: core.Response, Data: "response"}).Return(nil).Maybe()
-				expectedResponse := core.Message{Type: core.Response, Data: "response"}
-				exCtx.EXPECT().WaitForResponse(5*time.Second).Return(expectedResponse, nil).Maybe()
+
+				exCtx.EXPECT().Print(":\x1b[?25h").Return(nil)
+				exCtx.EXPECT().CommandMode("").Return("sleep 0", nil)
+				exCtx.EXPECT().Print("\x1b[2K\r\x1b[?25l").Return(nil)
+				exCtx.EXPECT().CreateCommand("sleep 0").Return(NewSleepCommand(0), nil)
+
 				return exCtx
 			},
 		},
 		{
 			name: "SubCommandFailsWithError",
 			subCommands: []core.Executer{
-				NewPrintMsg(core.Message{Type: core.Request, Data: "test"}),
 				NewExit(),
 			},
 			expectedNextCmd: nil,
-			expectedErr:     errors.New("mock error"),
+			expectedErr:     true,
 			mockExecutionCtx: func(t *testing.T) core.ExecutionContext {
 				t.Helper()
 
-				exCtx := core.NewMockExecutionContext(t)
-				exCtx.EXPECT().PrintMessage(core.Message{Type: core.Request, Data: "test"}).Return(nil).Maybe()
-				return exCtx
-			},
-		},
-		{
-			name: "FirstSubCommandFails",
-			subCommands: []core.Executer{
-				NewPrintMsg(core.Message{Type: core.Request, Data: "fail"}),
-				NewExit(),
-			},
-			expectedNextCmd: nil,
-			expectedErr:     errors.New("failure in subcommand"),
-			mockExecutionCtx: func(t *testing.T) core.ExecutionContext {
-				t.Helper()
-
-				exCtx := core.NewMockExecutionContext(t)
-				exCtx.EXPECT().PrintMessage(core.Message{Type: core.Request, Data: "fail"}).
-					Return(errors.New("failure in subcommand"))
-				return exCtx
+				return core.NewMockExecutionContext(t)
 			},
 		},
 	}
@@ -270,7 +354,7 @@ func TestSequence_Execute(t *testing.T) {
 			seq := NewSequence(tt.subCommands)
 			nextCmd, err := seq.Execute(exCtx)
 
-			if tt.expectedErr != nil {
+			if tt.expectedErr {
 				assert.Error(t, err)
 				assert.Nil(t, nextCmd)
 			} else {
@@ -294,39 +378,35 @@ func TestRepeat_Execute(t *testing.T) {
 		{
 			name:        "SubCommandExecutesOnce",
 			times:       1,
-			subCommand:  NewPrintMsg(core.Message{Type: core.Request, Data: "test"}),
+			subCommand:  NewSleepCommand(1 * time.Millisecond),
 			expectedErr: nil,
 			mockExecutionContext: func(t *testing.T) core.ExecutionContext {
 				t.Helper()
 
-				exCtx := core.NewMockExecutionContext(t)
-				exCtx.EXPECT().PrintMessage(core.Message{Type: core.Request, Data: "test"}).Return(nil).Maybe()
-				return exCtx
+				return core.NewMockExecutionContext(t)
 			},
 		},
 		{
 			name:        "SubCommandExecutesMultipleTimes",
 			times:       3,
-			subCommand:  NewPrintMsg(core.Message{Type: core.Request, Data: "repeat"}),
+			subCommand:  NewSleepCommand(1 * time.Millisecond),
 			expectedErr: nil,
 			mockExecutionContext: func(t *testing.T) core.ExecutionContext {
 				t.Helper()
 
-				exCtx := core.NewMockExecutionContext(t)
-				exCtx.EXPECT().PrintMessage(core.Message{Type: core.Request, Data: "repeat"}).Return(nil).Times(3)
-				return exCtx
+				return core.NewMockExecutionContext(t)
 			},
 		},
 		{
 			name:        "SubCommandFails",
 			times:       2,
-			subCommand:  NewPrintMsg(core.Message{Type: core.Request, Data: "fail"}),
-			expectedErr: errors.New("mock error"),
+			subCommand:  NewWaitForResp(1 * time.Millisecond),
+			expectedErr: assert.AnError,
 			mockExecutionContext: func(t *testing.T) core.ExecutionContext {
 				t.Helper()
 
 				exCtx := core.NewMockExecutionContext(t)
-				exCtx.EXPECT().PrintMessage(core.Message{Type: core.Request, Data: "fail"}).Return(errors.New("mock error")).Times(1)
+				exCtx.EXPECT().WaitForResponse(1*time.Millisecond).Return(core.Message{}, assert.AnError)
 				return exCtx
 			},
 		},
@@ -338,8 +418,8 @@ func TestRepeat_Execute(t *testing.T) {
 			mockExecutionContext: func(t *testing.T) core.ExecutionContext {
 				t.Helper()
 
-				exCtx := core.NewMockExecutionContext(t) // Nothing should be called
-				return exCtx
+				// Nothing should be called
+				return core.NewMockExecutionContext(t)
 			},
 		},
 	}

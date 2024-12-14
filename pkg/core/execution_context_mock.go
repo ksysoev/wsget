@@ -194,6 +194,63 @@ func (_c *MockExecutionContext_EditorMode_Call) RunAndReturn(run func(string) (s
 	return _c
 }
 
+// FormatMessage provides a mock function with given fields: msg, noColor
+func (_m *MockExecutionContext) FormatMessage(msg Message, noColor bool) (string, error) {
+	ret := _m.Called(msg, noColor)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FormatMessage")
+	}
+
+	var r0 string
+	var r1 error
+	if rf, ok := ret.Get(0).(func(Message, bool) (string, error)); ok {
+		return rf(msg, noColor)
+	}
+	if rf, ok := ret.Get(0).(func(Message, bool) string); ok {
+		r0 = rf(msg, noColor)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	if rf, ok := ret.Get(1).(func(Message, bool) error); ok {
+		r1 = rf(msg, noColor)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockExecutionContext_FormatMessage_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FormatMessage'
+type MockExecutionContext_FormatMessage_Call struct {
+	*mock.Call
+}
+
+// FormatMessage is a helper method to define mock.On call
+//   - msg Message
+//   - noColor bool
+func (_e *MockExecutionContext_Expecter) FormatMessage(msg interface{}, noColor interface{}) *MockExecutionContext_FormatMessage_Call {
+	return &MockExecutionContext_FormatMessage_Call{Call: _e.mock.On("FormatMessage", msg, noColor)}
+}
+
+func (_c *MockExecutionContext_FormatMessage_Call) Run(run func(msg Message, noColor bool)) *MockExecutionContext_FormatMessage_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(Message), args[1].(bool))
+	})
+	return _c
+}
+
+func (_c *MockExecutionContext_FormatMessage_Call) Return(_a0 string, _a1 error) *MockExecutionContext_FormatMessage_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockExecutionContext_FormatMessage_Call) RunAndReturn(run func(Message, bool) (string, error)) *MockExecutionContext_FormatMessage_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Print provides a mock function with given fields: data, attr
 func (_m *MockExecutionContext) Print(data string, attr ...color.Attribute) error {
 	_va := make([]interface{}, len(attr))
@@ -255,17 +312,17 @@ func (_c *MockExecutionContext_Print_Call) RunAndReturn(run func(string, ...colo
 	return _c
 }
 
-// PrintMessage provides a mock function with given fields: msg
-func (_m *MockExecutionContext) PrintMessage(msg Message) error {
-	ret := _m.Called(msg)
+// PrintToFile provides a mock function with given fields: data
+func (_m *MockExecutionContext) PrintToFile(data string) error {
+	ret := _m.Called(data)
 
 	if len(ret) == 0 {
-		panic("no return value specified for PrintMessage")
+		panic("no return value specified for PrintToFile")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(Message) error); ok {
-		r0 = rf(msg)
+	if rf, ok := ret.Get(0).(func(string) error); ok {
+		r0 = rf(data)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -273,30 +330,30 @@ func (_m *MockExecutionContext) PrintMessage(msg Message) error {
 	return r0
 }
 
-// MockExecutionContext_PrintMessage_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PrintMessage'
-type MockExecutionContext_PrintMessage_Call struct {
+// MockExecutionContext_PrintToFile_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PrintToFile'
+type MockExecutionContext_PrintToFile_Call struct {
 	*mock.Call
 }
 
-// PrintMessage is a helper method to define mock.On call
-//   - msg Message
-func (_e *MockExecutionContext_Expecter) PrintMessage(msg interface{}) *MockExecutionContext_PrintMessage_Call {
-	return &MockExecutionContext_PrintMessage_Call{Call: _e.mock.On("PrintMessage", msg)}
+// PrintToFile is a helper method to define mock.On call
+//   - data string
+func (_e *MockExecutionContext_Expecter) PrintToFile(data interface{}) *MockExecutionContext_PrintToFile_Call {
+	return &MockExecutionContext_PrintToFile_Call{Call: _e.mock.On("PrintToFile", data)}
 }
 
-func (_c *MockExecutionContext_PrintMessage_Call) Run(run func(msg Message)) *MockExecutionContext_PrintMessage_Call {
+func (_c *MockExecutionContext_PrintToFile_Call) Run(run func(data string)) *MockExecutionContext_PrintToFile_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(Message))
+		run(args[0].(string))
 	})
 	return _c
 }
 
-func (_c *MockExecutionContext_PrintMessage_Call) Return(_a0 error) *MockExecutionContext_PrintMessage_Call {
+func (_c *MockExecutionContext_PrintToFile_Call) Return(_a0 error) *MockExecutionContext_PrintToFile_Call {
 	_c.Call.Return(_a0)
 	return _c
 }
 
-func (_c *MockExecutionContext_PrintMessage_Call) RunAndReturn(run func(Message) error) *MockExecutionContext_PrintMessage_Call {
+func (_c *MockExecutionContext_PrintToFile_Call) RunAndReturn(run func(string) error) *MockExecutionContext_PrintToFile_Call {
 	_c.Call.Return(run)
 	return _c
 }
