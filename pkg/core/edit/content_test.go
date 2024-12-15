@@ -1262,3 +1262,56 @@ func TestContent_PrevSymbol(t *testing.T) {
 		})
 	}
 }
+
+func TestContent_GetCurrentWord(t *testing.T) {
+	tests := []struct {
+		name     string
+		text     string
+		pos      int
+		expected string
+	}{
+		{
+			name:     "Cursor at the beginning of the content",
+			text:     "hello world",
+			pos:      0,
+			expected: "",
+		},
+		{
+			name:     "Cursor in the middle of the content",
+			text:     "hello world",
+			pos:      6,
+			expected: "",
+		},
+		{
+			name:     "Cursor at the end of the content",
+			text:     "hello world",
+			pos:      11,
+			expected: "world",
+		},
+		{
+			name:     "Cursor at the end of the content with multiple newlines",
+			text:     "hello\n\nworld",
+			pos:      5,
+			expected: "hello",
+		},
+		{
+			name:     "Cursor at middle of a word",
+			text:     "hello\n\nworld",
+			pos:      9,
+			expected: "wo",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Content{
+				text: []rune(tt.text),
+				pos:  tt.pos,
+			}
+
+			if got := c.GetCurrentWord(); got != tt.expected {
+				t.Errorf("GetCurrentWord() = %q, want %q", got, tt.expected)
+			}
+		})
+	}
+}

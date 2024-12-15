@@ -137,14 +137,14 @@ func (ed *Editor) handleKey(e core.KeyEvent) (next bool, res string, err error) 
 	case core.KeyArrowDown:
 		ed.nextFromHistory()
 	case core.KeyTab:
-		content := ed.content.String()
+		curWord := ed.content.GetCurrentWord()
 
-		match := ed.history.Search(content)
-		if match == "" || match == content {
+		match := ed.history.Search(curWord)
+		if match == "" || match == curWord {
 			return true, "", nil
 		}
 
-		diff := match[len(content):]
+		diff := match[len(curWord):]
 
 		for _, r := range diff {
 			_, _ = fmt.Fprint(ed.output, ed.content.InsertSymbol(r))
