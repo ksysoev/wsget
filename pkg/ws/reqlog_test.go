@@ -111,7 +111,7 @@ func TestRequestLogger_RoundTrip(t *testing.T) {
 
 	tests := []struct {
 		name             string
-		output           io.Writer
+		output           *bytes.Buffer
 		request          *http.Request
 		roundTripError   error
 		expectedLogLines string
@@ -168,7 +168,7 @@ func TestRequestLogger_RoundTrip(t *testing.T) {
 			if tt.output != nil {
 				expected := strings.ReplaceAll(tt.expectedLogLines, "%%URL%%", s.URL)
 
-				output := tt.output.(*bytes.Buffer).String()
+				output := tt.output.String()
 
 				output = re.ReplaceAllString(output, "")
 

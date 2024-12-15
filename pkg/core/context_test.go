@@ -102,7 +102,6 @@ func TestExecutionContext_SendRequest(t *testing.T) {
 
 func TestExecutionContext_Print(t *testing.T) {
 	tests := []struct {
-		setupCLI    func() *CLI
 		name        string
 		data        string
 		attributes  []color.Attribute
@@ -112,27 +111,18 @@ func TestExecutionContext_Print(t *testing.T) {
 			name:       "Valid case with no attributes",
 			data:       "test data",
 			attributes: nil,
-			setupCLI: func() *CLI {
-				return &CLI{
-					output: &bytes.Buffer{},
-				}
-			},
 		},
 		{
 			name:       "Valid case with attributes",
 			data:       "colored data",
 			attributes: []color.Attribute{color.FgBlue, color.Bold},
-			setupCLI: func() *CLI {
-				return &CLI{
-					output: &bytes.Buffer{},
-				}
-			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cli := tt.setupCLI()
+			output := &bytes.Buffer{}
+			cli := &CLI{output: output}
 			ec := &executionContext{
 				cli: cli,
 			}
@@ -142,11 +132,7 @@ func TestExecutionContext_Print(t *testing.T) {
 				assert.Error(t, err, "Expected error but got none")
 			} else {
 				assert.NoError(t, err, "Did not expect an error")
-
-				if cli.output != nil {
-					output := cli.output.(*bytes.Buffer).String()
-					assert.Contains(t, output, tt.data, "Expected output to contain data")
-				}
+				assert.Contains(t, output.String(), tt.data, "Expected output to contain data")
 			}
 		})
 	}

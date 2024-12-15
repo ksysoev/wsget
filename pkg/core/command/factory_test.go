@@ -119,15 +119,30 @@ func TestFactory_Create(t *testing.T) {
 			if got != nil && tt.want != nil {
 				switch gotType := got.(type) {
 				case *Edit:
-					if got.(*Edit).content != tt.want.(*Edit).content {
+					edit, ok := tt.want.(*Edit)
+					if !ok {
+						t.Errorf("Factory() type %v, got = %v, want %v", gotType, got, tt.want)
+					}
+
+					if gotType.content != edit.content {
 						t.Errorf("Factory() type %v,  got = %v, want %v", gotType, got, tt.want)
 					}
 				case *Send:
-					if got.(*Send).request != tt.want.(*Send).request {
+					send, ok := tt.want.(*Send)
+					if !ok {
+						t.Errorf("Factory() type %v, got = %v, want %v", gotType, got, tt.want)
+					}
+
+					if gotType.request != send.request {
 						t.Errorf("Factory() type %v, got = %v, want %v", gotType, got, tt.want)
 					}
 				case *WaitForResp:
-					if got.(*WaitForResp).timeout != tt.want.(*WaitForResp).timeout {
+					wait, ok := tt.want.(*WaitForResp)
+					if !ok {
+						t.Errorf("Factory() type %v, got = %v, want %v", gotType, got, tt.want)
+					}
+
+					if gotType.timeout != wait.timeout {
 						t.Errorf("Factory() type %v, got = %v, want %v", gotType, got, tt.want)
 					}
 				}

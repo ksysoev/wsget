@@ -2,6 +2,8 @@ package formater
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestFormat_FormatMessage(t *testing.T) {
@@ -187,23 +189,13 @@ func TestFormat_parseJSON(t *testing.T) {
 		"body":   "Hello, world!",
 	}
 
-	if parsedValidJSON.(map[string]interface{})["status"].(float64) != expectedValidJSON["status"] {
-		t.Errorf("Unexpected parsed JSON: %v", parsedValidJSON)
-	}
-
-	if parsedValidJSON.(map[string]interface{})["body"].(string) != expectedValidJSON["body"] {
-		t.Errorf("Unexpected parsed JSON: %v", parsedValidJSON)
-	}
+	assert.Equal(t, expectedValidJSON, parsedValidJSON)
 
 	// Test invalid JSON parsing
 	invalidJSON := `{"status": 200, "body": "Hello, world!"`
 
 	parsedInvalidJSON, ok := formater.parseJSON(invalidJSON)
-	if ok {
-		t.Errorf("Expected false, but got true")
-	}
 
-	if parsedInvalidJSON != nil {
-		t.Errorf("Expected nil, but got %v", parsedInvalidJSON)
-	}
+	assert.False(t, ok)
+	assert.Nil(t, parsedInvalidJSON)
 }

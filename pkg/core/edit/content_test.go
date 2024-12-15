@@ -1267,8 +1267,8 @@ func TestContent_GetCurrentWord(t *testing.T) {
 	tests := []struct {
 		name     string
 		text     string
-		pos      int
 		expected string
+		pos      int
 	}{
 		{
 			name:     "Cursor at the beginning of the content",
