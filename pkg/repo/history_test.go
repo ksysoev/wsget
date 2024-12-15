@@ -19,7 +19,7 @@ func TestNewHistory(t *testing.T) {
 	assert.Equal(t, expectedFileName, history.fileName, "expected correct file name")
 }
 
-func TestNextRequest(t *testing.T) {
+func TestHistory_NextRequest(t *testing.T) {
 	tests := []struct {
 		name        string
 		expected    string
@@ -85,7 +85,7 @@ func TestNextRequest(t *testing.T) {
 	}
 }
 
-func TestHistoryClose(t *testing.T) {
+func TestHistory_Close(t *testing.T) {
 	tmpDir := os.TempDir()
 
 	tests := []struct {
@@ -161,7 +161,7 @@ func TestHistoryClose(t *testing.T) {
 	}
 }
 
-func TestAddRequest(t *testing.T) {
+func TestHistory_AddRequest(t *testing.T) {
 	tests := []struct {
 		name          string
 		initial       []string
@@ -219,7 +219,7 @@ func TestAddRequest(t *testing.T) {
 	}
 }
 
-func TestLoadHistory(t *testing.T) {
+func TestHistory_LoadHistory(t *testing.T) {
 	tmDir := os.TempDir()
 
 	tests := []struct {
@@ -312,7 +312,7 @@ func TestLoadHistory(t *testing.T) {
 				t.Fatalf("failed to set up test: %v", err)
 			}
 
-			history, err := LoadHistory(tt.fileName)
+			history, err := LoadFromFile(tt.fileName)
 			if tt.expectedError {
 				assert.Error(t, err, "expected error but got nil")
 			} else {
@@ -426,4 +426,93 @@ func TestResetPosition(t *testing.T) {
 			assert.Equal(t, tt.expectedPos, history.pos, "unexpected position after ResetPosition")
 		})
 	}
+}
+
+func TestParseWordsFromRequest(t *testing.T) {
+	tests := []struct {
+		name     string
+		request  string
+		expected []string
+	}{
+		{
+			name:     "EmptyRequest",
+			request:  "",
+			expected: []string(nil),
+		},
+		{
+			name:     "SingleWord",
+			request:  "hello",
+			expected: []string{"hello"},
+		},
+		{
+			name:     "MultipleWords",
+			request:  "hello world",
+			expected: []string{"hello", "world"},
+		},
+		{
+			name:     "WordsWithSpecialCharacters",
+			request:  "hello, world!",
+			expected: []string{"hello", "world"},
+		},
+		{
+			name:     "MixedCaseWords",
+			request:  "Hello WoRLd",
+			expected: []string{"Hello", "WoRLd"},
+		},
+		{
+			name:     "WordsWithNumbers",
+			request:  "hello123 world456",
+			expected: []string{"hello123", "world456"},
+		},
+		{
+			name:     "PunctuationOnly",
+			request:  ".,!?;",
+			expected: []string(nil),
+		},
+		{
+			name:     "WordsWithUnderscores",
+			request:  "hello_world test_case",
+			expected: []string{"hello_world", "test_case"},
+		},
+		{
+			name:     "WordsWithHyphens",
+			request:  "co-operate re-enter",
+			expected: []string{"co-operate", "re-enter"},
+		},
+		{
+			name:     "WhitespaceOnly",
+			request:  "   ",
+			expected: []string(nil),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := parseWordsFromRequest(tt.request)
+			assert.Equal(t, tt.expected, result, "unexpected result for request: %s", tt.request)
+		})
+	}
+}
+
+func TestHistory_AddWordsToIndex(t *testing.T) {
+	index := NewDictionary(nil)
+	history := &History{
+		index: index,
+	}
+
+	expectedWords := []string{"hello", "world"}
+
+	history.AddWordsToIndex(expectedWords)
+	assert.Equal(t, index.words, expectedWords, "unexpected index state after AddWordsToIndex")
+}
+
+func TestHistory_Search(t *testing.T) {
+	index := NewDictionary([]string{"hello"})
+	history := &History{
+		index: index,
+	}
+
+	word := history.Search("hell")
+
+	assert.Equal(t, "hello", word, "unexpected word")
 }

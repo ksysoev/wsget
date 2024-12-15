@@ -35,12 +35,12 @@ func NewHistory(fileName string) *History {
 	}
 }
 
-// LoadHistory loads the command history from the specified file.
+// LoadFromFile loads the command history from the specified file.
 // It opens the file with the given filename and reads its contents.
 // Each line in the file represents a request and is added to a History instance.
 // Newlines represented by "\n" within a request are preserved.
 // Returns a pointer to a History instance or an error if the file cannot be opened.
-func LoadHistory(fileName string) (*History, error) {
+func LoadFromFile(fileName string) (*History, error) {
 	fileHandler, err := os.OpenFile(fileName, os.O_RDONLY|os.O_CREATE, HistoryFileRigths)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open history file: %w", err)
@@ -164,14 +164,23 @@ func (h *History) ResetPosition() {
 	h.pos = len(h.requests)
 }
 
-func parseWordsFromRequest(request string) []string {
-	return wordMatcher.FindAllString(request, -1)
-}
-
+// AddWordsToIndex adds a list of words to the history's index for efficient search and retrieval.
+// It takes words, a slice of strings, representing the words to be added.
+// This method does not return any value and ensures the words are uniquely added and sorted in the index.
 func (h *History) AddWordsToIndex(words []string) {
 	h.index.AddWords(words)
 }
 
+// Search finds the longest common prefix of words in the history index that match the given prefix.
+// It takes prefix of type string, representing the search prefix to be matched.
+// It returns a string containing the longest common prefix among matching words.
 func (h *History) Search(prefix string) string {
 	return h.index.Search(prefix)
+}
+
+// parseWordsFromRequest extracts and returns all words from the given request string.
+// It takes a request of type string.
+// It returns a slice of strings containing all words with a minimum length of 3 characters from the request string.
+func parseWordsFromRequest(request string) []string {
+	return wordMatcher.FindAllString(request, -1)
 }
