@@ -14,7 +14,7 @@ type Dictionary struct {
 // It returns a pointer to the created Dictionary.
 func NewDictionary(words []string) *Dictionary {
 	d := Dictionary{
-		words: make([]string, len(words)),
+		words: make([]string, 0, len(words)),
 	}
 
 	d.AddWords(words)

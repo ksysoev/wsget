@@ -1,8 +1,9 @@
 package repo
 
 import (
-	"sort"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewDictionary(t *testing.T) {
@@ -11,18 +12,8 @@ func TestNewDictionary(t *testing.T) {
 
 	dictionary := NewDictionary(words)
 
-	// Check if the words are sorted in ascending order
-	if !sort.StringsAreSorted(dictionary.words) {
-		t.Errorf("NewDictionary did not sort the words in ascending order")
-	}
-
 	// Check if the sorted words match the expected result
-	for i, word := range dictionary.words {
-		if word != expected[i] {
-			t.Errorf("NewDictionary sorted words do not match the expected result")
-			break
-		}
-	}
+	assert.Equal(t, expected, dictionary.words)
 }
 
 func TestDictionary_Search(t *testing.T) {

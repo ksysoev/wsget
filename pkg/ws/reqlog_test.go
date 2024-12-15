@@ -147,7 +147,12 @@ func TestRequestLogger_RoundTrip(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 			}))
 
-			rl := newRequestLogger(tt.output, false)
+			var rl *requestLogger
+			if tt.output == nil {
+				rl = newRequestLogger(nil, false)
+			} else {
+				rl = newRequestLogger(tt.output, false)
+			}
 
 			cl := http.Client{
 				Transport: rl,

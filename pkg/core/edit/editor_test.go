@@ -10,6 +10,7 @@ import (
 	"github.com/ksysoev/wsget/pkg/core"
 	"github.com/ksysoev/wsget/pkg/repo"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func TestNewEditor(t *testing.T) {
@@ -487,8 +488,9 @@ func TestEditorHandleKey(t *testing.T) {
 			editor := NewEditor(output, nil, false)
 
 			mockHistory := NewMockHistoryRepo(t)
-			mockHistory.On("PrevRequest").Return("").Maybe()
-			mockHistory.On("NextRequest").Return("").Maybe()
+			mockHistory.EXPECT().PrevRequest().Return("").Maybe()
+			mockHistory.EXPECT().NextRequest().Return("").Maybe()
+			mockHistory.EXPECT().Search(mock.Anything).Return("").Maybe()
 
 			editor.history = mockHistory
 

@@ -86,6 +86,8 @@ func TestNextRequest(t *testing.T) {
 }
 
 func TestHistoryClose(t *testing.T) {
+	tmpDir := os.TempDir()
+
 	tests := []struct {
 		name          string
 		history       *History
@@ -94,37 +96,37 @@ func TestHistoryClose(t *testing.T) {
 	}{
 		{
 			name:          "NoRequests",
-			history:       &History{fileName: "history_no_requests.txt", requests: []string{}, limit: 10},
+			history:       &History{fileName: tmpDir + "history_no_requests.txt", requests: []string{}, limit: 10},
 			expectedLines: []string(nil),
 			expectError:   false,
 		},
 		{
 			name:          "IncorrectPath",
-			history:       &History{fileName: "/incorrect/path.txt", requests: []string{"request1"}, limit: 10},
+			history:       &History{fileName: tmpDir + "/incorrect/path.txt", requests: []string{"request1"}, limit: 10},
 			expectedLines: []string(nil),
 			expectError:   true,
 		},
 		{
 			name:          "SingleRequest",
-			history:       &History{fileName: "history_single_request.txt", requests: []string{"request1"}, limit: 10},
+			history:       &History{fileName: tmpDir + "history_single_request.txt", requests: []string{"request1"}, limit: 10},
 			expectedLines: []string{"request1"},
 			expectError:   false,
 		},
 		{
 			name:          "MultipleRequests",
-			history:       &History{fileName: "history_multiple_requests.txt", requests: []string{"request1", "request2"}, limit: 10},
+			history:       &History{fileName: tmpDir + "history_multiple_requests.txt", requests: []string{"request1", "request2"}, limit: 10},
 			expectedLines: []string{"request1", "request2"},
 			expectError:   false,
 		},
 		{
 			name:          "ExceedLimit",
-			history:       &History{fileName: "history_exceed_limit.txt", requests: []string{"req1", "req2", "req3"}, limit: 2},
+			history:       &History{fileName: tmpDir + "history_exceed_limit.txt", requests: []string{"req1", "req2", "req3"}, limit: 2},
 			expectedLines: []string{"req2", "req3"},
 			expectError:   false,
 		},
 		{
 			name:          "EmptyLines",
-			history:       &History{fileName: "history_empty_lines.txt", requests: []string{"", "req1", "", "req2", "", "req3", ""}, limit: 10},
+			history:       &History{fileName: tmpDir + "history_empty_lines.txt", requests: []string{"", "req1", "", "req2", "", "req3", ""}, limit: 10},
 			expectedLines: []string{"req1", "req2", "req3"},
 			expectError:   false,
 		},
@@ -144,7 +146,8 @@ func TestHistoryClose(t *testing.T) {
 			// Read the file and compare with expectedLines
 			file, err := os.Open(tt.history.fileName)
 			assert.NoError(t, err)
-			defer file.Close()
+
+			defer func() { _ = file.Close() }()
 
 			var lines []string
 
@@ -154,9 +157,6 @@ func TestHistoryClose(t *testing.T) {
 			}
 
 			assert.Equal(t, tt.expectedLines, lines)
-
-			// Clean up
-			os.Remove(tt.history.fileName)
 		})
 	}
 }
@@ -208,10 +208,9 @@ func TestAddRequest(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			history := &History{
-				requests: tt.initial,
-				pos:      len(tt.initial),
-			}
+			history := NewHistory("test")
+			history.requests = tt.initial
+			history.pos = len(tt.initial)
 
 			history.AddRequest(tt.newRequest)
 			assert.Equal(t, tt.expected, history.requests)
@@ -221,6 +220,8 @@ func TestAddRequest(t *testing.T) {
 }
 
 func TestLoadHistory(t *testing.T) {
+	tmDir := os.TempDir()
+
 	tests := []struct {
 		setup         func(fileName string) error
 		name          string
@@ -230,7 +231,7 @@ func TestLoadHistory(t *testing.T) {
 	}{
 		{
 			name:     "FileNotFound",
-			fileName: "non_existent.txt",
+			fileName: tmDir + "non_existent.txt",
 			setup: func(_ string) error {
 				return nil
 			},
@@ -238,7 +239,7 @@ func TestLoadHistory(t *testing.T) {
 		},
 		{
 			name:     "FileNotFound",
-			fileName: "/incorrect/path.txt",
+			fileName: tmDir + "/incorrect/path.txt",
 			setup: func(_ string) error {
 				return nil
 			},
@@ -246,13 +247,13 @@ func TestLoadHistory(t *testing.T) {
 		},
 		{
 			name:     "EmptyFile",
-			fileName: "empty.txt",
+			fileName: tmDir + "empty.txt",
 			setup: func(fileName string) error {
 				f, err := os.Create(fileName)
 				if err != nil {
 					return err
 				}
-				defer f.Close()
+				defer func() { _ = f.Close() }()
 				return nil
 			},
 			expectedError: false,
@@ -260,13 +261,13 @@ func TestLoadHistory(t *testing.T) {
 		},
 		{
 			name:     "SingleEntry",
-			fileName: "single_entry.txt",
+			fileName: tmDir + "single_entry.txt",
 			setup: func(fileName string) error {
 				f, err := os.Create(fileName)
 				if err != nil {
 					return err
 				}
-				defer f.Close()
+				defer func() { _ = f.Close() }()
 				_, err = f.WriteString("entry1\n")
 				return err
 			},
@@ -275,13 +276,13 @@ func TestLoadHistory(t *testing.T) {
 		},
 		{
 			name:     "MultipleEntries",
-			fileName: "multiple_entries.txt",
+			fileName: tmDir + "multiple_entries.txt",
 			setup: func(fileName string) error {
 				f, err := os.Create(fileName)
 				if err != nil {
 					return err
 				}
-				defer f.Close()
+				defer func() { _ = f.Close() }()
 				_, err = f.WriteString("entry1\nentry2\nentry3\n")
 				return err
 			},
@@ -290,13 +291,13 @@ func TestLoadHistory(t *testing.T) {
 		},
 		{
 			name:     "EmptyLines",
-			fileName: "multiple_entries.txt",
+			fileName: tmDir + "multiple_entries.txt",
 			setup: func(fileName string) error {
 				f, err := os.Create(fileName)
 				if err != nil {
 					return err
 				}
-				defer f.Close()
+				defer func() { _ = f.Close() }()
 				_, err = f.WriteString("\nentry1\n\nentry2\n\nentry3\n\n")
 				return err
 			},
@@ -310,7 +311,6 @@ func TestLoadHistory(t *testing.T) {
 			if err := tt.setup(tt.fileName); err != nil {
 				t.Fatalf("failed to set up test: %v", err)
 			}
-			defer os.Remove(tt.fileName)
 
 			history, err := LoadHistory(tt.fileName)
 			if tt.expectedError {
