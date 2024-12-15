@@ -459,3 +459,18 @@ func lastIndexOf(buffer []rune, pos int, search rune) int {
 func isWord(r rune) bool {
 	return unicode.IsDigit(r) || unicode.IsLetter(r)
 }
+
+// GetCurrentWord retrieves the word currently under the cursor position.
+// It returns a string representing the word or an empty string if the position is at the start.
+func (c *Content) GetCurrentWord() string {
+	if c.pos <= 0 {
+		return ""
+	}
+
+	start := c.pos
+	for start > 0 && isWord(c.text[start-1]) {
+		start--
+	}
+
+	return string(c.text[start:c.pos])
+}

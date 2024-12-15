@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 )
 
@@ -12,8 +13,11 @@ const (
 	DefaultLimit      = 100
 )
 
+var wordMatcher = regexp.MustCompile(`\b[\w-]{3,}\b`) // Match words with at least 3 characters
+
 // History maintains a record of command requests, enabling storage, retrieval, and navigation through past requests.
 type History struct {
+	index    *Dictionary
 	fileName string
 	requests []string
 	limit    int
@@ -23,6 +27,7 @@ type History struct {
 // NewHistory creates and returns a new History instance with default settings and an initial empty requests slice.
 func NewHistory(fileName string) *History {
 	return &History{
+		index:    NewDictionary(nil),
 		fileName: fileName,
 		limit:    DefaultLimit,
 		requests: make([]string, 0, DefaultLimit),
@@ -30,18 +35,16 @@ func NewHistory(fileName string) *History {
 	}
 }
 
-// LoadHistory loads the command history from the specified file.
+// LoadFromFile loads the command history from the specified file.
 // It opens the file with the given filename and reads its contents.
 // Each line in the file represents a request and is added to a History instance.
 // Newlines represented by "\n" within a request are preserved.
 // Returns a pointer to a History instance or an error if the file cannot be opened.
-func LoadHistory(fileName string) (*History, error) {
+func LoadFromFile(fileName string) (*History, error) {
 	fileHandler, err := os.OpenFile(fileName, os.O_RDONLY|os.O_CREATE, HistoryFileRigths)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open history file: %w", err)
 	}
-
-	defer fileHandler.Close()
 
 	reader := bufio.NewReader(fileHandler)
 
@@ -64,6 +67,10 @@ func LoadHistory(fileName string) (*History, error) {
 		h.AddRequest(line)
 	}
 
+	if err := fileHandler.Close(); err != nil {
+		return nil, fmt.Errorf("failed to close history file: %w", err)
+	}
+
 	return h, nil
 }
 
@@ -73,8 +80,6 @@ func (h *History) Close() error {
 	if err != nil {
 		return err
 	}
-
-	defer fileHandler.Close()
 
 	writer := bufio.NewWriter(fileHandler)
 
@@ -99,7 +104,11 @@ func (h *History) Close() error {
 		}
 	}
 
-	return writer.Flush()
+	if err := writer.Flush(); err != nil {
+		return err
+	}
+
+	return fileHandler.Close()
 }
 
 // AddRequest adds a new request to the history if it is not empty and not a duplicate of the last request.
@@ -116,6 +125,10 @@ func (h *History) AddRequest(request string) {
 
 	h.requests = append(h.requests, request)
 	h.pos = len(h.requests)
+
+	words := parseWordsFromRequest(request)
+
+	h.index.AddWords(words)
 }
 
 // PrevRequest returns the previous request from the history. If at the beginning of the history, it returns an empty string.
@@ -149,4 +162,25 @@ func (h *History) ResetPosition() {
 	}
 
 	h.pos = len(h.requests)
+}
+
+// AddWordsToIndex adds a list of words to the history's index for efficient search and retrieval.
+// It takes words, a slice of strings, representing the words to be added.
+// This method does not return any value and ensures the words are uniquely added and sorted in the index.
+func (h *History) AddWordsToIndex(words []string) {
+	h.index.AddWords(words)
+}
+
+// Search finds the longest common prefix of words in the history index that match the given prefix.
+// It takes prefix of type string, representing the search prefix to be matched.
+// It returns a string containing the longest common prefix among matching words.
+func (h *History) Search(prefix string) string {
+	return h.index.Search(prefix)
+}
+
+// parseWordsFromRequest extracts and returns all words from the given request string.
+// It takes a request of type string.
+// It returns a slice of strings containing all words with a minimum length of 3 characters from the request string.
+func parseWordsFromRequest(request string) []string {
+	return wordMatcher.FindAllString(request, -1)
 }

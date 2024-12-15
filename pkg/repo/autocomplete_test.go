@@ -1,8 +1,9 @@
-package edit
+package repo
 
 import (
-	"sort"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewDictionary(t *testing.T) {
@@ -11,18 +12,8 @@ func TestNewDictionary(t *testing.T) {
 
 	dictionary := NewDictionary(words)
 
-	// Check if the words are sorted in ascending order
-	if !sort.StringsAreSorted(dictionary.words) {
-		t.Errorf("NewDictionary did not sort the words in ascending order")
-	}
-
 	// Check if the sorted words match the expected result
-	for i, word := range dictionary.words {
-		if word != expected[i] {
-			t.Errorf("NewDictionary sorted words do not match the expected result")
-			break
-		}
-	}
+	assert.Equal(t, expected, dictionary.words)
 }
 
 func TestDictionary_Search(t *testing.T) {
@@ -99,5 +90,53 @@ func TestLongestCommonPrefix(t *testing.T) {
 		if result != tt.expected {
 			t.Errorf("longestCommonPrefix(%v) = %s, expected %s", tt.strs, result, tt.expected)
 		}
+	}
+}
+
+func TestDictionary_AddWords(t *testing.T) {
+	tests := []struct {
+		name          string
+		initialWords  []string
+		newWords      []string
+		expectedWords []string
+	}{
+		{
+			name:          "Add new non-duplicate words",
+			initialWords:  []string{"flower", "flow"},
+			newWords:      []string{"flight", "flame"},
+			expectedWords: []string{"flame", "flight", "flow", "flower"},
+		},
+		{
+			name:          "Add duplicate words",
+			initialWords:  []string{"apple", "banana"},
+			newWords:      []string{"banana", "cherry"},
+			expectedWords: []string{"apple", "banana", "cherry"},
+		},
+		{
+			name:          "Add no new words",
+			initialWords:  []string{"dog", "cat"},
+			newWords:      []string{},
+			expectedWords: []string{"cat", "dog"},
+		},
+		{
+			name:          "Add words to an empty dictionary",
+			initialWords:  []string{},
+			newWords:      []string{"zebra", "ant"},
+			expectedWords: []string{"ant", "zebra"},
+		},
+		{
+			name:          "Add empty and unique words",
+			initialWords:  []string{},
+			newWords:      []string{"", "abc"},
+			expectedWords: []string{"", "abc"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dictionary := NewDictionary(tt.initialWords)
+			dictionary.AddWords(tt.newWords)
+			assert.Equal(t, tt.expectedWords, dictionary.words)
+		})
 	}
 }

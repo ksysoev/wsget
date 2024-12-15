@@ -48,6 +48,10 @@ func (c *Edit) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 		return nil, err
 	}
 
+	if req == "" {
+		return nil, nil
+	}
+
 	return NewSend(req), nil
 }
 
@@ -184,6 +188,10 @@ func (c *CmdEdit) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 
 	if err := exCtx.Print(LineClear + "\r" + HideCursor); err != nil {
 		return nil, err
+	}
+
+	if rawCmd == "" {
+		return nil, nil
 	}
 
 	cmd, err := exCtx.CreateCommand(rawCmd)

@@ -19,7 +19,7 @@ func TestNewHistory(t *testing.T) {
 	assert.Equal(t, expectedFileName, history.fileName, "expected correct file name")
 }
 
-func TestNextRequest(t *testing.T) {
+func TestHistory_NextRequest(t *testing.T) {
 	tests := []struct {
 		name        string
 		expected    string
@@ -85,7 +85,9 @@ func TestNextRequest(t *testing.T) {
 	}
 }
 
-func TestHistoryClose(t *testing.T) {
+func TestHistory_Close(t *testing.T) {
+	tmpDir := os.TempDir()
+
 	tests := []struct {
 		name          string
 		history       *History
@@ -94,37 +96,37 @@ func TestHistoryClose(t *testing.T) {
 	}{
 		{
 			name:          "NoRequests",
-			history:       &History{fileName: "history_no_requests.txt", requests: []string{}, limit: 10},
+			history:       &History{fileName: tmpDir + "/history_no_requests.txt", requests: []string{}, limit: 10},
 			expectedLines: []string(nil),
 			expectError:   false,
 		},
 		{
 			name:          "IncorrectPath",
-			history:       &History{fileName: "/incorrect/path.txt", requests: []string{"request1"}, limit: 10},
+			history:       &History{fileName: tmpDir + "/incorrect/path.txt", requests: []string{"request1"}, limit: 10},
 			expectedLines: []string(nil),
 			expectError:   true,
 		},
 		{
 			name:          "SingleRequest",
-			history:       &History{fileName: "history_single_request.txt", requests: []string{"request1"}, limit: 10},
+			history:       &History{fileName: tmpDir + "/history_single_request.txt", requests: []string{"request1"}, limit: 10},
 			expectedLines: []string{"request1"},
 			expectError:   false,
 		},
 		{
 			name:          "MultipleRequests",
-			history:       &History{fileName: "history_multiple_requests.txt", requests: []string{"request1", "request2"}, limit: 10},
+			history:       &History{fileName: tmpDir + "/history_multiple_requests.txt", requests: []string{"request1", "request2"}, limit: 10},
 			expectedLines: []string{"request1", "request2"},
 			expectError:   false,
 		},
 		{
 			name:          "ExceedLimit",
-			history:       &History{fileName: "history_exceed_limit.txt", requests: []string{"req1", "req2", "req3"}, limit: 2},
+			history:       &History{fileName: tmpDir + "/history_exceed_limit.txt", requests: []string{"req1", "req2", "req3"}, limit: 2},
 			expectedLines: []string{"req2", "req3"},
 			expectError:   false,
 		},
 		{
 			name:          "EmptyLines",
-			history:       &History{fileName: "history_empty_lines.txt", requests: []string{"", "req1", "", "req2", "", "req3", ""}, limit: 10},
+			history:       &History{fileName: tmpDir + "/history_empty_lines.txt", requests: []string{"", "req1", "", "req2", "", "req3", ""}, limit: 10},
 			expectedLines: []string{"req1", "req2", "req3"},
 			expectError:   false,
 		},
@@ -144,7 +146,8 @@ func TestHistoryClose(t *testing.T) {
 			// Read the file and compare with expectedLines
 			file, err := os.Open(tt.history.fileName)
 			assert.NoError(t, err)
-			defer file.Close()
+
+			defer func() { _ = file.Close() }()
 
 			var lines []string
 
@@ -154,14 +157,11 @@ func TestHistoryClose(t *testing.T) {
 			}
 
 			assert.Equal(t, tt.expectedLines, lines)
-
-			// Clean up
-			os.Remove(tt.history.fileName)
 		})
 	}
 }
 
-func TestAddRequest(t *testing.T) {
+func TestHistory_AddRequest(t *testing.T) {
 	tests := []struct {
 		name          string
 		initial       []string
@@ -208,10 +208,9 @@ func TestAddRequest(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			history := &History{
-				requests: tt.initial,
-				pos:      len(tt.initial),
-			}
+			history := NewHistory("test")
+			history.requests = tt.initial
+			history.pos = len(tt.initial)
 
 			history.AddRequest(tt.newRequest)
 			assert.Equal(t, tt.expected, history.requests)
@@ -220,7 +219,9 @@ func TestAddRequest(t *testing.T) {
 	}
 }
 
-func TestLoadHistory(t *testing.T) {
+func TestHistory_LoadHistory(t *testing.T) {
+	tmDir := os.TempDir()
+
 	tests := []struct {
 		setup         func(fileName string) error
 		name          string
@@ -230,7 +231,7 @@ func TestLoadHistory(t *testing.T) {
 	}{
 		{
 			name:     "FileNotFound",
-			fileName: "non_existent.txt",
+			fileName: tmDir + "/non_existent.txt",
 			setup: func(_ string) error {
 				return nil
 			},
@@ -238,7 +239,7 @@ func TestLoadHistory(t *testing.T) {
 		},
 		{
 			name:     "FileNotFound",
-			fileName: "/incorrect/path.txt",
+			fileName: tmDir + "/incorrect/path.txt",
 			setup: func(_ string) error {
 				return nil
 			},
@@ -246,13 +247,13 @@ func TestLoadHistory(t *testing.T) {
 		},
 		{
 			name:     "EmptyFile",
-			fileName: "empty.txt",
+			fileName: tmDir + "/empty.txt",
 			setup: func(fileName string) error {
 				f, err := os.Create(fileName)
 				if err != nil {
 					return err
 				}
-				defer f.Close()
+				defer func() { _ = f.Close() }()
 				return nil
 			},
 			expectedError: false,
@@ -260,13 +261,13 @@ func TestLoadHistory(t *testing.T) {
 		},
 		{
 			name:     "SingleEntry",
-			fileName: "single_entry.txt",
+			fileName: tmDir + "/single_entry.txt",
 			setup: func(fileName string) error {
 				f, err := os.Create(fileName)
 				if err != nil {
 					return err
 				}
-				defer f.Close()
+				defer func() { _ = f.Close() }()
 				_, err = f.WriteString("entry1\n")
 				return err
 			},
@@ -275,13 +276,13 @@ func TestLoadHistory(t *testing.T) {
 		},
 		{
 			name:     "MultipleEntries",
-			fileName: "multiple_entries.txt",
+			fileName: tmDir + "/multiple_entries.txt",
 			setup: func(fileName string) error {
 				f, err := os.Create(fileName)
 				if err != nil {
 					return err
 				}
-				defer f.Close()
+				defer func() { _ = f.Close() }()
 				_, err = f.WriteString("entry1\nentry2\nentry3\n")
 				return err
 			},
@@ -290,13 +291,13 @@ func TestLoadHistory(t *testing.T) {
 		},
 		{
 			name:     "EmptyLines",
-			fileName: "multiple_entries.txt",
+			fileName: tmDir + "/multiple_entries.txt",
 			setup: func(fileName string) error {
 				f, err := os.Create(fileName)
 				if err != nil {
 					return err
 				}
-				defer f.Close()
+				defer func() { _ = f.Close() }()
 				_, err = f.WriteString("\nentry1\n\nentry2\n\nentry3\n\n")
 				return err
 			},
@@ -310,9 +311,8 @@ func TestLoadHistory(t *testing.T) {
 			if err := tt.setup(tt.fileName); err != nil {
 				t.Fatalf("failed to set up test: %v", err)
 			}
-			defer os.Remove(tt.fileName)
 
-			history, err := LoadHistory(tt.fileName)
+			history, err := LoadFromFile(tt.fileName)
 			if tt.expectedError {
 				assert.Error(t, err, "expected error but got nil")
 			} else {
@@ -426,4 +426,93 @@ func TestResetPosition(t *testing.T) {
 			assert.Equal(t, tt.expectedPos, history.pos, "unexpected position after ResetPosition")
 		})
 	}
+}
+
+func TestParseWordsFromRequest(t *testing.T) {
+	tests := []struct {
+		name     string
+		request  string
+		expected []string
+	}{
+		{
+			name:     "EmptyRequest",
+			request:  "",
+			expected: []string(nil),
+		},
+		{
+			name:     "SingleWord",
+			request:  "hello",
+			expected: []string{"hello"},
+		},
+		{
+			name:     "MultipleWords",
+			request:  "hello world",
+			expected: []string{"hello", "world"},
+		},
+		{
+			name:     "WordsWithSpecialCharacters",
+			request:  "hello, world!",
+			expected: []string{"hello", "world"},
+		},
+		{
+			name:     "MixedCaseWords",
+			request:  "Hello WoRLd",
+			expected: []string{"Hello", "WoRLd"},
+		},
+		{
+			name:     "WordsWithNumbers",
+			request:  "hello123 world456",
+			expected: []string{"hello123", "world456"},
+		},
+		{
+			name:     "PunctuationOnly",
+			request:  ".,!?;",
+			expected: []string(nil),
+		},
+		{
+			name:     "WordsWithUnderscores",
+			request:  "hello_world test_case",
+			expected: []string{"hello_world", "test_case"},
+		},
+		{
+			name:     "WordsWithHyphens",
+			request:  "co-operate re-enter",
+			expected: []string{"co-operate", "re-enter"},
+		},
+		{
+			name:     "WhitespaceOnly",
+			request:  "   ",
+			expected: []string(nil),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := parseWordsFromRequest(tt.request)
+			assert.Equal(t, tt.expected, result, "unexpected result for request: %s", tt.request)
+		})
+	}
+}
+
+func TestHistory_AddWordsToIndex(t *testing.T) {
+	index := NewDictionary(nil)
+	history := &History{
+		index: index,
+	}
+
+	expectedWords := []string{"hello", "world"}
+
+	history.AddWordsToIndex(expectedWords)
+	assert.Equal(t, index.words, expectedWords, "unexpected index state after AddWordsToIndex")
+}
+
+func TestHistory_Search(t *testing.T) {
+	index := NewDictionary([]string{"hello"})
+	history := &History{
+		index: index,
+	}
+
+	word := history.Search("hell")
+
+	assert.Equal(t, "hello", word, "unexpected word")
 }

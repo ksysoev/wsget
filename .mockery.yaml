@@ -1,9 +1,9 @@
 with-expecter: true
 mock-build-tags: "!compile"
 inpackage: true
+issue-845-fix: True
 filename: "{{.InterfaceName | snakecase }}_mock.go"
 dir: "{{.InterfaceDir}}"
-mockname: "Mock{{.InterfaceName}}"
 packages:
   github.com/ksysoev/wsget/pkg/core:
     interfaces:

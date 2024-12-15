@@ -1,4 +1,4 @@
-package edit
+package repo
 
 import (
 	"sort"
@@ -13,13 +13,37 @@ type Dictionary struct {
 // The words are sorted in ascending order before being stored in the dictionary.
 // It returns a pointer to the created Dictionary.
 func NewDictionary(words []string) *Dictionary {
-	sortedWords := make([]string, len(words))
-	copy(sortedWords, words)
-	sort.Strings(sortedWords)
-
-	return &Dictionary{
-		words: sortedWords,
+	d := Dictionary{
+		words: make([]string, 0, len(words)),
 	}
+
+	d.AddWords(words)
+
+	return &d
+}
+
+// AddWords adds new unique words to the dictionary in sorted order.
+// It takes a slice of strings newWords, representing the words to be added.
+// It does not return any value and ignores duplicate or empty inputs.
+func (d *Dictionary) AddWords(newWords []string) {
+	if len(newWords) == 0 {
+		return
+	}
+
+	wordSet := make(map[string]bool, len(d.words)+len(newWords))
+
+	for _, word := range d.words {
+		wordSet[word] = true
+	}
+
+	for _, word := range newWords {
+		if !wordSet[word] {
+			d.words = append(d.words, word)
+			wordSet[word] = true
+		}
+	}
+
+	sort.Strings(d.words)
 }
 
 // Search searches for words in the dictionary that have the given prefix.

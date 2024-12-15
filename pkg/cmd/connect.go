@@ -78,14 +78,14 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 		return fmt.Errorf("fail to get current user: %s", err)
 	}
 
-	history, err := repo.LoadHistory(homeDir + "/" + HistoryFilename)
+	history, err := repo.LoadFromFile(homeDir + "/" + HistoryFilename)
 	if err != nil {
 		return fmt.Errorf("fail to load history: %s", err)
 	}
 
 	defer func() { _ = history.Close() }()
 
-	cmdHistory, err := repo.LoadHistory(homeDir + "/" + HistoryCmdFilename)
+	cmdHistory, err := repo.LoadFromFile(homeDir + "/" + HistoryCmdFilename)
 	if err != nil {
 		return fmt.Errorf("fail to load command history: %s", err)
 	}
@@ -97,12 +97,11 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 		return fmt.Errorf("fail to load macro: %s", err)
 	}
 
-	var dict *edit.Dictionary
 	if macro != nil {
-		dict = edit.NewDictionary(macro.GetNames())
+		cmdHistory.AddWordsToIndex(macro.GetNames())
 	}
 
-	editor := edit.NewMultiMode(os.Stdout, history, cmdHistory, dict)
+	editor := edit.NewMultiMode(os.Stdout, history, cmdHistory)
 	cmdFactory := command2.NewFactory(macro)
 
 	client := core.NewCLI(cmdFactory, wsConn, os.Stdout, editor, formater.NewFormat())
