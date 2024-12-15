@@ -14,6 +14,7 @@ type HistoryRepo interface {
 	PrevRequest() string
 	NextRequest() string
 	ResetPosition()
+	Search(prefix string) string
 }
 
 const (
@@ -26,7 +27,6 @@ type Editor struct {
 	input           <-chan core.KeyEvent
 	history         HistoryRepo
 	content         *Content
-	Dictionary      *Dictionary
 	output          io.Writer
 	prevPressedTime time.Time
 	buffer          []rune
@@ -138,11 +138,8 @@ func (ed *Editor) handleKey(e core.KeyEvent) (next bool, res string, err error) 
 		ed.nextFromHistory()
 	case core.KeyTab:
 		content := ed.content.String()
-		if ed.Dictionary == nil || content == "" {
-			return true, "", nil
-		}
 
-		match := ed.Dictionary.Search(content)
+		match := ed.history.Search(content)
 		if match == "" || match == content {
 			return true, "", nil
 		}

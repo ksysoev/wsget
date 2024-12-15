@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 )
 
@@ -12,8 +13,11 @@ const (
 	DefaultLimit      = 100
 )
 
+var wordMatcher = regexp.MustCompile(`\b[\w-]{3,}\b`) // Match words with at least 3 characters
+
 // History maintains a record of command requests, enabling storage, retrieval, and navigation through past requests.
 type History struct {
+	index    *Dictionary
 	fileName string
 	requests []string
 	limit    int
@@ -23,6 +27,7 @@ type History struct {
 // NewHistory creates and returns a new History instance with default settings and an initial empty requests slice.
 func NewHistory(fileName string) *History {
 	return &History{
+		index:    NewDictionary(nil),
 		fileName: fileName,
 		limit:    DefaultLimit,
 		requests: make([]string, 0, DefaultLimit),
@@ -116,6 +121,10 @@ func (h *History) AddRequest(request string) {
 
 	h.requests = append(h.requests, request)
 	h.pos = len(h.requests)
+
+	words := parseWordsFromRequest(request)
+
+	h.index.AddWords(words)
 }
 
 // PrevRequest returns the previous request from the history. If at the beginning of the history, it returns an empty string.
@@ -149,4 +158,16 @@ func (h *History) ResetPosition() {
 	}
 
 	h.pos = len(h.requests)
+}
+
+func parseWordsFromRequest(request string) []string {
+	return wordMatcher.FindAllString(request, -1)
+}
+
+func (h *History) AddWordsToIndex(words []string) {
+	h.index.AddWords(words)
+}
+
+func (h *History) Search(prefix string) string {
+	return h.index.Search(prefix)
 }
