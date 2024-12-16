@@ -19,7 +19,7 @@ import (
 const (
 	headerPartsNumber     = 2
 	dialTimeout           = 15 * time.Second
-	defaultMaxMessageSize = 1024 * 1024
+	DefaultMaxMessageSize = 1024 * 1024
 )
 
 var (
@@ -37,12 +37,14 @@ type Connection struct {
 	opts      *websocket.DialOptions
 	ready     chan struct{}
 	l         sync.Mutex
+	msgSize   int64
 }
 
 type Options struct {
 	Output              io.Writer
 	Headers             []string
 	SkipSSLVerification bool
+	MaxMessageSize      int64
 }
 
 // New initializes a new WebSocket connection configuration with specified URL and options.
@@ -84,10 +86,13 @@ func New(wsURL string, opts Options) (*Connection, error) {
 		wsOpts.HTTPHeader = Headers
 	}
 
+	var msgSize int64 = DefaultMaxMessageSize
+
 	return &Connection{
-		url:   parsedURL,
-		opts:  wsOpts,
-		ready: make(chan struct{}),
+		url:     parsedURL,
+		opts:    wsOpts,
+		ready:   make(chan struct{}),
+		msgSize: msgSize,
 	}, nil
 }
 
@@ -130,7 +135,7 @@ func (c *Connection) Connect(ctx context.Context) error {
 
 	c.l.Unlock()
 
-	ws.SetReadLimit(defaultMaxMessageSize)
+	ws.SetReadLimit(c.msgSize)
 
 	return c.handleResponses(ctx, ws)
 }

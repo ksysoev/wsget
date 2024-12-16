@@ -55,6 +55,7 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 	wsOpts := ws.Options{
 		SkipSSLVerification: args.insecure,
 		Headers:             args.headers,
+		MaxMessageSize:      args.maxMsgSize,
 	}
 
 	if args.verbose {
