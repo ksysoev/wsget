@@ -22,6 +22,10 @@ const (
 	defaultMaxMessageSize = 1024 * 1024
 )
 
+var (
+	ErrConnectionClosed = errors.New("connection closed")
+)
+
 type reader interface {
 	Read(p []byte) (n int, err error)
 }
@@ -185,13 +189,13 @@ func handleError(err error) error {
 	}
 
 	if errors.Is(err, io.EOF) || errors.Is(err, net.ErrClosed) || errors.Is(err, syscall.EPIPE) {
-		return fmt.Errorf("connection closed")
+		return ErrConnectionClosed
 	}
 
 	var ce websocket.CloseError
 	if errors.As(err, &ce) {
 		if ce.Code == websocket.StatusNormalClosure {
-			return nil
+			return ErrConnectionClosed
 		}
 
 		return fmt.Errorf("connection closed: %s %s", ce.Code, ce.Reason)

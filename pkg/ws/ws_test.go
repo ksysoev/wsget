@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
 
@@ -274,12 +275,12 @@ func TestConnection_HandleError(t *testing.T) {
 		{
 			name:  "IO EOF error",
 			err:   io.EOF,
-			isNil: true,
+			isNil: false,
 		},
 		{
 			name:  "Net ErrClosed error",
 			err:   net.ErrClosed,
-			isNil: true,
+			isNil: false,
 		},
 		{
 			name:  "Unexpected error",
@@ -292,7 +293,7 @@ func TestConnection_HandleError(t *testing.T) {
 				Code:   websocket.StatusNormalClosure,
 				Reason: "normal closure",
 			},
-			isNil: true,
+			isNil: false,
 		},
 		{
 			name: "Unexpected Close error",
@@ -302,12 +303,21 @@ func TestConnection_HandleError(t *testing.T) {
 			},
 			isNil: false,
 		},
+		{
+			name:  "Nil error",
+			err:   nil,
+			isNil: true,
+		},
+		{
+			name:  "Syscall EPIPE error",
+			err:   syscall.EPIPE,
+			isNil: false,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			conn := &Connection{}
-			err := conn.handleError(tt.err)
+			err := handleError(tt.err)
 
 			if tt.isNil {
 				assert.NoError(t, err)
@@ -346,7 +356,7 @@ func TestConnection_Connect_Success(t *testing.T) {
 		defer wg.Done()
 
 		err := conn.Connect(context.Background())
-		assert.NoError(t, err)
+		assert.ErrorIs(t, err, ErrConnectionClosed)
 	}()
 
 	select {
@@ -395,7 +405,7 @@ func TestConnection_Connect_AlreadyConnected(t *testing.T) {
 		defer wg.Done()
 
 		err = conn.Connect(context.Background())
-		assert.NoError(t, err)
+		assert.ErrorIs(t, err, ErrConnectionClosed)
 	}()
 
 	select {
