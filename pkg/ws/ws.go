@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/coder/websocket"
@@ -107,7 +108,7 @@ func (c *Connection) Connect(ctx context.Context) error {
 
 	ws, resp, err := websocket.Dial(ctx, c.url.String(), c.opts)
 	if err != nil {
-		return c.handleError(err)
+		return handleError(err)
 	}
 
 	if resp.Body != nil {
@@ -144,11 +145,11 @@ func (c *Connection) handleResponses(ctx context.Context, ws *websocket.Conn) er
 	for ctx.Err() == nil {
 		msgType, reader, err := ws.Reader(ctx)
 		if err != nil {
-			return c.handleError(err)
+			return handleError(err)
 		}
 
 		if err := c.handleMessage(ctx, msgType, reader); err != nil {
-			return c.handleError(err)
+			return handleError(err)
 		}
 	}
 
@@ -178,9 +179,13 @@ func (c *Connection) handleMessage(ctx context.Context, msgType websocket.Messag
 // It takes an err parameter of type error and returns an error value.
 // The method returns nil if the error is context.Canceled, io.EOF, net.ErrClosed or a websocket.StatusNormalClosure.
 // It returns a formatted error message if the error is a websocket.CloseError with any other close code.
-func (c *Connection) handleError(err error) error {
-	if errors.Is(err, context.Canceled) || errors.Is(err, io.EOF) || errors.Is(err, net.ErrClosed) {
+func handleError(err error) error {
+	if err == nil || errors.Is(err, context.Canceled) {
 		return nil
+	}
+
+	if errors.Is(err, io.EOF) || errors.Is(err, net.ErrClosed) || errors.Is(err, syscall.EPIPE) {
+		return fmt.Errorf("connection closed")
 	}
 
 	var ce websocket.CloseError
@@ -192,7 +197,7 @@ func (c *Connection) handleError(err error) error {
 		return fmt.Errorf("connection closed: %s %s", ce.Code, ce.Reason)
 	}
 
-	return fmt.Errorf("fail read from connection: %w", err)
+	return fmt.Errorf("connection error: %w", err)
 }
 
 // Send transmits a message over an established WebSocket connection within a given context.
@@ -206,7 +211,9 @@ func (c *Connection) Send(ctx context.Context, msg string) error {
 		return ctx.Err()
 	}
 
-	return c.ws.Write(ctx, websocket.MessageText, []byte(msg))
+	err := c.ws.Write(ctx, websocket.MessageText, []byte(msg))
+
+	return handleError(err)
 }
 
 // Close shuts down an established WebSocket connection gracefully.
