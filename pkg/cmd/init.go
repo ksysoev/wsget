@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"github.com/ksysoev/wsget/pkg/ws"
 	"github.com/spf13/cobra"
 )
 
@@ -31,6 +32,7 @@ type flags struct {
 	outputFile   string
 	inputFile    string
 	headers      []string
+	maxMsgSize   int64
 	waitResponse int
 	insecure     bool
 	verbose      bool
@@ -60,6 +62,7 @@ func InitCommands(version string) *cobra.Command {
 	cmd.Flags().StringSliceVarP(&args.headers, "header", "H", []string{}, "HTTP headers to attach to the request")
 	cmd.Flags().StringVarP(&args.inputFile, "input", "i", "", "Input YAML file with list of requests to send to the server")
 	cmd.Flags().BoolVarP(&args.verbose, "verbose", "v", false, "Verbose output")
+	cmd.Flags().Int64VarP(&args.maxMsgSize, "max-size", "s", ws.DefaultMaxMessageSize, "Maximum message size in bytes, non-positive value will be ignored and default value will be used")
 
 	return cmd
 }
