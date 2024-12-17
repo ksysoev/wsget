@@ -75,6 +75,7 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 		if err != nil {
 			return fmt.Errorf("fail to get current user: %s", err)
 		}
+
 		args.configDir = filepath.Join(currentUser.HomeDir, defaultConfigDir)
 	}
 

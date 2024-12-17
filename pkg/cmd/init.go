@@ -34,12 +34,12 @@ type flags struct {
 	request      string
 	outputFile   string
 	inputFile    string
+	configDir    string
 	headers      []string
 	maxMsgSize   int64
 	waitResponse int
 	insecure     bool
 	verbose      bool
-	configDir    string
 }
 
 // InitCommands initializes and returns a new cobra.Command for the wsget tool.
