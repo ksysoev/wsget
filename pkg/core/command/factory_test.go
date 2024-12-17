@@ -7,11 +7,12 @@ import (
 	"time"
 
 	"github.com/ksysoev/wsget/pkg/core"
+	"github.com/ksysoev/wsget/pkg/repo"
 )
 
 func TestFactory_Create(t *testing.T) {
 	tests := []struct {
-		macro   *Macro
+		macro   *repo.Macro
 		want    core.Executer
 		name    string
 		raw     string
@@ -90,7 +91,7 @@ func TestFactory_Create(t *testing.T) {
 		{
 			name:    "macro command",
 			raw:     "macro",
-			macro:   &Macro{},
+			macro:   &repo.Macro{},
 			want:    nil,
 			wantErr: true,
 		},

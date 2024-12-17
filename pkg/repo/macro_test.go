@@ -1,10 +1,11 @@
-package command
+package repo
 
 import (
 	"os"
 	"testing"
 
 	"github.com/ksysoev/wsget/pkg/core"
+	"github.com/ksysoev/wsget/pkg/core/command"
 )
 
 func TestNewMacro(t *testing.T) {
@@ -209,7 +210,7 @@ func TestMacro_Get(t *testing.T) {
 			name:    "get existing command",
 			macro:   &Macro{macro: map[string]*MacroTemplates{"test": testTemplate}},
 			cmdName: "test",
-			wantCmd: NewExit(),
+			wantCmd: command.NewExit(),
 			wantErr: false,
 			errMsg:  "",
 		},
@@ -362,8 +363,8 @@ macro:
 		t.Fatalf("LoadFromFile() error = %v, want non-nil", err)
 	}
 
-	if err.Error() != (&ErrUnsupportedVersion{"2"}).Error() {
-		t.Errorf("LoadFromFile() error = %v, want %v", err.Error(), &ErrUnsupportedVersion{"2"})
+	if err.Error() != (&command.ErrUnsupportedVersion{"2"}).Error() {
+		t.Errorf("LoadFromFile() error = %v, want %v", err.Error(), &command.ErrUnsupportedVersion{"2"})
 	}
 }
 

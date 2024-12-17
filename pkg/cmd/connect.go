@@ -97,7 +97,7 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 
 	defer func() { _ = cmdHistory.Close() }()
 
-	macro, err := command2.LoadMacroForDomain(filepath.Join(args.configDir, macroDir), wsConn.Hostname())
+	macro, err := repo.LoadMacroForDomain(filepath.Join(args.configDir, macroDir), wsConn.Hostname())
 	if err != nil {
 		return fmt.Errorf("fail to load macro: %s", err)
 	}
