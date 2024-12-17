@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/user"
+	"path/filepath"
 	"time"
 
 	"github.com/ksysoev/wsget/pkg/core"
@@ -20,11 +21,11 @@ import (
 )
 
 const (
-	MacroDir           = "macro"
-	ConfigDir          = ".wsget"
-	HistoryFilename    = ConfigDir + "/history"
-	HistoryCmdFilename = ConfigDir + "/cmd_history"
-	ConfigDirMode      = 0o755
+	macroDir           = "macro"
+	historyFilename    = "history"
+	historyCmdFilename = "cmd_history"
+	configDirMode      = 0o755
+	defaultConfigDir   = ".wsget"
 )
 
 // createConnectRunner creates a runner function for the connect command.
@@ -69,31 +70,33 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 
 	defer func() { _ = wsConn.Close() }()
 
-	currentUser, err := user.Current()
-	if err != nil {
+	if args.configDir == "" {
+		currentUser, err := user.Current()
+		if err != nil {
+			return fmt.Errorf("fail to get current user: %s", err)
+		}
+		args.configDir = filepath.Join(currentUser.HomeDir, defaultConfigDir)
+	}
+
+	if err = os.MkdirAll(filepath.Join(args.configDir, macroDir), configDirMode); err != nil {
 		return fmt.Errorf("fail to get current user: %s", err)
 	}
 
-	homeDir := currentUser.HomeDir
-	if err = os.MkdirAll(homeDir+"/"+ConfigDir+"/"+MacroDir, ConfigDirMode); err != nil {
-		return fmt.Errorf("fail to get current user: %s", err)
-	}
-
-	history, err := repo.LoadFromFile(homeDir + "/" + HistoryFilename)
+	history, err := repo.LoadFromFile(filepath.Join(args.configDir, historyFilename))
 	if err != nil {
 		return fmt.Errorf("fail to load history: %s", err)
 	}
 
 	defer func() { _ = history.Close() }()
 
-	cmdHistory, err := repo.LoadFromFile(homeDir + "/" + HistoryCmdFilename)
+	cmdHistory, err := repo.LoadFromFile(filepath.Join(args.configDir, historyCmdFilename))
 	if err != nil {
 		return fmt.Errorf("fail to load command history: %s", err)
 	}
 
 	defer func() { _ = cmdHistory.Close() }()
 
-	macro, err := command2.LoadMacroForDomain(homeDir+"/"+ConfigDir+"/"+MacroDir, wsConn.Hostname())
+	macro, err := command2.LoadMacroForDomain(filepath.Join(args.configDir, macroDir), wsConn.Hostname())
 	if err != nil {
 		return fmt.Errorf("fail to load macro: %s", err)
 	}
