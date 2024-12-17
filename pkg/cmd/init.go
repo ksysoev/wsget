@@ -1,6 +1,9 @@
 package cmd
 
 import (
+	"cmp"
+	"os"
+
 	"github.com/ksysoev/wsget/pkg/ws"
 	"github.com/spf13/cobra"
 )
@@ -31,6 +34,7 @@ type flags struct {
 	request      string
 	outputFile   string
 	inputFile    string
+	configDir    string
 	headers      []string
 	maxMsgSize   int64
 	waitResponse int
@@ -55,6 +59,7 @@ func InitCommands(version string) *cobra.Command {
 		RunE:       createConnectRunner(args),
 	}
 
+	cmd.Flags().StringVarP(&args.configDir, "config-dir", "c", "", "Configuration directory for storing history and macros")
 	cmd.Flags().BoolVarP(&args.insecure, "insecure", "k", false, "Skip SSL certificate verification")
 	cmd.Flags().StringVarP(&args.request, "request", "r", "", "WebSocket request that will be sent to the server")
 	cmd.Flags().StringVarP(&args.outputFile, "output", "o", "", "Output file for saving all request and responses")
@@ -63,6 +68,8 @@ func InitCommands(version string) *cobra.Command {
 	cmd.Flags().StringVarP(&args.inputFile, "input", "i", "", "Input YAML file with list of requests to send to the server")
 	cmd.Flags().BoolVarP(&args.verbose, "verbose", "v", false, "Verbose output")
 	cmd.Flags().Int64VarP(&args.maxMsgSize, "max-size", "s", ws.DefaultMaxMessageSize, "Maximum message size in bytes, non-positive value will be ignored and default value will be used")
+
+	args.configDir = cmp.Or(args.configDir, os.Getenv("WSGET_CONFIG_DIR"))
 
 	return cmd
 }
