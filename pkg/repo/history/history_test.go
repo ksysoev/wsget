@@ -1,10 +1,11 @@
-package repo
+package history
 
 import (
 	"bufio"
 	"os"
 	"testing"
 
+	"github.com/ksysoev/wsget/pkg/repo/macro"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -312,7 +313,7 @@ func TestHistory_LoadHistory(t *testing.T) {
 				t.Fatalf("failed to set up test: %v", err)
 			}
 
-			history, err := LoadFromFile(tt.fileName)
+			history, err := macro.LoadFromFile(tt.fileName)
 			if tt.expectedError {
 				assert.Error(t, err, "expected error but got nil")
 			} else {

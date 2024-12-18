@@ -8,14 +8,14 @@ import (
 	"testing"
 
 	"github.com/ksysoev/wsget/pkg/core"
-	"github.com/ksysoev/wsget/pkg/repo"
+	"github.com/ksysoev/wsget/pkg/repo/history"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
 func TestNewEditor(t *testing.T) {
 	output := new(bytes.Buffer)
-	history := repo.NewHistory("")
+	history := history.NewHistory("")
 	editor := NewEditor(output, history, false)
 
 	if editor.content == nil {
