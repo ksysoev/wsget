@@ -23,6 +23,8 @@ const (
 	Bell                             = "\a"
 )
 
+type Option func(*Editor)
+
 type Editor struct {
 	input           <-chan core.KeyEvent
 	history         HistoryRepo
@@ -32,14 +34,16 @@ type Editor struct {
 	buffer          []rune
 	pos             int
 	isSingleLine    bool
+	onOpen          func(io.Writer) error
+	onClose         func(io.Writer) error
 }
 
 // NewEditor initializes a new instance of Editor for text editing tasks.
 // It takes output of type io.Writer for writing, history of type HistoryRepo for request history,
 // and isSingleLine of type bool to specify single-line mode.
 // It returns a pointer to an initialized Editor structure.
-func NewEditor(output io.Writer, history HistoryRepo, isSingleLine bool) *Editor {
-	return &Editor{
+func NewEditor(output io.Writer, history HistoryRepo, isSingleLine bool, opts ...Option) *Editor {
+	e := &Editor{
 		history:         history,
 		content:         NewContent(),
 		buffer:          make([]rune, 0),
@@ -47,7 +51,15 @@ func NewEditor(output io.Writer, history HistoryRepo, isSingleLine bool) *Editor
 		output:          output,
 		prevPressedTime: time.Now(),
 		isSingleLine:    isSingleLine,
+		onOpen:          func(_ io.Writer) error { return nil },
+		onClose:         func(_ io.Writer) error { return nil },
 	}
+
+	for _, opt := range opts {
+		opt(e)
+	}
+
+	return e
 }
 
 // SetInput sets the input channel for the Editor instance to process keyboard events.
@@ -60,7 +72,15 @@ func (ed *Editor) SetInput(input <-chan core.KeyEvent) {
 // Edit processes keyboard input to manipulate and return the edited content.
 // It takes a context ctx of type context.Context for cancellation and an initial buffer initBuffer of type string.
 // It returns the final edited string content or an error if input is unavailable, keyboard stream is closed, or an interrupt occurs.
-func (ed *Editor) Edit(ctx context.Context, initBuffer string) (string, error) {
+func (ed *Editor) Edit(ctx context.Context, initBuffer string) (res string, err error) {
+	if err := ed.onOpen(ed.output); err != nil {
+		return "", fmt.Errorf("failed to execute open hook: %w", err)
+	}
+
+	defer func() {
+		err = ed.onClose(ed.output)
+	}()
+
 	ed.history.ResetPosition()
 
 	if _, err := fmt.Fprint(ed.output, ed.content.ReplaceText(initBuffer)); err != nil {
@@ -274,4 +294,22 @@ func (ed *Editor) isPasting() bool {
 	ed.prevPressedTime = time.Now()
 
 	return elapsed.Microseconds() < PastingTimingThresholdInMicrosec
+}
+
+// WithOpenHook sets the onOpen function for the Editor instance.
+// It takes a function hook of type func(io.Writer) error.
+// It returns an Option function to set the onOpen function.
+func WithOpenHook(hook func(io.Writer) error) Option {
+	return func(ed *Editor) {
+		ed.onOpen = hook
+	}
+}
+
+// WithCloseHook sets the onClose function for the Editor instance.
+// It takes a function hook of type func(io.Writer) error.
+// It returns an Option function to set the onClose function.
+func WithCloseHook(hook func(io.Writer) error) Option {
+	return func(ed *Editor) {
+		ed.onClose = hook
+	}
 }

@@ -177,16 +177,8 @@ func NewCmdEdit() *CmdEdit {
 // Execute executes the CmdEdit and returns a core.Executer and an error.
 // It prompts the user to edit a command and returns the corresponding Command object.
 func (c *CmdEdit) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
-	if err := exCtx.Print(":" + ShowCursor); err != nil {
-		return nil, err
-	}
-
 	rawCmd, err := exCtx.CommandMode("")
 	if err != nil {
-		return nil, err
-	}
-
-	if err := exCtx.Print(LineClear + "\r" + HideCursor); err != nil {
 		return nil, err
 	}
 
