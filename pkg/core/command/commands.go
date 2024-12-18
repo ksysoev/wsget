@@ -31,20 +31,8 @@ func NewEdit(content string) *Edit {
 
 // Execute executes the edit command and returns a Send command id editing was successful or an error in other case.
 func (c *Edit) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
-	if err := exCtx.Print("->", color.FgGreen); err != nil {
-		return nil, err
-	}
-
-	if err := exCtx.Print("\n" + ShowCursor); err != nil {
-		return nil, err
-	}
-
 	req, err := exCtx.EditorMode(c.content)
 	if err != nil {
-		return nil, err
-	}
-
-	if err := exCtx.Print(LineUp + LineClear + HideCursor); err != nil {
 		return nil, err
 	}
 

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/fatih/color"
 	"github.com/ksysoev/wsget/pkg/core"
 )
 
@@ -27,18 +28,38 @@ func NewMultiMode(output io.Writer, reqHistory, cmdHistory HistoryRepo) *MultiMo
 		cmdHistory,
 		true,
 		WithOpenHook(func(w io.Writer) error {
-			_, err := fmt.Fprintf(w, ":"+ShowCursor)
+			_, err := fmt.Fprint(w, ":"+ShowCursor)
 			return err
 		}),
 		WithCloseHook(func(w io.Writer) error {
-			_, err := fmt.Fprintf(w, LineClear+"\r"+HideCursor)
+			_, err := fmt.Fprint(w, LineClear+"\r"+HideCursor)
+			return err
+		}),
+	)
+
+	editMode := NewEditor(
+		output,
+		reqHistory,
+		false,
+		WithOpenHook(func(w io.Writer) error {
+			if _, err := color.New(color.FgGreen).Fprint(w, "->"); err != nil {
+				return err
+			}
+
+			_, err := fmt.Fprint(w, "\n"+ShowCursor)
+
+			return err
+		}),
+		WithCloseHook(func(w io.Writer) error {
+			_, err := fmt.Fprint(w, LineUp+LineClear+HideCursor)
+
 			return err
 		}),
 	)
 
 	return &MultiMode{
 		commandMode: commandMode,
-		editMode:    NewEditor(output, reqHistory, false),
+		editMode:    editMode,
 	}
 }
 
