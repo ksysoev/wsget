@@ -7,14 +7,17 @@ import (
 	"time"
 
 	"github.com/ksysoev/wsget/pkg/core"
-	"github.com/ksysoev/wsget/pkg/repo/macro"
 )
 
-type Factory struct {
-	macro *macro.Macro
+type MacroRepo interface {
+	Get(name, argString string) (core.Executer, error)
 }
 
-func NewFactory(macro *macro.Macro) *Factory {
+type Factory struct {
+	macro MacroRepo
+}
+
+func NewFactory(macro MacroRepo) *Factory {
 	return &Factory{macro: macro}
 }
 

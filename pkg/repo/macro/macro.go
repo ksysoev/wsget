@@ -41,11 +41,11 @@ func NewMacro(domains []string) *Macro {
 // Otherwise, it creates a new Sequence with the commands and adds it to the macro.
 func (m *Macro) AddCommands(name string, rawCommands []string) error {
 	if _, ok := m.macro[name]; ok {
-		return &command.ErrDuplicateMacro{name}
+		return fmt.Errorf("duplicate macro: %s", name)
 	}
 
 	if len(rawCommands) == 0 {
-		return command.ErrEmptyMacro{name}
+		return fmt.Errorf("empty macro: %s", name)
 	}
 
 	templs, err := NewMacroTemplates(rawCommands)
@@ -64,7 +64,7 @@ func (m *Macro) AddCommands(name string, rawCommands []string) error {
 func (m *Macro) merge(macro *Macro) error {
 	for name, cmd := range macro.macro {
 		if _, ok := m.macro[name]; ok {
-			return &command.ErrDuplicateMacro{name}
+			return fmt.Errorf("duplicate macro: %s", name)
 		}
 
 		m.macro[name] = cmd
@@ -80,7 +80,7 @@ func (m *Macro) Get(name, argString string) (core.Executer, error) {
 		return cmd.GetExecuter(args)
 	}
 
-	return nil, &command.ErrUnknownCommand{name}
+	return nil, fmt.Errorf("unknown command: %s", name)
 }
 
 func (m *Macro) GetNames() []string {
@@ -107,7 +107,7 @@ func LoadFromFile(path string) (*Macro, error) {
 	}
 
 	if cfg.Version != "1" {
-		return nil, &command.ErrUnsupportedVersion{cfg.Version}
+		return nil, fmt.Errorf("unsupported macro version: %s", cfg.Version)
 	}
 
 	macroCfg := NewMacro(cfg.Domains)
@@ -162,7 +162,7 @@ func LoadMacroForDomain(macroDir, domain string) (*Macro, error) {
 			err := macro.merge(fileMacro)
 
 			if err != nil {
-				return nil, fmt.Errorf("fail to loading macro from file %s, %s ", file.Name(), err)
+				return nil, fmt.Errorf("fail to loading macro from file %s, %w ", file.Name(), err)
 			}
 		}
 	}

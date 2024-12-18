@@ -363,8 +363,8 @@ macro:
 		t.Fatalf("LoadFromFile() error = %v, want non-nil", err)
 	}
 
-	if err.Error() != (&command.ErrUnsupportedVersion{"2"}).Error() {
-		t.Errorf("LoadFromFile() error = %v, want %v", err.Error(), &command.ErrUnsupportedVersion{"2"})
+	if err.Error() != "unsupported macro version: 2" {
+		t.Errorf("LoadFromFile() error = %v, want unsupported macro version: 2", err)
 	}
 }
 

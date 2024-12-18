@@ -13,6 +13,9 @@ packages:
       ExecutionContext:
       Formater:
       ConnectionHandler:
+  github.com/ksysoev/wsget/pkg/core/command:
+    interfaces:
+      MacroRepo:
   github.com/ksysoev/wsget/pkg/core/edit:
     interfaces:
       HistoryRepo:
