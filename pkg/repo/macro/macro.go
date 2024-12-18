@@ -20,7 +20,7 @@ type Config struct {
 }
 
 type Macro struct {
-	macro   map[string]*MacroTemplates
+	macro   map[string]*Templates
 	domains []string
 }
 
@@ -29,7 +29,7 @@ type Macro struct {
 // Returns a pointer to the newly created Macro instance.
 func NewMacro(domains []string) *Macro {
 	return &Macro{
-		macro:   make(map[string]*MacroTemplates),
+		macro:   make(map[string]*Templates),
 		domains: domains,
 	}
 }
@@ -170,12 +170,12 @@ func LoadMacroForDomain(macroDir, domain string) (*Macro, error) {
 	return macro, nil
 }
 
-type MacroTemplates struct {
+type Templates struct {
 	list []*template.Template
 }
 
-func NewMacroTemplates(templates []string) (*MacroTemplates, error) {
-	tmpls := &MacroTemplates{}
+func NewMacroTemplates(templates []string) (*Templates, error) {
+	tmpls := &Templates{}
 	tmpls.list = make([]*template.Template, len(templates))
 
 	for i, rawTempl := range templates {
@@ -190,7 +190,7 @@ func NewMacroTemplates(templates []string) (*MacroTemplates, error) {
 	return tmpls, nil
 }
 
-func (t *MacroTemplates) GetExecuter(args []string) (core.Executer, error) {
+func (t *Templates) GetExecuter(args []string) (core.Executer, error) {
 	data := struct {
 		Args []string
 	}{args}
