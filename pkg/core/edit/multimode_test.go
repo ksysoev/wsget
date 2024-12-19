@@ -75,10 +75,10 @@ func (f failingWriter) Write(_ []byte) (n int, err error) {
 
 func TestEditorOpenHook(t *testing.T) {
 	tests := []struct {
-		name           string
 		writer         io.Writer
-		expectedOutput string
 		expectedError  error
+		name           string
+		expectedOutput string
 	}{
 		{
 			name:           "Success with valid writer",
@@ -115,10 +115,10 @@ func TestEditorOpenHook(t *testing.T) {
 
 func TestEditorCloseHook(t *testing.T) {
 	tests := []struct {
-		name           string
 		writer         io.Writer
-		expectedOutput string
 		expectedError  error
+		name           string
+		expectedOutput string
 	}{
 		{
 			name:           "Success with valid writer",
@@ -155,10 +155,10 @@ func TestEditorCloseHook(t *testing.T) {
 
 func TestCmdEditorOpenHook(t *testing.T) {
 	tests := []struct {
-		name           string
 		writer         io.Writer
-		expectedOutput string
 		expectedError  error
+		name           string
+		expectedOutput string
 	}{
 		{
 			name:           "Success with valid writer",
@@ -195,10 +195,10 @@ func TestCmdEditorOpenHook(t *testing.T) {
 
 func TestCmdEditorCloseHook(t *testing.T) {
 	tests := []struct {
-		name           string
 		writer         io.Writer
-		expectedOutput string
 		expectedError  error
+		name           string
+		expectedOutput string
 	}{
 		{
 			name:           "Success with valid writer",
