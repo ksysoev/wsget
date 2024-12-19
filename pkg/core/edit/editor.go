@@ -26,16 +26,16 @@ const (
 type Option func(*Editor)
 
 type Editor struct {
-	input           <-chan core.KeyEvent
-	history         HistoryRepo
-	content         *Content
-	output          io.Writer
 	prevPressedTime time.Time
+	history         HistoryRepo
+	output          io.Writer
+	input           <-chan core.KeyEvent
+	content         *Content
+	onOpen          func(io.Writer) error
+	onClose         func(io.Writer) error
 	buffer          []rune
 	pos             int
 	isSingleLine    bool
-	onOpen          func(io.Writer) error
-	onClose         func(io.Writer) error
 }
 
 // NewEditor initializes a new instance of Editor for text editing tasks.
@@ -78,7 +78,9 @@ func (ed *Editor) Edit(ctx context.Context, initBuffer string) (res string, err 
 	}
 
 	defer func() {
-		err = ed.onClose(ed.output)
+		if closeErr := ed.onClose(ed.output); err == nil {
+			err = closeErr
+		}
 	}()
 
 	ed.history.ResetPosition()
