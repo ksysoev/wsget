@@ -148,19 +148,16 @@ func TestCmdEdit_Execute(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name                string
-		mockPrintError      error
-		mockPrintAfterError error
-		mockCommandError    error
-		mockCreateCmd       core.Executer
-		mockCreateCmdErr    error
-		expectedNextCmd     core.Executer
-		expectedErr         error
-		mockRawCommand      string
+		name             string
+		mockCommandError error
+		mockCreateCmd    core.Executer
+		mockCreateCmdErr error
+		expectedNextCmd  core.Executer
+		expectedErr      error
+		mockRawCommand   string
 	}{
 		{
 			name:             "ValidCommand",
-			mockPrintError:   nil,
 			mockCommandError: nil,
 			mockRawCommand:   "test-command",
 			mockCreateCmd:    NewPrintMsg(core.Message{Type: core.Request, Data: "mock"}),
@@ -169,7 +166,6 @@ func TestCmdEdit_Execute(t *testing.T) {
 		},
 		{
 			name:             "CreateCommandError",
-			mockPrintError:   nil,
 			mockCommandError: nil,
 			mockRawCommand:   "invalid-command",
 			mockCreateCmd:    nil,
@@ -179,34 +175,12 @@ func TestCmdEdit_Execute(t *testing.T) {
 		},
 		{
 			name:             "EmptyRawCommand",
-			mockPrintError:   nil,
 			mockCommandError: nil,
 			mockRawCommand:   "",
 			mockCreateCmd:    nil,
 			mockCreateCmdErr: nil,
 			expectedNextCmd:  nil,
 			expectedErr:      nil, // Assuming it's valid to return no command or error.
-		},
-		{
-			name:             "PrintErrorAtStart",
-			mockPrintError:   assert.AnError,
-			mockCommandError: nil,
-			mockRawCommand:   "test-command",
-			mockCreateCmd:    nil,
-			mockCreateCmdErr: nil,
-			expectedNextCmd:  nil,
-			expectedErr:      assert.AnError,
-		},
-		{
-			name:                "PrintErrorOnCursorHide",
-			mockPrintError:      nil,
-			mockCommandError:    nil,
-			mockPrintAfterError: assert.AnError,
-			mockRawCommand:      "test-command",
-			mockCreateCmd:       nil,
-			mockCreateCmdErr:    nil,
-			expectedNextCmd:     nil,
-			expectedErr:         assert.AnError,
 		},
 	}
 
@@ -216,9 +190,7 @@ func TestCmdEdit_Execute(t *testing.T) {
 			t.Parallel()
 
 			exCtx := core.NewMockExecutionContext(t)
-			exCtx.EXPECT().Print(":\x1b[?25h").Return(tt.mockPrintError).Maybe()
 			exCtx.EXPECT().CommandMode("").Return(tt.mockRawCommand, tt.mockCommandError).Maybe()
-			exCtx.EXPECT().Print(LineClear + "\r" + HideCursor).Return(tt.mockPrintAfterError).Maybe()
 			exCtx.EXPECT().CreateCommand(tt.mockRawCommand).Return(tt.mockCreateCmd, tt.mockCreateCmdErr).Maybe()
 			exCtx.EXPECT().Print("Invalid command: "+tt.mockRawCommand+"\n", color.FgRed).Return(nil).Maybe()
 
@@ -323,9 +295,7 @@ func TestSequence_Execute(t *testing.T) {
 
 				exCtx := core.NewMockExecutionContext(t)
 
-				exCtx.EXPECT().Print(":\x1b[?25h").Return(nil)
 				exCtx.EXPECT().CommandMode("").Return("sleep 0", nil)
-				exCtx.EXPECT().Print("\x1b[2K\r\x1b[?25l").Return(nil)
 				exCtx.EXPECT().CreateCommand("sleep 0").Return(NewSleepCommand(0), nil)
 
 				return exCtx
@@ -480,10 +450,7 @@ func TestEdit_Execute(t *testing.T) {
 				t.Helper()
 
 				exCtx := core.NewMockExecutionContext(t)
-				exCtx.EXPECT().Print("->", color.FgGreen).Return(nil)
-				exCtx.EXPECT().Print("\n" + ShowCursor).Return(nil)
 				exCtx.EXPECT().EditorMode("test-content").Return("test-response", nil)
-				exCtx.EXPECT().Print(LineUp + LineClear + HideCursor).Return(nil)
 				return exCtx
 			},
 		},
@@ -496,36 +463,7 @@ func TestEdit_Execute(t *testing.T) {
 				t.Helper()
 
 				exCtx := core.NewMockExecutionContext(t)
-				exCtx.EXPECT().Print("->", color.FgGreen).Return(nil)
-				exCtx.EXPECT().Print("\n" + ShowCursor).Return(nil)
 				exCtx.EXPECT().EditorMode("error-content").Return("", assert.AnError)
-				return exCtx
-			},
-		},
-		{
-			name:            "PrintError 1",
-			mockContent:     "print-error-content",
-			expectedErr:     assert.AnError,
-			expectedNextCmd: nil,
-			mockExecutionCtx: func(t *testing.T) core.ExecutionContext {
-				t.Helper()
-
-				exCtx := core.NewMockExecutionContext(t)
-				exCtx.EXPECT().Print("->", color.FgGreen).Return(assert.AnError)
-				return exCtx
-			},
-		},
-		{
-			name:            "PrintError 2",
-			mockContent:     "print-error-content",
-			expectedErr:     assert.AnError,
-			expectedNextCmd: nil,
-			mockExecutionCtx: func(t *testing.T) core.ExecutionContext {
-				t.Helper()
-
-				exCtx := core.NewMockExecutionContext(t)
-				exCtx.EXPECT().Print("->", color.FgGreen).Return(nil)
-				exCtx.EXPECT().Print("\n" + ShowCursor).Return(assert.AnError)
 				return exCtx
 			},
 		},

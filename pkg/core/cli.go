@@ -14,6 +14,9 @@ const (
 
 	HideCursor = "\x1b[?25l"
 	ShowCursor = "\x1b[?25h"
+
+	ClearTerminal = "\u001B[H\u001B[2J"
+	WelcomMessage = "Use Enter to input request and send it, Ctrl+C to exit"
 )
 
 var (
@@ -119,7 +122,7 @@ func (c *CLI) Run(ctx context.Context, opts RunOptions) error {
 
 	c.hideCursor()
 
-	_, _ = fmt.Fprintln(c.output, "Use Enter to input request and send it, Ctrl+C to exit")
+	_, _ = fmt.Fprintln(c.output, WelcomMessage)
 
 	for _, cmd := range opts.Commands {
 		c.commands <- cmd
@@ -147,6 +150,8 @@ func (c *CLI) Run(ctx context.Context, opts RunOptions) error {
 				}
 
 				c.commands <- cmd
+			case KeyCtrlL:
+				_, _ = fmt.Fprintln(c.output, ClearTerminal+WelcomMessage)
 			case KeyEnter:
 				cmd, err := c.cmdFactory.Create("edit")
 				if err != nil {
