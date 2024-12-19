@@ -475,10 +475,17 @@ func (c *Content) GetCurrentWord() string {
 	return string(c.text[start:c.pos])
 }
 
+// GetPosition retrieves the current position value of the Content.
+// It takes no parameters.
+// It returns an int representing the current position.
 func (c *Content) GetPosition() int {
 	return c.pos
 }
 
+// MoveToPosition moves the current position to the specified index and returns the resultant output string.
+// It takes pos of type int, which is the target position relative to the content length.
+// It returns a string detailing the changes made while adjusting the position.
+// If pos is less than 0, it defaults to 0. If pos exceeds the content length, it defaults to the content's length.
 func (c *Content) MoveToPosition(pos int) string {
 	if pos < 0 {
 		pos = 0
