@@ -175,6 +175,25 @@ func (ed *Editor) handleKey(e core.KeyEvent) (next bool, res string, err error) 
 		_, _ = fmt.Fprint(ed.output, ed.content.MoveToRowStart())
 	case core.KeyEnd:
 		_, _ = fmt.Fprint(ed.output, ed.content.MoveToRowEnd())
+	case core.KeyCtrlL:
+		content := ed.content.String()
+		pos := ed.content.GetPosition()
+
+		if _, err := fmt.Fprint(ed.output, ed.content.Clear()+core.ClearTerminal); err != nil {
+			return false, "", fmt.Errorf("failed to clear terminal: %w", err)
+		}
+
+		if err := ed.onOpen(ed.output); err != nil {
+			return false, "", fmt.Errorf("failed to execute open hook: %w", err)
+		}
+
+		if _, err := fmt.Fprint(ed.output, ed.content.ReplaceText(content)); err != nil {
+			return false, "", fmt.Errorf("failed to write content: %w", err)
+		}
+
+		if _, err := fmt.Fprint(ed.output, ed.content.MoveToPosition(pos)); err != nil {
+			return false, "", fmt.Errorf("failed to move to position: %w", err)
+		}
 	default:
 		if e.Key > 0 {
 			return true, "", nil

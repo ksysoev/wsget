@@ -474,3 +474,31 @@ func (c *Content) GetCurrentWord() string {
 
 	return string(c.text[start:c.pos])
 }
+
+func (c *Content) GetPosition() int {
+	return c.pos
+}
+
+func (c *Content) MoveToPosition(pos int) string {
+	if pos < 0 {
+		pos = 0
+	}
+
+	if pos > len(c.text) {
+		pos = len(c.text)
+	}
+
+	output := ""
+
+	if pos < c.pos {
+		for c.pos > pos {
+			output += c.MovePositionLeft()
+		}
+	} else if pos > c.pos {
+		for c.pos < pos {
+			output += c.MovePositionRight()
+		}
+	}
+
+	return output
+}
