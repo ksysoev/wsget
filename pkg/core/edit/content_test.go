@@ -12,7 +12,7 @@ func TestNewContent(t *testing.T) {
 		return
 	}
 
-	if c.pos != 0 {
+	if c.GetPosition() != 0 {
 		t.Errorf("NewContent() returned Content with pos %d, expected 0", c.pos)
 	}
 
@@ -1311,6 +1311,70 @@ func TestContent_GetCurrentWord(t *testing.T) {
 
 			if got := c.GetCurrentWord(); got != tt.expected {
 				t.Errorf("GetCurrentWord() = %q, want %q", got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestContent_MoveToPosition(t *testing.T) {
+	tests := []struct {
+		content     *Content
+		name        string
+		expected    string
+		pos         int
+		expectedPos int
+	}{
+		{
+			name: "move to position within bounds",
+			content: &Content{
+				text: []rune("hello world"),
+				pos:  0,
+			},
+			pos:         5,
+			expected:    "hello",
+			expectedPos: 5,
+		},
+		{
+			name: "move to position out of bounds (negative)",
+			content: &Content{
+				text: []rune("hello world"),
+				pos:  5,
+			},
+			pos:         -1,
+			expected:    "\b\b\b\b\b",
+			expectedPos: 0,
+		},
+		{
+			name: "move to position out of bounds (exceeds length)",
+			content: &Content{
+				text: []rune("hello world"),
+				pos:  5,
+			},
+			pos:         20,
+			expected:    " world",
+			expectedPos: 11,
+		},
+		{
+			name: "move to same position",
+			content: &Content{
+				text: []rune("hello world"),
+				pos:  5,
+			},
+			pos:         5,
+			expected:    "",
+			expectedPos: 5,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := tt.content.MoveToPosition(tt.pos)
+			if actual != tt.expected {
+				t.Errorf("expected %q, but got %q", tt.expected, actual)
+			}
+
+			if tt.content.pos != tt.expectedPos {
+				t.Errorf("expected position %d, but got %d", tt.expectedPos, tt.content.pos)
 			}
 		})
 	}

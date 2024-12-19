@@ -71,6 +71,45 @@ func TestEdit(t *testing.T) {
 	}
 }
 
+func TestEditor_Edit_FailOpenHook(t *testing.T) {
+	history := NewMockHistoryRepo(t)
+
+	editor := NewEditor(io.Discard, history, false, WithOpenHook(func(_ io.Writer) error {
+		return assert.AnError
+	}))
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	req, err := editor.Edit(ctx, "")
+
+	assert.ErrorIs(t, err, assert.AnError)
+	assert.Empty(t, req)
+}
+
+func TestEditor_Edit_FailCloseHook(t *testing.T) {
+	history := NewMockHistoryRepo(t)
+	history.EXPECT().ResetPosition()
+
+	editor := NewEditor(io.Discard, history, true, WithCloseHook(func(_ io.Writer) error {
+		return assert.AnError
+	}))
+
+	keyStream := make(chan core.KeyEvent, 1)
+	defer close(keyStream)
+
+	editor.SetInput(keyStream)
+
+	go func() {
+		keyStream <- core.KeyEvent{Key: core.KeyEnter}
+	}()
+
+	req, err := editor.Edit(context.Background(), "")
+
+	assert.ErrorIs(t, err, assert.AnError)
+	assert.Empty(t, req)
+}
+
 func TestEditInterrupted(t *testing.T) {
 	history := NewMockHistoryRepo(t)
 	history.EXPECT().ResetPosition()
@@ -475,6 +514,13 @@ func TestEditorHandleKey(t *testing.T) {
 		{
 			name:         "Alt + Left Key",
 			keyEvent:     core.KeyEvent{Key: core.KeyEsc, Rune: 98},
+			expectedNext: true,
+			expectedRes:  "",
+			expectedErr:  nil,
+		},
+		{
+			name:         "Ctrl + L",
+			keyEvent:     core.KeyEvent{Key: core.KeyCtrlL},
 			expectedNext: true,
 			expectedRes:  "",
 			expectedErr:  nil,
