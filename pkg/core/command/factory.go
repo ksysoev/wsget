@@ -9,11 +9,15 @@ import (
 	"github.com/ksysoev/wsget/pkg/core"
 )
 
-type Factory struct {
-	macro *Macro
+type MacroRepo interface {
+	Get(name, argString string) (core.Executer, error)
 }
 
-func NewFactory(macro *Macro) *Factory {
+type Factory struct {
+	macro MacroRepo
+}
+
+func NewFactory(macro MacroRepo) *Factory {
 	return &Factory{macro: macro}
 }
 

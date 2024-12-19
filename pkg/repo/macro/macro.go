@@ -1,4 +1,4 @@
-package command
+package macro
 
 import (
 	"bytes"
@@ -9,6 +9,7 @@ import (
 	"text/template"
 
 	"github.com/ksysoev/wsget/pkg/core"
+	"github.com/ksysoev/wsget/pkg/core/command"
 	"gopkg.in/yaml.v3"
 )
 
@@ -19,7 +20,7 @@ type Config struct {
 }
 
 type Macro struct {
-	macro   map[string]*MacroTemplates
+	macro   map[string]*Templates
 	domains []string
 }
 
@@ -28,7 +29,7 @@ type Macro struct {
 // Returns a pointer to the newly created Macro instance.
 func NewMacro(domains []string) *Macro {
 	return &Macro{
-		macro:   make(map[string]*MacroTemplates),
+		macro:   make(map[string]*Templates),
 		domains: domains,
 	}
 }
@@ -40,11 +41,11 @@ func NewMacro(domains []string) *Macro {
 // Otherwise, it creates a new Sequence with the commands and adds it to the macro.
 func (m *Macro) AddCommands(name string, rawCommands []string) error {
 	if _, ok := m.macro[name]; ok {
-		return &ErrDuplicateMacro{name}
+		return fmt.Errorf("duplicate macro: %s", name)
 	}
 
 	if len(rawCommands) == 0 {
-		return ErrEmptyMacro{name}
+		return fmt.Errorf("empty macro: %s", name)
 	}
 
 	templs, err := NewMacroTemplates(rawCommands)
@@ -63,7 +64,7 @@ func (m *Macro) AddCommands(name string, rawCommands []string) error {
 func (m *Macro) merge(macro *Macro) error {
 	for name, cmd := range macro.macro {
 		if _, ok := m.macro[name]; ok {
-			return &ErrDuplicateMacro{name}
+			return fmt.Errorf("duplicate macro: %s", name)
 		}
 
 		m.macro[name] = cmd
@@ -79,7 +80,7 @@ func (m *Macro) Get(name, argString string) (core.Executer, error) {
 		return cmd.GetExecuter(args)
 	}
 
-	return nil, &ErrUnknownCommand{name}
+	return nil, fmt.Errorf("unknown command: %s", name)
 }
 
 func (m *Macro) GetNames() []string {
@@ -106,7 +107,7 @@ func LoadFromFile(path string) (*Macro, error) {
 	}
 
 	if cfg.Version != "1" {
-		return nil, &ErrUnsupportedVersion{cfg.Version}
+		return nil, fmt.Errorf("unsupported macro version: %s", cfg.Version)
 	}
 
 	macroCfg := NewMacro(cfg.Domains)
@@ -161,7 +162,7 @@ func LoadMacroForDomain(macroDir, domain string) (*Macro, error) {
 			err := macro.merge(fileMacro)
 
 			if err != nil {
-				return nil, fmt.Errorf("fail to loading macro from file %s, %s ", file.Name(), err)
+				return nil, fmt.Errorf("fail to loading macro from file %s, %w ", file.Name(), err)
 			}
 		}
 	}
@@ -169,12 +170,12 @@ func LoadMacroForDomain(macroDir, domain string) (*Macro, error) {
 	return macro, nil
 }
 
-type MacroTemplates struct {
+type Templates struct {
 	list []*template.Template
 }
 
-func NewMacroTemplates(templates []string) (*MacroTemplates, error) {
-	tmpls := &MacroTemplates{}
+func NewMacroTemplates(templates []string) (*Templates, error) {
+	tmpls := &Templates{}
 	tmpls.list = make([]*template.Template, len(templates))
 
 	for i, rawTempl := range templates {
@@ -189,7 +190,7 @@ func NewMacroTemplates(templates []string) (*MacroTemplates, error) {
 	return tmpls, nil
 }
 
-func (t *MacroTemplates) GetExecuter(args []string) (core.Executer, error) {
+func (t *Templates) GetExecuter(args []string) (core.Executer, error) {
 	data := struct {
 		Args []string
 	}{args}
@@ -201,7 +202,7 @@ func (t *MacroTemplates) GetExecuter(args []string) (core.Executer, error) {
 			return nil, err
 		}
 
-		cmd, err := NewFactory(nil).Create(output.String())
+		cmd, err := command.NewFactory(nil).Create(output.String())
 		if err != nil {
 			return nil, err
 		}
@@ -213,5 +214,5 @@ func (t *MacroTemplates) GetExecuter(args []string) (core.Executer, error) {
 		return cmds[0], nil
 	}
 
-	return NewSequence(cmds), nil
+	return command.NewSequence(cmds), nil
 }

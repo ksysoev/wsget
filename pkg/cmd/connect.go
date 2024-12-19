@@ -14,7 +14,8 @@ import (
 	"github.com/ksysoev/wsget/pkg/core/edit"
 	"github.com/ksysoev/wsget/pkg/core/formater"
 	"github.com/ksysoev/wsget/pkg/input"
-	"github.com/ksysoev/wsget/pkg/repo"
+	"github.com/ksysoev/wsget/pkg/repo/history"
+	"github.com/ksysoev/wsget/pkg/repo/macro"
 	"github.com/ksysoev/wsget/pkg/ws"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
@@ -83,31 +84,31 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 		return fmt.Errorf("fail to get current user: %s", err)
 	}
 
-	history, err := repo.LoadFromFile(filepath.Join(args.configDir, historyFilename))
+	reqHistory, err := history.LoadFromFile(filepath.Join(args.configDir, historyFilename))
 	if err != nil {
 		return fmt.Errorf("fail to load history: %s", err)
 	}
 
-	defer func() { _ = history.Close() }()
+	defer func() { _ = reqHistory.Close() }()
 
-	cmdHistory, err := repo.LoadFromFile(filepath.Join(args.configDir, historyCmdFilename))
+	cmdHistory, err := history.LoadFromFile(filepath.Join(args.configDir, historyCmdFilename))
 	if err != nil {
 		return fmt.Errorf("fail to load command history: %s", err)
 	}
 
 	defer func() { _ = cmdHistory.Close() }()
 
-	macro, err := command2.LoadMacroForDomain(filepath.Join(args.configDir, macroDir), wsConn.Hostname())
+	macroRepo, err := macro.LoadMacroForDomain(filepath.Join(args.configDir, macroDir), wsConn.Hostname())
 	if err != nil {
 		return fmt.Errorf("fail to load macro: %s", err)
 	}
 
-	if macro != nil {
-		cmdHistory.AddWordsToIndex(macro.GetNames())
+	if macroRepo != nil {
+		cmdHistory.AddWordsToIndex(macroRepo.GetNames())
 	}
 
-	editor := edit.NewMultiMode(os.Stdout, history, cmdHistory)
-	cmdFactory := command2.NewFactory(macro)
+	editor := edit.NewMultiMode(os.Stdout, reqHistory, cmdHistory)
+	cmdFactory := command2.NewFactory(macroRepo)
 
 	client := core.NewCLI(cmdFactory, wsConn, os.Stdout, editor, formater.NewFormat())
 
