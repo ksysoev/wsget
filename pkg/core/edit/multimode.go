@@ -27,34 +27,16 @@ func NewMultiMode(output io.Writer, reqHistory, cmdHistory HistoryRepo) *MultiMo
 		output,
 		cmdHistory,
 		true,
-		WithOpenHook(func(w io.Writer) error {
-			_, err := fmt.Fprint(w, ":"+ShowCursor)
-			return err
-		}),
-		WithCloseHook(func(w io.Writer) error {
-			_, err := fmt.Fprint(w, LineClear+"\r"+HideCursor)
-			return err
-		}),
+		WithOpenHook(cmdEditorOpenHook),
+		WithCloseHook(cmdEditorCloseHook),
 	)
 
 	editMode := NewEditor(
 		output,
 		reqHistory,
 		false,
-		WithOpenHook(func(w io.Writer) error {
-			if _, err := color.New(color.FgGreen).Fprint(w, "->"); err != nil {
-				return err
-			}
-
-			_, err := fmt.Fprint(w, "\n"+ShowCursor)
-
-			return err
-		}),
-		WithCloseHook(func(w io.Writer) error {
-			_, err := fmt.Fprint(w, LineUp+LineClear+HideCursor)
-
-			return err
-		}),
+		WithOpenHook(editorOpenHook),
+		WithCloseHook(editorCloseHook),
 	)
 
 	return &MultiMode{
@@ -79,4 +61,42 @@ func (m *MultiMode) Edit(ctx context.Context, initBuffer string) (string, error)
 func (m *MultiMode) SetInput(input <-chan core.KeyEvent) {
 	m.commandMode.SetInput(input)
 	m.editMode.SetInput(input)
+}
+
+// editorOpenHook prepares the editor's environment when it opens.
+// It takes w of type io.Writer to write initialization sequences.
+// It returns an error if writing to the provided io.Writer fails.
+func editorOpenHook(w io.Writer) error {
+	if _, err := color.New(color.FgGreen).Fprint(w, "->"); err != nil {
+		return err
+	}
+
+	_, err := fmt.Fprint(w, "\n"+ShowCursor)
+
+	return err
+}
+
+// editorCloseHook restores the editor's environment when it closes.
+// It takes w of type io.Writer to write cleanup sequences.
+// It returns an error if writing to the provided io.Writer fails.
+func editorCloseHook(w io.Writer) error {
+	_, err := fmt.Fprint(w, LineUp+LineClear+HideCursor)
+
+	return err
+}
+
+// cmdEditorOpenHook prepares the command editor's environment when it opens.
+// It takes w of type io.Writer to write initialization sequences.
+// It returns an error if writing to the provided io.Writer fails.
+func cmdEditorOpenHook(w io.Writer) error {
+	_, err := fmt.Fprint(w, ":"+ShowCursor)
+	return err
+}
+
+// cmdEditorCloseHook cleans up the command editor's environment when it closes.
+// It takes w of type io.Writer to write terminal reset sequences.
+// It returns an error if writing to the provided io.Writer fails.
+func cmdEditorCloseHook(w io.Writer) error {
+	_, err := fmt.Fprint(w, LineClear+"\r"+HideCursor)
+	return err
 }
