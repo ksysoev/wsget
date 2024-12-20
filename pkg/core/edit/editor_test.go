@@ -608,7 +608,7 @@ func TestEditor_nextFromHistory(t *testing.T) {
 	tests := []struct {
 		name           string
 		mockHistory    func(*MockHistoryRepo)
-		initialBuffer  string
+		editBuffer     string
 		expectedOutput string
 	}{
 		{
@@ -616,7 +616,6 @@ func TestEditor_nextFromHistory(t *testing.T) {
 			mockHistory: func(mockHistory *MockHistoryRepo) {
 				mockHistory.EXPECT().NextRequest().Return("")
 			},
-			initialBuffer:  "",
 			expectedOutput: Bell,
 		},
 		{
@@ -624,7 +623,6 @@ func TestEditor_nextFromHistory(t *testing.T) {
 			mockHistory: func(mockHistory *MockHistoryRepo) {
 				mockHistory.EXPECT().NextRequest().Return("next request")
 			},
-			initialBuffer:  "",
 			expectedOutput: "next request",
 		},
 		{
@@ -632,8 +630,8 @@ func TestEditor_nextFromHistory(t *testing.T) {
 			mockHistory: func(mockHistory *MockHistoryRepo) {
 				mockHistory.EXPECT().NextRequest().Return("")
 			},
-			initialBuffer:  "buffer content",
-			expectedOutput: "\a",
+			editBuffer:     "edited buffer",
+			expectedOutput: "edited buffer",
 		},
 	}
 
@@ -644,14 +642,15 @@ func TestEditor_nextFromHistory(t *testing.T) {
 
 			output := new(bytes.Buffer)
 			content := NewContent()
-			content.ReplaceText(tt.initialBuffer)
 
 			editor := &Editor{
 				history: mockHistory,
 				output:  output,
 				content: content,
 			}
-
+			if tt.editBuffer != "" {
+				editor.buffer = &tt.editBuffer
+			}
 			editor.nextFromHistory()
 
 			assert.Equal(t, tt.expectedOutput, output.String())
