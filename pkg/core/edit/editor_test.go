@@ -548,3 +548,113 @@ func TestEditorHandleKey(t *testing.T) {
 		})
 	}
 }
+
+func TestEditor_prevFromHistory(t *testing.T) {
+	tests := []struct {
+		name           string
+		mockHistory    func(*MockHistoryRepo)
+		initialBuffer  string
+		expectedOutput string
+	}{
+		{
+			name: "No history available (empty request)",
+			mockHistory: func(mockHistory *MockHistoryRepo) {
+				mockHistory.EXPECT().PrevRequest().Return("")
+			},
+			initialBuffer:  "",
+			expectedOutput: Bell,
+		},
+		{
+			name: "History available",
+			mockHistory: func(mockHistory *MockHistoryRepo) {
+				mockHistory.EXPECT().PrevRequest().Return("previous request")
+			},
+			initialBuffer:  "",
+			expectedOutput: "previous request",
+		},
+		{
+			name: "Buffer already present, history overrides",
+			mockHistory: func(mockHistory *MockHistoryRepo) {
+				mockHistory.EXPECT().PrevRequest().Return("new request")
+			},
+			initialBuffer:  "current buffer",
+			expectedOutput: "\x1b[2K\rnew request",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockHistory := NewMockHistoryRepo(t)
+			tt.mockHistory(mockHistory)
+
+			output := new(bytes.Buffer)
+			content := NewContent()
+			content.ReplaceText(tt.initialBuffer)
+
+			editor := &Editor{
+				history: mockHistory,
+				output:  output,
+				content: content,
+			}
+
+			editor.prevFromHistory()
+
+			assert.Equal(t, tt.expectedOutput, output.String())
+		})
+	}
+}
+
+func TestEditor_nextFromHistory(t *testing.T) {
+	tests := []struct {
+		name           string
+		mockHistory    func(*MockHistoryRepo)
+		initialBuffer  string
+		expectedOutput string
+	}{
+		{
+			name: "No history available (empty request)",
+			mockHistory: func(mockHistory *MockHistoryRepo) {
+				mockHistory.EXPECT().NextRequest().Return("")
+			},
+			initialBuffer:  "",
+			expectedOutput: Bell,
+		},
+		{
+			name: "History available",
+			mockHistory: func(mockHistory *MockHistoryRepo) {
+				mockHistory.EXPECT().NextRequest().Return("next request")
+			},
+			initialBuffer:  "",
+			expectedOutput: "next request",
+		},
+		{
+			name: "No history available but buffer exists",
+			mockHistory: func(mockHistory *MockHistoryRepo) {
+				mockHistory.EXPECT().NextRequest().Return("")
+			},
+			initialBuffer:  "buffer content",
+			expectedOutput: "\a",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockHistory := NewMockHistoryRepo(t)
+			tt.mockHistory(mockHistory)
+
+			output := new(bytes.Buffer)
+			content := NewContent()
+			content.ReplaceText(tt.initialBuffer)
+
+			editor := &Editor{
+				history: mockHistory,
+				output:  output,
+				content: content,
+			}
+
+			editor.nextFromHistory()
+
+			assert.Equal(t, tt.expectedOutput, output.String())
+		})
+	}
+}
