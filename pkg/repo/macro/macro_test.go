@@ -6,6 +6,7 @@ import (
 
 	"github.com/ksysoev/wsget/pkg/core"
 	"github.com/ksysoev/wsget/pkg/core/command"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewMacro(t *testing.T) {
@@ -372,5 +373,185 @@ func TestLoadFromFile_NotExists(t *testing.T) {
 	_, err := LoadFromFile("/tmp/TestLoadFromFile_NotExists.yaml")
 	if err == nil {
 		t.Fatalf("LoadFromFile() error = %v, want non-nil", err)
+	}
+}
+
+func TestMacro_GetNames(t *testing.T) {
+	tests := []struct {
+		name  string
+		macro *Macro
+		want  []string
+	}{
+		{
+			name: "empty macro",
+			macro: &Macro{
+				macro: map[string]*Templates{},
+			},
+			want: []string{},
+		},
+		{
+			name: "single command macro",
+			macro: &Macro{
+				macro: map[string]*Templates{
+					"test": nil,
+				},
+			},
+			want: []string{"test"},
+		},
+		{
+			name: "multiple command macro",
+			macro: &Macro{
+				macro: map[string]*Templates{
+					"command1": nil,
+					"command2": nil,
+					"command3": nil,
+				},
+			},
+			want: []string{"command1", "command2", "command3"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.macro.GetNames()
+			assert.ElementsMatch(t, tt.want, got, "GetNames() = %v, want %v", got, tt.want)
+		})
+	}
+}
+
+func TestMacro_LoadMacroForDomain(t *testing.T) {
+	tests := []struct {
+		name        string
+		setup       func(macroDir string) // setup function to prepare test environment
+		domain      string
+		expectedErr string
+		expectedLen int // expected number of macros loaded
+	}{
+		{
+			name: "no files in directory",
+			setup: func(macroDir string) {
+				// No setup needed, empty directory suffices
+			},
+			domain:      "example.com",
+			expectedErr: "",
+			expectedLen: 0,
+		},
+		{
+			name: "matching domain in YAML file",
+			setup: func(macroDir string) {
+				os.WriteFile(macroDir+"/macro1.yaml", []byte(`
+version: 1
+domains:
+  - example.com
+macro:
+  test:
+    - send hello
+    - wait 5
+`), 0644)
+			},
+			domain:      "example.com",
+			expectedErr: "",
+			expectedLen: 1,
+		},
+		{
+			name: "no matching domain in files",
+			setup: func(macroDir string) {
+				os.WriteFile(macroDir+"/macro1.yaml", []byte(`
+version: 1
+domains:
+  - otherdomain.com
+macro:
+  test:
+    - send hello
+    - wait 5
+`), 0644)
+			},
+			domain:      "example.com",
+			expectedErr: "",
+			expectedLen: 0,
+		},
+		{
+			name: "invalid file contents",
+			setup: func(macroDir string) {
+				os.WriteFile(macroDir+"/macro1.yaml", []byte("Invalid YAML content"), 0644)
+			},
+			domain:      "example.com",
+			expectedErr: "yaml: unmarshal errors",
+			expectedLen: 0,
+		},
+		{
+			name: "multiple files with partially matching domains",
+			setup: func(macroDir string) {
+				os.WriteFile(macroDir+"/macro1.yaml", []byte(`
+version: 1
+domains:
+  - example.com
+macro:
+  test:
+    - send hello
+    - wait 5
+`), 0644)
+				os.WriteFile(macroDir+"/macro2.yaml", []byte(`
+version: 1
+domains:
+  - anotherdomain.com
+macro:
+  other:
+    - edit world
+`), 0644)
+			},
+			domain:      "example.com",
+			expectedErr: "",
+			expectedLen: 1,
+		},
+		{
+			name: "merge macros successfully",
+			setup: func(macroDir string) {
+				os.WriteFile(macroDir+"/macro1.yaml", []byte(`
+version: 1
+domains:
+  - example.com
+macro:
+  test1:
+    - send hello
+`), 0644)
+				os.WriteFile(macroDir+"/macro2.yaml", []byte(`
+version: 1
+domains:
+  - example.com
+macro:
+  test2:
+    - wait 5
+`), 0644)
+			},
+			domain:      "example.com",
+			expectedErr: "",
+			expectedLen: 2,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			macroDir := t.TempDir()
+
+			if tt.setup != nil {
+				tt.setup(macroDir)
+			}
+
+			got, err := LoadMacroForDomain(macroDir, tt.domain)
+
+			if tt.expectedErr == "" {
+				assert.NoError(t, err)
+			} else {
+				assert.ErrorContains(t, err, tt.expectedErr)
+			}
+
+			if tt.expectedLen == 0 {
+				assert.Nil(t, got)
+			} else {
+				assert.NotNil(t, got)
+				assert.Equal(t, tt.expectedLen, len(got.macro))
+			}
+		})
 	}
 }

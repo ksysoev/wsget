@@ -1,15 +1,12 @@
 package macro
 
 import (
-	"bytes"
 	"fmt"
 	"log"
 	"os"
 	"strings"
-	"text/template"
 
 	"github.com/ksysoev/wsget/pkg/core"
-	"github.com/ksysoev/wsget/pkg/core/command"
 	"gopkg.in/yaml.v3"
 )
 
@@ -121,9 +118,11 @@ func LoadFromFile(path string) (*Macro, error) {
 	return macroCfg, nil
 }
 
-// LoadMacroForDomain loads a macro for a given domain from a directory.
-// It takes the directory path and the domain name as input parameters.
-// It returns a pointer to a Macro struct and an error if any.
+// LoadMacroForDomain loads and merges macros for a specific domain from YAML files in a given directory.
+// It takes macroDir, a string specifying the directory path, and domain, a string specifying the target domain.
+// It returns a pointer to a Macro containing merged macros for the domain, or an error in case of failure.
+// Errors may occur if the directory cannot be read, files cannot be parsed, or macros fail to merge.
+// Ignores non-YAML files, directories, and files without a matching domain.
 func LoadMacroForDomain(macroDir, domain string) (*Macro, error) {
 	files, err := os.ReadDir(macroDir)
 	if err != nil {
@@ -168,51 +167,4 @@ func LoadMacroForDomain(macroDir, domain string) (*Macro, error) {
 	}
 
 	return macro, nil
-}
-
-type Templates struct {
-	list []*template.Template
-}
-
-func NewMacroTemplates(templates []string) (*Templates, error) {
-	tmpls := &Templates{}
-	tmpls.list = make([]*template.Template, len(templates))
-
-	for i, rawTempl := range templates {
-		tmpl, err := template.New("macro").Parse(rawTempl)
-		if err != nil {
-			return nil, err
-		}
-
-		tmpls.list[i] = tmpl
-	}
-
-	return tmpls, nil
-}
-
-func (t *Templates) GetExecuter(args []string) (core.Executer, error) {
-	data := struct {
-		Args []string
-	}{args}
-	cmds := make([]core.Executer, len(t.list))
-
-	for i, tmpl := range t.list {
-		var output bytes.Buffer
-		if err := tmpl.Execute(&output, data); err != nil {
-			return nil, err
-		}
-
-		cmd, err := command.NewFactory(nil).Create(output.String())
-		if err != nil {
-			return nil, err
-		}
-
-		cmds[i] = cmd
-	}
-
-	if len(cmds) == 1 {
-		return cmds[0], nil
-	}
-
-	return command.NewSequence(cmds), nil
 }
