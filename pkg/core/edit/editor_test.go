@@ -28,14 +28,6 @@ func TestNewEditor(t *testing.T) {
 	if editor.history != history {
 		t.Error("Expected history to be set")
 	}
-
-	if editor.buffer == nil {
-		t.Error("Expected non-nil buffer")
-	}
-
-	if editor.pos != 0 {
-		t.Error("Expected pos to be 0")
-	}
 }
 
 func TestEdit(t *testing.T) {

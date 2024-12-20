@@ -280,6 +280,7 @@ func (ed *Editor) nextFromHistory() {
 	} else if req == "" {
 		_, _ = fmt.Fprint(ed.output, ed.content.ReplaceText(ed.buffer))
 		ed.buffer = ""
+
 		return
 	}
 
