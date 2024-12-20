@@ -648,9 +648,12 @@ func TestEditor_nextFromHistory(t *testing.T) {
 				output:  output,
 				content: content,
 			}
+
 			if tt.editBuffer != "" {
-				editor.buffer = &tt.editBuffer
+				buf := tt.editBuffer
+				editor.buffer = &buf
 			}
+
 			editor.nextFromHistory()
 
 			assert.Equal(t, tt.expectedOutput, output.String())
