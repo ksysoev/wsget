@@ -80,6 +80,9 @@ func (m *Macro) Get(name, argString string) (core.Executer, error) {
 	return nil, fmt.Errorf("unknown command: %s", name)
 }
 
+// GetNames returns a list of all macro names stored in the Macro instance.
+// It does not take any parameters.
+// It returns a slice of strings containing the names of the macros.
 func (m *Macro) GetNames() []string {
 	names := make([]string, 0, len(m.macro))
 
