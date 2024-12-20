@@ -149,8 +149,13 @@ func (h *History) NextRequest() string {
 		return ""
 	}
 
-	req := h.requests[h.pos]
 	h.pos++
+
+	if h.pos == len(h.requests) {
+		return ""
+	}
+
+	req := h.requests[h.pos]
 
 	return req
 }
