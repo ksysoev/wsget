@@ -33,8 +33,7 @@ type Editor struct {
 	content         *Content
 	onOpen          func(io.Writer) error
 	onClose         func(io.Writer) error
-	buffer          []rune
-	pos             int
+	buffer          *string
 	isSingleLine    bool
 }
 
@@ -46,8 +45,6 @@ func NewEditor(output io.Writer, history HistoryRepo, isSingleLine bool, opts ..
 	e := &Editor{
 		history:         history,
 		content:         NewContent(),
-		buffer:          make([]rune, 0),
-		pos:             0,
 		output:          output,
 		prevPressedTime: time.Now(),
 		isSingleLine:    isSingleLine,
@@ -84,6 +81,7 @@ func (ed *Editor) Edit(ctx context.Context, initBuffer string) (res string, err 
 	}()
 
 	ed.history.ResetPosition()
+	ed.buffer = nil
 
 	if _, err := fmt.Fprint(ed.output, ed.content.ReplaceText(initBuffer)); err != nil {
 		return "", fmt.Errorf("failed to write initial buffer: %w", err)
@@ -263,6 +261,11 @@ func (ed *Editor) prevFromHistory() {
 		return
 	}
 
+	if ed.buffer == nil {
+		buf := ed.content.String()
+		ed.buffer = &buf
+	}
+
 	_, _ = fmt.Fprint(ed.output, ed.content.ReplaceText(req))
 }
 
@@ -272,8 +275,13 @@ func (ed *Editor) prevFromHistory() {
 func (ed *Editor) nextFromHistory() {
 	req := ed.history.NextRequest()
 
-	if req == "" {
+	if req == "" && ed.buffer == nil {
 		_, _ = fmt.Fprint(ed.output, Bell)
+		return
+	} else if req == "" {
+		_, _ = fmt.Fprint(ed.output, ed.content.ReplaceText(*ed.buffer))
+		ed.buffer = nil
+
 		return
 	}
 

@@ -38,7 +38,7 @@ func TestHistory_NextRequest(t *testing.T) {
 			name:        "SingleRequestAtEnd",
 			initial:     []string{"request1"},
 			initialPos:  0,
-			expected:    "request1",
+			expected:    "",
 			expectedPos: 1,
 		},
 		{
@@ -52,14 +52,14 @@ func TestHistory_NextRequest(t *testing.T) {
 			name:        "MultipleRequestsMoveForward",
 			initial:     []string{"request1", "request2", "request3"},
 			initialPos:  0,
-			expected:    "request1",
+			expected:    "request2",
 			expectedPos: 1,
 		},
 		{
 			name:        "MultipleRequestsAtEnd",
 			initial:     []string{"request1", "request2", "request3"},
 			initialPos:  2,
-			expected:    "request3",
+			expected:    "",
 			expectedPos: 3,
 		},
 		{
