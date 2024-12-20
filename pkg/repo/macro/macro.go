@@ -1,12 +1,10 @@
-package command
+package macro
 
 import (
-	"bytes"
 	"fmt"
 	"log"
 	"os"
 	"strings"
-	"text/template"
 
 	"github.com/ksysoev/wsget/pkg/core"
 	"gopkg.in/yaml.v3"
@@ -19,7 +17,7 @@ type Config struct {
 }
 
 type Macro struct {
-	macro   map[string]*MacroTemplates
+	macro   map[string]*Templates
 	domains []string
 }
 
@@ -28,7 +26,7 @@ type Macro struct {
 // Returns a pointer to the newly created Macro instance.
 func NewMacro(domains []string) *Macro {
 	return &Macro{
-		macro:   make(map[string]*MacroTemplates),
+		macro:   make(map[string]*Templates),
 		domains: domains,
 	}
 }
@@ -40,11 +38,11 @@ func NewMacro(domains []string) *Macro {
 // Otherwise, it creates a new Sequence with the commands and adds it to the macro.
 func (m *Macro) AddCommands(name string, rawCommands []string) error {
 	if _, ok := m.macro[name]; ok {
-		return &ErrDuplicateMacro{name}
+		return fmt.Errorf("duplicate macro: %s", name)
 	}
 
 	if len(rawCommands) == 0 {
-		return ErrEmptyMacro{name}
+		return fmt.Errorf("empty macro: %s", name)
 	}
 
 	templs, err := NewMacroTemplates(rawCommands)
@@ -63,7 +61,7 @@ func (m *Macro) AddCommands(name string, rawCommands []string) error {
 func (m *Macro) merge(macro *Macro) error {
 	for name, cmd := range macro.macro {
 		if _, ok := m.macro[name]; ok {
-			return &ErrDuplicateMacro{name}
+			return fmt.Errorf("duplicate macro: %s", name)
 		}
 
 		m.macro[name] = cmd
@@ -79,9 +77,12 @@ func (m *Macro) Get(name, argString string) (core.Executer, error) {
 		return cmd.GetExecuter(args)
 	}
 
-	return nil, &ErrUnknownCommand{name}
+	return nil, fmt.Errorf("unknown command: %s", name)
 }
 
+// GetNames returns a list of all macro names stored in the Macro instance.
+// It does not take any parameters.
+// It returns a slice of strings containing the names of the macros.
 func (m *Macro) GetNames() []string {
 	names := make([]string, 0, len(m.macro))
 
@@ -106,7 +107,7 @@ func LoadFromFile(path string) (*Macro, error) {
 	}
 
 	if cfg.Version != "1" {
-		return nil, &ErrUnsupportedVersion{cfg.Version}
+		return nil, fmt.Errorf("unsupported macro version: %s", cfg.Version)
 	}
 
 	macroCfg := NewMacro(cfg.Domains)
@@ -120,9 +121,11 @@ func LoadFromFile(path string) (*Macro, error) {
 	return macroCfg, nil
 }
 
-// LoadMacroForDomain loads a macro for a given domain from a directory.
-// It takes the directory path and the domain name as input parameters.
-// It returns a pointer to a Macro struct and an error if any.
+// LoadMacroForDomain loads and merges macros for a specific domain from YAML files in a given directory.
+// It takes macroDir, a string specifying the directory path, and domain, a string specifying the target domain.
+// It returns a pointer to a Macro containing merged macros for the domain, or an error in case of failure.
+// Errors may occur if the directory cannot be read, files cannot be parsed, or macros fail to merge.
+// Ignores non-YAML files, directories, and files without a matching domain.
 func LoadMacroForDomain(macroDir, domain string) (*Macro, error) {
 	files, err := os.ReadDir(macroDir)
 	if err != nil {
@@ -161,57 +164,10 @@ func LoadMacroForDomain(macroDir, domain string) (*Macro, error) {
 			err := macro.merge(fileMacro)
 
 			if err != nil {
-				return nil, fmt.Errorf("fail to loading macro from file %s, %s ", file.Name(), err)
+				return nil, fmt.Errorf("fail to loading macro from file %s, %w ", file.Name(), err)
 			}
 		}
 	}
 
 	return macro, nil
-}
-
-type MacroTemplates struct {
-	list []*template.Template
-}
-
-func NewMacroTemplates(templates []string) (*MacroTemplates, error) {
-	tmpls := &MacroTemplates{}
-	tmpls.list = make([]*template.Template, len(templates))
-
-	for i, rawTempl := range templates {
-		tmpl, err := template.New("macro").Parse(rawTempl)
-		if err != nil {
-			return nil, err
-		}
-
-		tmpls.list[i] = tmpl
-	}
-
-	return tmpls, nil
-}
-
-func (t *MacroTemplates) GetExecuter(args []string) (core.Executer, error) {
-	data := struct {
-		Args []string
-	}{args}
-	cmds := make([]core.Executer, len(t.list))
-
-	for i, tmpl := range t.list {
-		var output bytes.Buffer
-		if err := tmpl.Execute(&output, data); err != nil {
-			return nil, err
-		}
-
-		cmd, err := NewFactory(nil).Create(output.String())
-		if err != nil {
-			return nil, err
-		}
-
-		cmds[i] = cmd
-	}
-
-	if len(cmds) == 1 {
-		return cmds[0], nil
-	}
-
-	return NewSequence(cmds), nil
 }

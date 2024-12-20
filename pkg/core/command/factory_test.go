@@ -7,11 +7,15 @@ import (
 	"time"
 
 	"github.com/ksysoev/wsget/pkg/core"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestFactory_Create(t *testing.T) {
+	mockMacro := NewMockMacroRepo(t)
+	mockMacro.EXPECT().Get("macro", "").Return(nil, assert.AnError).Maybe()
+
 	tests := []struct {
-		macro   *Macro
+		macro   MacroRepo
 		want    core.Executer
 		name    string
 		raw     string
@@ -90,7 +94,7 @@ func TestFactory_Create(t *testing.T) {
 		{
 			name:    "macro command",
 			raw:     "macro",
-			macro:   &Macro{},
+			macro:   mockMacro,
 			want:    nil,
 			wantErr: true,
 		},
