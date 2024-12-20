@@ -429,7 +429,7 @@ func TestMacro_LoadMacroForDomain(t *testing.T) {
 	}{
 		{
 			name: "no files in directory",
-			setup: func(macroDir string) {
+			setup: func(_ string) {
 				// No setup needed, empty directory suffices
 			},
 			domain:      "example.com",
@@ -439,7 +439,7 @@ func TestMacro_LoadMacroForDomain(t *testing.T) {
 		{
 			name: "matching domain in YAML file",
 			setup: func(macroDir string) {
-				os.WriteFile(macroDir+"/macro1.yaml", []byte(`
+				err := os.WriteFile(macroDir+"/macro1.yaml", []byte(`
 version: 1
 domains:
   - example.com
@@ -447,7 +447,9 @@ macro:
   test:
     - send hello
     - wait 5
-`), 0644)
+`), 0o600)
+
+				assert.NoError(t, err)
 			},
 			domain:      "example.com",
 			expectedErr: "",
@@ -456,7 +458,7 @@ macro:
 		{
 			name: "no matching domain in files",
 			setup: func(macroDir string) {
-				os.WriteFile(macroDir+"/macro1.yaml", []byte(`
+				err := os.WriteFile(macroDir+"/macro1.yaml", []byte(`
 version: 1
 domains:
   - otherdomain.com
@@ -464,7 +466,8 @@ macro:
   test:
     - send hello
     - wait 5
-`), 0644)
+`), 0o600)
+				assert.NoError(t, err)
 			},
 			domain:      "example.com",
 			expectedErr: "",
@@ -473,7 +476,8 @@ macro:
 		{
 			name: "invalid file contents",
 			setup: func(macroDir string) {
-				os.WriteFile(macroDir+"/macro1.yaml", []byte("Invalid YAML content"), 0644)
+				err := os.WriteFile(macroDir+"/macro1.yaml", []byte("Invalid YAML content"), 0o600)
+				assert.NoError(t, err)
 			},
 			domain:      "example.com",
 			expectedErr: "yaml: unmarshal errors",
@@ -482,7 +486,7 @@ macro:
 		{
 			name: "multiple files with partially matching domains",
 			setup: func(macroDir string) {
-				os.WriteFile(macroDir+"/macro1.yaml", []byte(`
+				err := os.WriteFile(macroDir+"/macro1.yaml", []byte(`
 version: 1
 domains:
   - example.com
@@ -490,15 +494,17 @@ macro:
   test:
     - send hello
     - wait 5
-`), 0644)
-				os.WriteFile(macroDir+"/macro2.yaml", []byte(`
+`), 0o600)
+				assert.NoError(t, err)
+				err = os.WriteFile(macroDir+"/macro2.yaml", []byte(`
 version: 1
 domains:
   - anotherdomain.com
 macro:
   other:
     - edit world
-`), 0644)
+`), 0o600)
+				assert.NoError(t, err)
 			},
 			domain:      "example.com",
 			expectedErr: "",
@@ -507,22 +513,24 @@ macro:
 		{
 			name: "merge macros successfully",
 			setup: func(macroDir string) {
-				os.WriteFile(macroDir+"/macro1.yaml", []byte(`
+				err := os.WriteFile(macroDir+"/macro1.yaml", []byte(`
 version: 1
 domains:
   - example.com
 macro:
   test1:
     - send hello
-`), 0644)
-				os.WriteFile(macroDir+"/macro2.yaml", []byte(`
+`), 0o600)
+				assert.NoError(t, err)
+				err = os.WriteFile(macroDir+"/macro2.yaml", []byte(`
 version: 1
 domains:
   - example.com
 macro:
   test2:
     - wait 5
-`), 0644)
+`), 0o600)
+				assert.NoError(t, err)
 			},
 			domain:      "example.com",
 			expectedErr: "",
