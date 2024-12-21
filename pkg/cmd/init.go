@@ -59,6 +59,8 @@ func InitCommands(version string) *cobra.Command {
 		RunE:       createConnectRunner(args),
 	}
 
+	cmd.AddCommand(initMacroDownloadCommand())
+
 	cmd.Flags().StringVarP(&args.configDir, "config-dir", "c", "", "Configuration directory for storing history and macros")
 	cmd.Flags().BoolVarP(&args.insecure, "insecure", "k", false, "Skip SSL certificate verification")
 	cmd.Flags().StringVarP(&args.request, "request", "r", "", "WebSocket request that will be sent to the server")
@@ -70,6 +72,25 @@ func InitCommands(version string) *cobra.Command {
 	cmd.Flags().Int64VarP(&args.maxMsgSize, "max-size", "s", ws.DefaultMaxMessageSize, "Maximum message size in bytes, non-positive value will be ignored and default value will be used")
 
 	args.configDir = cmp.Or(args.configDir, os.Getenv("WSGET_CONFIG_DIR"))
+
+	return cmd
+}
+
+// initMacroDownloadCommand initializes a Cobra command for downloading a macro file from a URL.
+// It takes args of type flags to configure the command's behavior.
+// It returns a pointer to a Cobra command configured with necessary flags and options.
+// It returns an error during execution if the URL is invalid or there is an issue during the file download.
+func initMacroDownloadCommand() *cobra.Command {
+	var fileName string
+
+	cmd := &cobra.Command{
+		Use:   "download [flags] <url>",
+		Short: "Download a macro file from provided URL",
+		Args:  cobra.ExactArgs(1),
+		RunE:  createMacroDownloadRunner(fileName),
+	}
+
+	cmd.Flags().StringVarP(&fileName, "name", "n", "", "File name to save the macro")
 
 	return cmd
 }
