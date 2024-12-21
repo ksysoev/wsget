@@ -66,7 +66,18 @@ Use Enter to input request and send it, Ctrl+C to exit
   "time": 1698555261
 }
 ```
-## Editor Keyboard Shortcuts
+
+## Connection Mode Keyboard Shortcuts Documentation
+
+| Key/Combination | Action |
+| --- |---|
+| **Esc** / **Ctrl + C** / **Ctrl + D** | Discconnect from the server. |
+| **Enter** | Enter request editing mode. |
+| **Ctrl + L** | Clear the terminal and redisplay the welcome message. |
+| **:** | Enter command mode to execute a specific command. |
+
+
+## Request/Command Editor Mode Keyboard Shortcuts
 
 ### General Navigation and Editing Shortcuts
 
