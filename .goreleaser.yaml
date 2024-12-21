@@ -25,6 +25,7 @@ checksum:
 changelog:
   sort: asc
 release:
+  draft: true
   github:
     owner: ksysoev
     name: wsget
