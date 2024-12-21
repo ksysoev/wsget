@@ -66,6 +66,50 @@ Use Enter to input request and send it, Ctrl+C to exit
   "time": 1698555261
 }
 ```
+## Editor Keyboard Shortcuts
+
+### General Navigation and Editing Shortcuts
+
+| Key/Combination | Action |
+| --- |---|
+| **Left Arrow** | Move the cursor one position to the left. |
+| **Right Arrow** | Move the cursor one position to the right. |
+| **Space** | Insert a space character at the current cursor position. |
+| **Enter** | Adds a newline or completes editing (depends on editor mode). |
+| **Backspace** | Remove the character before the cursor. |
+| **Delete** | Remove the character after the cursor. |
+
+### Advanced Navigation
+
+| Key/Combination | Action |
+|---| --- |
+| **Alt + Backspace** | Delete the word to the left of the cursor. |
+| **Alt + Left Arrow** | Move the cursor to the start of the previous word. |
+| **Alt + Right Arrow** | Move the cursor to the start of the next word. |
+| **Alt + Delete** | Delete the word to the right of the cursor. |
+| **Home** | Move the cursor to the start of the line. |
+| **End** | Move the cursor to the end of the line. |
+
+### Content Modification
+
+| Key/Combination | Action |
+| --- | --- |
+| **Ctrl + U** | Clear all content from the editor. |
+| **Ctrl + L** | Clear the terminal's display while retaining content and positioning. |
+
+### History Navigation
+
+| Key/Combination | Action |
+| --- | --- |
+| **Up Arrow** | Cycle to the previous request in history. |
+| **Down Arrow** | Cycle to the next request in history. |
+
+### Miscellaneous Shortcuts
+
+| Key/Combination | Action |
+|---| --- |
+| **Ctrl + S** | Complete editing. |
+| **Ctrl + C** or **Ctrl + D** or **Esc** | Interrupt the editing process; cancel and terminate editing. |
 
 ## Macros
 
