@@ -214,7 +214,9 @@ func (m *Macro) Download(filepath, url string) error {
 		return fmt.Errorf("fail to download macro: %w", err)
 	}
 
-	fmt.Println(filepath)
+	if !strings.HasSuffix(filepath, ".yaml") || !strings.HasSuffix(filepath, ".yml") {
+		filepath += ".yml"
+	}
 
 	// Save the downloaded macro to the file
 	if err := os.WriteFile(filepath, data, os.ModePerm); err != nil {
