@@ -37,9 +37,7 @@ func runMacroDownloadCommand(_ context.Context, args *flags, name *string, unnam
 
 	path := filepath.Join(args.configDir, macroDir, *name)
 
-	macroRepo := macro.NewMacro(nil)
-
-	if err := macroRepo.Download(path, url); err != nil {
+	if err := macro.Download(path, url); err != nil {
 		return fmt.Errorf("fail to download macro: %w", err)
 	}
 

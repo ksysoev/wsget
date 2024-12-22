@@ -12,13 +12,13 @@ import (
 func TestNewMacro(t *testing.T) {
 	tests := []struct {
 		name    string
-		want    *Macro
+		want    *Repo
 		domains []string
 	}{
 		{
 			name:    "empty domains",
 			domains: []string{},
-			want: &Macro{
+			want: &Repo{
 				macro:   make(map[string]*command.Templates),
 				domains: []string{},
 			},
@@ -26,7 +26,7 @@ func TestNewMacro(t *testing.T) {
 		{
 			name:    "non-empty domains",
 			domains: []string{"example.com", "google.com"},
-			want: &Macro{
+			want: &Repo{
 				macro:   make(map[string]*command.Templates),
 				domains: []string{"example.com", "google.com"},
 			},
@@ -35,12 +35,12 @@ func TestNewMacro(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := NewMacro(tt.domains); got == nil {
-				t.Errorf("NewMacro() = %v, want non-nil", got)
+			if got := New(tt.domains); got == nil {
+				t.Errorf("New() = %v, want non-nil", got)
 			} else if len(got.macro) != 0 {
-				t.Errorf("NewMacro() = %v, want empty macro map", got)
+				t.Errorf("New() = %v, want empty macro map", got)
 			} else if len(got.domains) != len(tt.domains) {
-				t.Errorf("NewMacro() = %v, want domains %v", got, tt.domains)
+				t.Errorf("New() = %v, want domains %v", got, tt.domains)
 			}
 		})
 	}
@@ -48,42 +48,42 @@ func TestNewMacro(t *testing.T) {
 func TestMacro_AddCommands(t *testing.T) {
 	tests := []struct {
 		name        string
-		macro       *Macro
+		macro       *Repo
 		commandName string
 		commands    []string
 		wantErr     bool
 	}{
 		{
 			name:        "add new macro",
-			macro:       NewMacro([]string{}),
+			macro:       New([]string{}),
 			commandName: "test",
 			commands:    []string{"edit hello"},
 			wantErr:     false,
 		},
 		{
 			name:        "add existing macro",
-			macro:       &Macro{macro: map[string]*command.Templates{"test": nil}},
+			macro:       &Repo{macro: map[string]*command.Templates{"test": nil}},
 			commandName: "test",
 			commands:    []string{"send hello"},
 			wantErr:     true,
 		},
 		{
 			name:        "empty macro",
-			macro:       NewMacro([]string{}),
+			macro:       New([]string{}),
 			commandName: "test",
 			commands:    []string{},
 			wantErr:     true,
 		},
 		{
 			name:        "single command macro",
-			macro:       NewMacro([]string{}),
+			macro:       New([]string{}),
 			commandName: "test",
 			commands:    []string{"exit hello"},
 			wantErr:     false,
 		},
 		{
 			name:        "multi command macro",
-			macro:       NewMacro([]string{}),
+			macro:       New([]string{}),
 			commandName: "test",
 			commands:    []string{"send hello", "wait 5"},
 			wantErr:     false,
@@ -94,26 +94,26 @@ func TestMacro_AddCommands(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.macro.AddCommands(tt.commandName, tt.commands)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("Macro.AddCommands() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Repo.AddCommands() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
 }
 func TestMacro_Merge(t *testing.T) {
 	tests := []struct {
-		macro       *Macro
-		otherMacro  *Macro
+		macro       *Repo
+		otherMacro  *Repo
 		name        string
 		expectedLen int
 		wantErr     bool
 	}{
 		{
 			name: "merge empty macro with empty macro",
-			macro: &Macro{
+			macro: &Repo{
 				macro:   make(map[string]*command.Templates),
 				domains: []string{},
 			},
-			otherMacro: &Macro{
+			otherMacro: &Repo{
 				macro:   make(map[string]*command.Templates),
 				domains: []string{},
 			},
@@ -122,13 +122,13 @@ func TestMacro_Merge(t *testing.T) {
 		},
 		{
 			name: "merge non-empty macro with empty macro",
-			macro: &Macro{
+			macro: &Repo{
 				macro: map[string]*command.Templates{
 					"test": nil,
 				},
 				domains: []string{},
 			},
-			otherMacro: &Macro{
+			otherMacro: &Repo{
 				macro:   make(map[string]*command.Templates),
 				domains: []string{},
 			},
@@ -137,11 +137,11 @@ func TestMacro_Merge(t *testing.T) {
 		},
 		{
 			name: "merge empty macro with non-empty macro",
-			macro: &Macro{
+			macro: &Repo{
 				macro:   make(map[string]*command.Templates),
 				domains: []string{},
 			},
-			otherMacro: &Macro{
+			otherMacro: &Repo{
 				macro: map[string]*command.Templates{
 					"test": nil,
 				},
@@ -152,13 +152,13 @@ func TestMacro_Merge(t *testing.T) {
 		},
 		{
 			name: "merge non-empty macro with non-empty macro",
-			macro: &Macro{
+			macro: &Repo{
 				macro: map[string]*command.Templates{
 					"test": nil,
 				},
 				domains: []string{},
 			},
-			otherMacro: &Macro{
+			otherMacro: &Repo{
 				macro: map[string]*command.Templates{
 					"test2": nil,
 				},
@@ -169,13 +169,13 @@ func TestMacro_Merge(t *testing.T) {
 		},
 		{
 			name: "merge macro with duplicate macro name",
-			macro: &Macro{
+			macro: &Repo{
 				macro: map[string]*command.Templates{
 					"test": nil,
 				},
 				domains: []string{},
 			},
-			otherMacro: &Macro{
+			otherMacro: &Repo{
 				macro: map[string]*command.Templates{
 					"test": nil,
 				},
@@ -190,9 +190,9 @@ func TestMacro_Merge(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.macro.merge(tt.otherMacro)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("Macro.merge() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Repo.merge() error = %v, wantErr %v", err, tt.wantErr)
 			} else if len(tt.macro.macro) != tt.expectedLen {
-				t.Errorf("Macro.merge() expected length of macro map = %d, got %d", tt.expectedLen, len(tt.macro.macro))
+				t.Errorf("Repo.merge() expected length of macro map = %d, got %d", tt.expectedLen, len(tt.macro.macro))
 			}
 		})
 	}
@@ -201,7 +201,7 @@ func TestMacro_Get(t *testing.T) {
 	testTemplate, _ := command.NewMacro([]string{"exit"})
 	tests := []struct {
 		name    string
-		macro   *Macro
+		macro   *Repo
 		cmdName string
 		wantCmd core.Executer
 		errMsg  string
@@ -209,7 +209,7 @@ func TestMacro_Get(t *testing.T) {
 	}{
 		{
 			name:    "get existing command",
-			macro:   &Macro{macro: map[string]*command.Templates{"test": testTemplate}},
+			macro:   &Repo{macro: map[string]*command.Templates{"test": testTemplate}},
 			cmdName: "test",
 			wantCmd: command.NewExit(),
 			wantErr: false,
@@ -217,7 +217,7 @@ func TestMacro_Get(t *testing.T) {
 		},
 		{
 			name:    "get non-existing command",
-			macro:   &Macro{macro: map[string]*command.Templates{}},
+			macro:   &Repo{macro: map[string]*command.Templates{}},
 			cmdName: "test",
 			wantCmd: nil,
 			wantErr: true,
@@ -225,7 +225,7 @@ func TestMacro_Get(t *testing.T) {
 		},
 		{
 			name:    "get command with empty macro",
-			macro:   &Macro{macro: map[string]*command.Templates{}},
+			macro:   &Repo{macro: map[string]*command.Templates{}},
 			cmdName: "",
 			wantCmd: nil,
 			wantErr: true,
@@ -233,7 +233,7 @@ func TestMacro_Get(t *testing.T) {
 		},
 		{
 			name:    "get command with non-empty macro",
-			macro:   &Macro{macro: map[string]*command.Templates{"test": nil}},
+			macro:   &Repo{macro: map[string]*command.Templates{"test": nil}},
 			cmdName: "",
 			wantCmd: nil,
 			wantErr: true,
@@ -245,15 +245,15 @@ func TestMacro_Get(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cmd, err := tt.macro.Get(tt.cmdName, "")
 			if (err != nil) != tt.wantErr {
-				t.Errorf("Macro.Get() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Repo.Get() error = %v, wantErr %v", err, tt.wantErr)
 			}
 
 			if err != nil && err.Error() != tt.errMsg {
-				t.Errorf("Macro.Get() error message = %v, want %v", err.Error(), tt.errMsg)
+				t.Errorf("Repo.Get() error message = %v, want %v", err.Error(), tt.errMsg)
 			}
 
 			if cmd != tt.wantCmd {
-				t.Errorf("Macro.Get() cmd = %v, want %v", cmd, tt.wantCmd)
+				t.Errorf("Repo.Get() cmd = %v, want %v", cmd, tt.wantCmd)
 			}
 		})
 	}
@@ -379,19 +379,19 @@ func TestLoadFromFile_NotExists(t *testing.T) {
 func TestMacro_GetNames(t *testing.T) {
 	tests := []struct {
 		name  string
-		macro *Macro
+		macro *Repo
 		want  []string
 	}{
 		{
 			name: "empty macro",
-			macro: &Macro{
+			macro: &Repo{
 				macro: map[string]*command.Templates{},
 			},
 			want: []string{},
 		},
 		{
 			name: "single command macro",
-			macro: &Macro{
+			macro: &Repo{
 				macro: map[string]*command.Templates{
 					"test": nil,
 				},
@@ -400,7 +400,7 @@ func TestMacro_GetNames(t *testing.T) {
 		},
 		{
 			name: "multiple command macro",
-			macro: &Macro{
+			macro: &Repo{
 				macro: map[string]*command.Templates{
 					"command1": nil,
 					"command2": nil,
