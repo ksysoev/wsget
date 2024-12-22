@@ -88,10 +88,10 @@ func initMacroDownloadCommand(args *flags) *cobra.Command {
 		Use:   "download [flags] <url>",
 		Short: "Download a macro file from provided URL",
 		Args:  cobra.ExactArgs(1),
-		RunE:  createMacroDownloadRunner(args, fileName),
+		RunE:  createMacroDownloadRunner(args, &fileName),
 	}
 
-	cmd.Flags().StringVarP(&fileName, "name", "n", "", "File name to save the macro")
+	cmd.Flags().StringVarP(&fileName, "name", "n", "default", "File name to save the macro")
 
 	return cmd
 }
