@@ -2,7 +2,9 @@ package macro
 
 import (
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"os"
 	"strings"
 
@@ -12,6 +14,7 @@ import (
 
 type Config struct {
 	Version string              `yaml:"version"`
+	Source  string              `yaml:"source"`
 	Macro   map[string][]string `yaml:"macro"`
 	Domains []string            `yaml:"domains"`
 }
@@ -170,4 +173,51 @@ func LoadMacroForDomain(macroDir, domain string) (*Macro, error) {
 	}
 
 	return macro, nil
+}
+
+func (m *Macro) Download(filepath, url string) error {
+	resp, err := http.Get(url)
+	if err != nil {
+		return fmt.Errorf("fail to download macro: %w", err)
+	}
+
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("fail to download macro: %s", resp.Status)
+	}
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("fail to read macro file: %w", err)
+	}
+
+	var cfg Config
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return fmt.Errorf("fail to unmarshal macro: %w", err)
+	}
+
+	if cfg.Version != "1" {
+		return fmt.Errorf("unsupported macro version: %s", cfg.Version)
+	}
+
+	for name, rawCommands := range cfg.Macro {
+		if err := m.AddCommands(name, rawCommands); err != nil {
+			return err
+		}
+	}
+
+	cfg.Source = url
+
+	data, err = yaml.Marshal(cfg)
+	if err != nil {
+		return fmt.Errorf("fail to download macro: %w", err)
+	}
+
+	// Save the downloaded macro to the file
+	if err := os.WriteFile(filepath, data, os.ModePerm); err != nil {
+		return fmt.Errorf("fail to download macro to file %s: %w", filepath, err)
+	}
+
+	return nil
 }
