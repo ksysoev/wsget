@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/ksysoev/wsget/pkg/core"
+	"github.com/ksysoev/wsget/pkg/core/command"
 	"gopkg.in/yaml.v3"
 )
 
@@ -20,7 +21,7 @@ type Config struct {
 }
 
 type Macro struct {
-	macro   map[string]*Templates
+	macro   map[string]*command.Templates
 	domains []string
 }
 
@@ -29,7 +30,7 @@ type Macro struct {
 // Returns a pointer to the newly created Macro instance.
 func NewMacro(domains []string) *Macro {
 	return &Macro{
-		macro:   make(map[string]*Templates),
+		macro:   make(map[string]*command.Templates),
 		domains: domains,
 	}
 }
@@ -48,7 +49,7 @@ func (m *Macro) AddCommands(name string, rawCommands []string) error {
 		return fmt.Errorf("empty macro: %s", name)
 	}
 
-	templs, err := NewMacroTemplates(rawCommands)
+	templs, err := command.NewMacro(rawCommands)
 
 	if err != nil {
 		return err
@@ -176,7 +177,8 @@ func LoadMacroForDomain(macroDir, domain string) (*Macro, error) {
 }
 
 func (m *Macro) Download(filepath, url string) error {
-	resp, err := http.Get(url)
+	resp, err := http.Get(url) //nolint:gosec // This is a CLI tool, and the URL is provided by the user
+
 	if err != nil {
 		return fmt.Errorf("fail to download macro: %w", err)
 	}
@@ -219,7 +221,7 @@ func (m *Macro) Download(filepath, url string) error {
 	}
 
 	// Save the downloaded macro to the file
-	if err := os.WriteFile(filepath, data, os.ModePerm); err != nil {
+	if err := os.WriteFile(filepath, data, 0o600); err != nil {
 		return fmt.Errorf("fail to download macro to file %s: %w", filepath, err)
 	}
 

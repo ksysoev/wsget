@@ -19,7 +19,7 @@ func TestNewMacro(t *testing.T) {
 			name:    "empty domains",
 			domains: []string{},
 			want: &Macro{
-				macro:   make(map[string]*Templates),
+				macro:   make(map[string]*command.Templates),
 				domains: []string{},
 			},
 		},
@@ -27,7 +27,7 @@ func TestNewMacro(t *testing.T) {
 			name:    "non-empty domains",
 			domains: []string{"example.com", "google.com"},
 			want: &Macro{
-				macro:   make(map[string]*Templates),
+				macro:   make(map[string]*command.Templates),
 				domains: []string{"example.com", "google.com"},
 			},
 		},
@@ -62,7 +62,7 @@ func TestMacro_AddCommands(t *testing.T) {
 		},
 		{
 			name:        "add existing macro",
-			macro:       &Macro{macro: map[string]*Templates{"test": nil}},
+			macro:       &Macro{macro: map[string]*command.Templates{"test": nil}},
 			commandName: "test",
 			commands:    []string{"send hello"},
 			wantErr:     true,
@@ -110,11 +110,11 @@ func TestMacro_Merge(t *testing.T) {
 		{
 			name: "merge empty macro with empty macro",
 			macro: &Macro{
-				macro:   make(map[string]*Templates),
+				macro:   make(map[string]*command.Templates),
 				domains: []string{},
 			},
 			otherMacro: &Macro{
-				macro:   make(map[string]*Templates),
+				macro:   make(map[string]*command.Templates),
 				domains: []string{},
 			},
 			wantErr:     false,
@@ -123,13 +123,13 @@ func TestMacro_Merge(t *testing.T) {
 		{
 			name: "merge non-empty macro with empty macro",
 			macro: &Macro{
-				macro: map[string]*Templates{
+				macro: map[string]*command.Templates{
 					"test": nil,
 				},
 				domains: []string{},
 			},
 			otherMacro: &Macro{
-				macro:   make(map[string]*Templates),
+				macro:   make(map[string]*command.Templates),
 				domains: []string{},
 			},
 			wantErr:     false,
@@ -138,11 +138,11 @@ func TestMacro_Merge(t *testing.T) {
 		{
 			name: "merge empty macro with non-empty macro",
 			macro: &Macro{
-				macro:   make(map[string]*Templates),
+				macro:   make(map[string]*command.Templates),
 				domains: []string{},
 			},
 			otherMacro: &Macro{
-				macro: map[string]*Templates{
+				macro: map[string]*command.Templates{
 					"test": nil,
 				},
 				domains: []string{},
@@ -153,13 +153,13 @@ func TestMacro_Merge(t *testing.T) {
 		{
 			name: "merge non-empty macro with non-empty macro",
 			macro: &Macro{
-				macro: map[string]*Templates{
+				macro: map[string]*command.Templates{
 					"test": nil,
 				},
 				domains: []string{},
 			},
 			otherMacro: &Macro{
-				macro: map[string]*Templates{
+				macro: map[string]*command.Templates{
 					"test2": nil,
 				},
 				domains: []string{},
@@ -170,13 +170,13 @@ func TestMacro_Merge(t *testing.T) {
 		{
 			name: "merge macro with duplicate macro name",
 			macro: &Macro{
-				macro: map[string]*Templates{
+				macro: map[string]*command.Templates{
 					"test": nil,
 				},
 				domains: []string{},
 			},
 			otherMacro: &Macro{
-				macro: map[string]*Templates{
+				macro: map[string]*command.Templates{
 					"test": nil,
 				},
 				domains: []string{},
@@ -198,7 +198,7 @@ func TestMacro_Merge(t *testing.T) {
 	}
 }
 func TestMacro_Get(t *testing.T) {
-	testTemplate, _ := NewMacroTemplates([]string{"exit"})
+	testTemplate, _ := command.NewMacro([]string{"exit"})
 	tests := []struct {
 		name    string
 		macro   *Macro
@@ -209,7 +209,7 @@ func TestMacro_Get(t *testing.T) {
 	}{
 		{
 			name:    "get existing command",
-			macro:   &Macro{macro: map[string]*Templates{"test": testTemplate}},
+			macro:   &Macro{macro: map[string]*command.Templates{"test": testTemplate}},
 			cmdName: "test",
 			wantCmd: command.NewExit(),
 			wantErr: false,
@@ -217,7 +217,7 @@ func TestMacro_Get(t *testing.T) {
 		},
 		{
 			name:    "get non-existing command",
-			macro:   &Macro{macro: map[string]*Templates{}},
+			macro:   &Macro{macro: map[string]*command.Templates{}},
 			cmdName: "test",
 			wantCmd: nil,
 			wantErr: true,
@@ -225,7 +225,7 @@ func TestMacro_Get(t *testing.T) {
 		},
 		{
 			name:    "get command with empty macro",
-			macro:   &Macro{macro: map[string]*Templates{}},
+			macro:   &Macro{macro: map[string]*command.Templates{}},
 			cmdName: "",
 			wantCmd: nil,
 			wantErr: true,
@@ -233,7 +233,7 @@ func TestMacro_Get(t *testing.T) {
 		},
 		{
 			name:    "get command with non-empty macro",
-			macro:   &Macro{macro: map[string]*Templates{"test": nil}},
+			macro:   &Macro{macro: map[string]*command.Templates{"test": nil}},
 			cmdName: "",
 			wantCmd: nil,
 			wantErr: true,
@@ -385,14 +385,14 @@ func TestMacro_GetNames(t *testing.T) {
 		{
 			name: "empty macro",
 			macro: &Macro{
-				macro: map[string]*Templates{},
+				macro: map[string]*command.Templates{},
 			},
 			want: []string{},
 		},
 		{
 			name: "single command macro",
 			macro: &Macro{
-				macro: map[string]*Templates{
+				macro: map[string]*command.Templates{
 					"test": nil,
 				},
 			},
@@ -401,7 +401,7 @@ func TestMacro_GetNames(t *testing.T) {
 		{
 			name: "multiple command macro",
 			macro: &Macro{
-				macro: map[string]*Templates{
+				macro: map[string]*command.Templates{
 					"command1": nil,
 					"command2": nil,
 					"command3": nil,

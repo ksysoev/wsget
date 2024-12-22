@@ -1,26 +1,25 @@
-package macro
+package command
 
 import (
 	"bytes"
 	"text/template"
 
 	"github.com/ksysoev/wsget/pkg/core"
-	"github.com/ksysoev/wsget/pkg/core/command"
 )
 
 type Templates struct {
 	list []*template.Template
 }
 
-// NewMacroTemplates creates a new Templates instance by parsing a list of string templates.
+// NewMacro creates a new Templates instance by parsing a list of string templates.
 // It takes a parameter templates of type []string, representing raw string templates.
 // It returns a pointer to a Templates instance populated with parsed templates.
 // It returns an error if any of the provided templates fail to parse.
-func NewMacroTemplates(templates []string) (*Templates, error) {
+func NewMacro(rawTemplates []string) (*Templates, error) {
 	tmpls := &Templates{}
-	tmpls.list = make([]*template.Template, len(templates))
+	tmpls.list = make([]*template.Template, len(rawTemplates))
 
-	for i, rawTempl := range templates {
+	for i, rawTempl := range rawTemplates {
 		tmpl, err := template.New("macro").Parse(rawTempl)
 		if err != nil {
 			return nil, err
@@ -49,7 +48,7 @@ func (t *Templates) GetExecuter(args []string) (core.Executer, error) {
 			return nil, err
 		}
 
-		cmd, err := command.NewFactory(nil).Create(output.String())
+		cmd, err := NewFactory(nil).Create(output.String())
 		if err != nil {
 			return nil, err
 		}
@@ -61,5 +60,5 @@ func (t *Templates) GetExecuter(args []string) (core.Executer, error) {
 		return cmds[0], nil
 	}
 
-	return command.NewSequence(cmds), nil
+	return NewSequence(cmds), nil
 }

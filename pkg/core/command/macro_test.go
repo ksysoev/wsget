@@ -1,9 +1,8 @@
-package macro
+package command
 
 import (
 	"testing"
 
-	"github.com/ksysoev/wsget/pkg/core/command"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -38,7 +37,7 @@ func TestNewMacroTemplates(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Act
-			result, err := NewMacroTemplates(tt.templates)
+			result, err := NewMacro(tt.templates)
 
 			// Assert
 			if tt.wantErr {
@@ -109,7 +108,7 @@ func TestTemplates_GetExecuter(t *testing.T) {
 		tt := tt // capture range variable
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
-			templates, err := NewMacroTemplates(tt.templates)
+			templates, err := NewMacro(tt.templates)
 			assert.NoError(t, err)
 
 			// Act
@@ -124,7 +123,7 @@ func TestTemplates_GetExecuter(t *testing.T) {
 				assert.NotNil(t, executer)
 
 				if tt.expectedCmds > 1 {
-					_, ok := executer.(*command.Sequence)
+					_, ok := executer.(*Sequence)
 					assert.True(t, ok)
 				}
 			}
