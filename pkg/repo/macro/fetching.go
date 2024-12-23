@@ -44,7 +44,7 @@ func Download(filepath, url string) (err error) {
 		}
 	}()
 
-	if err := cfg.WriteTo(file); err != nil {
+	if err := cfg.Write(file); err != nil {
 		return fmt.Errorf("fail to write macro: %w", err)
 	}
 
