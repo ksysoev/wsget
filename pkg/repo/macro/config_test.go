@@ -38,7 +38,7 @@ macro:
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var buf bytes.Buffer
-			buf.WriteString(tt.input)
+			_, _ = buf.WriteString(tt.input)
 
 			// Act
 			result, err := newConfig(&buf)
@@ -169,16 +169,18 @@ func (m *mockWriter) Write(p []byte) (n int, err error) {
 	if m.fail {
 		return 0, assert.AnError
 	}
+
 	m.output += string(p)
+
 	return len(p), nil
 }
 
 func TestConfig_Write(t *testing.T) {
 	tests := []struct {
-		name       string
-		config     *config
-		wantOutput string
 		wantErr    error
+		config     *config
+		name       string
+		wantOutput string
 	}{
 		{
 			name: "valid config writes successfully",
