@@ -2,7 +2,6 @@ package macro
 
 import (
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -26,30 +25,14 @@ func Download(filepath, url string) error {
 		return fmt.Errorf("fail to download macro: %s", resp.Status)
 	}
 
-	data, err := io.ReadAll(resp.Body)
+	_, cfg, err := parseConfig(resp.Body)
 	if err != nil {
-		return fmt.Errorf("fail to read macro file: %w", err)
-	}
-
-	var cfg config
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return fmt.Errorf("fail to unmarshal macro: %w", err)
-	}
-
-	if cfg.Version != "1" {
-		return fmt.Errorf("unsupported macro version: %s", cfg.Version)
-	}
-
-	m := New(nil)
-	for name, rawCommands := range cfg.Macro {
-		if err := m.AddCommands(name, rawCommands); err != nil {
-			return err
-		}
+		return fmt.Errorf("fail to download macro: %w", err)
 	}
 
 	cfg.Source = url
 
-	data, err = yaml.Marshal(cfg)
+	data, err := yaml.Marshal(cfg)
 	if err != nil {
 		return fmt.Errorf("fail to download macro: %w", err)
 	}

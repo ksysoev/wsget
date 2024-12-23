@@ -2,6 +2,7 @@ package macro
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"strings"
@@ -47,13 +48,13 @@ func (m *Repo) AddCommands(name string, rawCommands []string) error {
 		return fmt.Errorf("empty macro: %s", name)
 	}
 
-	templs, err := command.NewMacro(rawCommands)
+	macro, err := command.NewMacro(rawCommands)
 
 	if err != nil {
 		return err
 	}
 
-	m.macro[name] = templs
+	m.macro[name] = macro
 
 	return nil
 }
@@ -97,30 +98,21 @@ func (m *Repo) GetNames() []string {
 
 // LoadFromFile loads a macro configuration from a file at the given path.
 // It returns a Repo instance and an error if the file cannot be read or parsed.
-func LoadFromFile(path string) (*Repo, error) {
-	data, err := os.ReadFile(path)
+func LoadFromFile(path string) (r *Repo, err error) {
+	file, err := os.Open(path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("fail to open macro file %s: %w", path, err)
 	}
 
-	var cfg config
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, err
-	}
-
-	if cfg.Version != "1" {
-		return nil, fmt.Errorf("unsupported macro version: %s", cfg.Version)
-	}
-
-	macroCfg := New(cfg.Domains)
-
-	for name, rawCommands := range cfg.Macro {
-		if err := macroCfg.AddCommands(name, rawCommands); err != nil {
-			return nil, err
+	defer func() {
+		if e := file.Close(); err == nil && e != nil {
+			err = fmt.Errorf("fail to close macro file %s: %w", path, e)
 		}
-	}
+	}()
 
-	return macroCfg, nil
+	r, _, err = parseConfig(file)
+
+	return r, err
 }
 
 // LoadMacroForDomain loads and merges macros for a specific domain from YAML files in a given directory.
@@ -172,4 +164,26 @@ func LoadMacroForDomain(macroDir, domain string) (*Repo, error) {
 	}
 
 	return macro, nil
+}
+
+func parseConfig(src io.Reader) (*Repo, *config, error) {
+	var cfg *config
+	decoder := yaml.NewDecoder(src)
+	if err := decoder.Decode(&cfg); err != nil {
+		return nil, nil, err
+	}
+
+	if cfg.Version != "1" {
+		return nil, nil, fmt.Errorf("unsupported macro version: %s", cfg.Version)
+	}
+
+	repo := New(cfg.Domains)
+
+	for name, rawCommands := range cfg.Macro {
+		if err := repo.AddCommands(name, rawCommands); err != nil {
+			return nil, nil, fmt.Errorf("fail to add macro: %w", err)
+		}
+	}
+
+	return repo, cfg, nil
 }
