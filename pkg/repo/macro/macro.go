@@ -2,22 +2,13 @@ package macro
 
 import (
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"strings"
 
 	"github.com/ksysoev/wsget/pkg/core"
 	"github.com/ksysoev/wsget/pkg/core/command"
-	"gopkg.in/yaml.v3"
 )
-
-type config struct {
-	Version string              `yaml:"version"`
-	Source  string              `yaml:"source"`
-	Macro   map[string][]string `yaml:"macro"`
-	Domains []string            `yaml:"domains"`
-}
 
 type Repo struct {
 	macro   map[string]*command.Templates
@@ -110,9 +101,12 @@ func LoadFromFile(path string) (r *Repo, err error) {
 		}
 	}()
 
-	r, _, err = parseConfig(file)
+	cfg, err := newConfig(file)
+	if err != nil {
+		return nil, fmt.Errorf("fail to load macro from file %s: %w", path, err)
+	}
 
-	return r, err
+	return cfg.CreateRepo()
 }
 
 // LoadMacroForDomain loads and merges macros for a specific domain from YAML files in a given directory.
@@ -164,26 +158,4 @@ func LoadMacroForDomain(macroDir, domain string) (*Repo, error) {
 	}
 
 	return macro, nil
-}
-
-func parseConfig(src io.Reader) (*Repo, *config, error) {
-	var cfg *config
-	decoder := yaml.NewDecoder(src)
-	if err := decoder.Decode(&cfg); err != nil {
-		return nil, nil, err
-	}
-
-	if cfg.Version != "1" {
-		return nil, nil, fmt.Errorf("unsupported macro version: %s", cfg.Version)
-	}
-
-	repo := New(cfg.Domains)
-
-	for name, rawCommands := range cfg.Macro {
-		if err := repo.AddCommands(name, rawCommands); err != nil {
-			return nil, nil, fmt.Errorf("fail to add macro: %w", err)
-		}
-	}
-
-	return repo, cfg, nil
 }

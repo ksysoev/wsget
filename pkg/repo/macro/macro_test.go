@@ -7,6 +7,7 @@ import (
 	"github.com/ksysoev/wsget/pkg/core"
 	"github.com/ksysoev/wsget/pkg/core/command"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewMacro(t *testing.T) {
@@ -354,19 +355,11 @@ macro:
     - send hello
     - wait 5
 `)
-	if err != nil {
-		t.Fatalf("Failed to write to temporary test file: %v", err)
-	}
+	require.NoError(t, err)
 
 	// Load macro from temporary test file
 	_, err = LoadFromFile(tempFile.Name())
-	if err == nil {
-		t.Fatalf("LoadFromFile() error = %v, want non-nil", err)
-	}
-
-	if err.Error() != "unsupported macro version: 2" {
-		t.Errorf("LoadFromFile() error = %v, want unsupported macro version: 2", err)
-	}
+	assert.ErrorContains(t, err, "unsupported macro version")
 }
 
 func TestLoadFromFile_NotExists(t *testing.T) {
