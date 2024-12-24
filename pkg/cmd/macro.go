@@ -20,6 +20,10 @@ func createMacroDownloadRunner(args *flags, filename *string) func(cmd *cobra.Co
 	}
 }
 
+// runMacroDownloadCommand downloads a macro configuration file from a given URL and saves it to a specified path.
+// It takes a context, args of type *flags, name of type *string, and unnamedArgs of type []string.
+// It returns an error if the URL is missing, the current user cannot be retrieved, the file creation fails,
+// or the macro download encounters an issue such as invalid YAML or unsupported macro version.
 func runMacroDownloadCommand(_ context.Context, args *flags, name *string, unnamedArgs []string) error {
 	url := unnamedArgs[0]
 	if url == "" {
@@ -37,9 +41,5 @@ func runMacroDownloadCommand(_ context.Context, args *flags, name *string, unnam
 
 	path := filepath.Join(args.configDir, macroDir, *name)
 
-	if err := macro.Download(path, url); err != nil {
-		return fmt.Errorf("fail to download macro: %w", err)
-	}
-
-	return nil
+	return macro.Download(path, url)
 }
