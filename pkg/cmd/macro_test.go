@@ -20,19 +20,19 @@ func TestRunMacroDownloadCommand_NoUrl(t *testing.T) {
 func TestRunMacroDownloadCommand_NoConfigDir(t *testing.T) {
 	args := &flags{}
 	name := "test"
-	unnamedArgs := []string{"http://localhost:0"}
+	unnamedArgs := []string{"http://localhost:9999"}
 
 	err := runMacroDownloadCommand(context.Background(), args, &name, unnamedArgs)
-	assert.ErrorContains(t, err, "connect: can't assign requested address")
+	assert.ErrorContains(t, err, "connect: connection refused")
 }
 
 func TestRunMacroDownloadCommand_FailToDownload(t *testing.T) {
 	args := &flags{configDir: "testdata"}
 	name := "test"
-	unnamedArgs := []string{"http://localhost:0"}
+	unnamedArgs := []string{"http://localhost:9999"}
 
 	err := runMacroDownloadCommand(context.Background(), args, &name, unnamedArgs)
-	assert.ErrorContains(t, err, "connect: can't assign requested address")
+	assert.ErrorContains(t, err, "connect: connection refused")
 }
 
 func TestRunMacroDownloadCommand(t *testing.T) {
