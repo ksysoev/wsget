@@ -103,12 +103,16 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 		return fmt.Errorf("fail to load macro: %s", err)
 	}
 
+	var cmdFactory *command2.Factory
+
 	if macroRepo != nil {
 		cmdHistory.AddWordsToIndex(macroRepo.GetNames())
+		cmdFactory = command2.NewFactory(macroRepo)
+	} else {
+		cmdFactory = command2.NewFactory(nil)
 	}
 
 	editor := edit.NewMultiMode(os.Stdout, reqHistory, cmdHistory)
-	cmdFactory := command2.NewFactory(macroRepo)
 
 	client := core.NewCLI(cmdFactory, wsConn, os.Stdout, editor, formater.NewFormat())
 
