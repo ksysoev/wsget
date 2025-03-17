@@ -21,7 +21,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: stable
+          go-version: "1.24.x"
       - name: Install Snapcraft
         run: |
           sudo snap install snapcraft --classic
