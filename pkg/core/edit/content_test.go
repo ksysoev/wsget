@@ -1392,7 +1392,9 @@ func TestContentWithUnicode(t *testing.T) {
 	content.MoveToPrevWord()
 	content.RemovePrevSymbol()
 
-	if content.String() != "Привет,мир!" {
-		t.Errorf("expected text to be 'Привет, ', but got %q", content.String())
+	expected := "Привет,мир!"
+
+	if content.String() != expected {
+		t.Errorf("expected text to be %q, but got %q", expected, content.String())
 	}
 }
