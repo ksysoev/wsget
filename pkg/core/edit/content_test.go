@@ -1379,3 +1379,20 @@ func TestContent_MoveToPosition(t *testing.T) {
 		})
 	}
 }
+
+func TestContentWithUnicode(t *testing.T) {
+	content := NewContent()
+
+	// Start with a simple text
+	text := "Привет, мир!"
+	content.ReplaceText(text)
+
+	// Move to the end of the text
+	content.MoveToEnd()
+	content.MoveToPrevWord()
+	content.RemovePrevSymbol()
+
+	if content.String() != "Привет,мир!" {
+		t.Errorf("expected text to be 'Привет, ', but got %q", content.String())
+	}
+}
