@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 )
 
 const (
@@ -286,7 +287,7 @@ func (c *Content) RemovePrevSymbol() string {
 	}
 
 	if symbol != NewLine {
-		endCurrentLine := startCurrentLine + len(lines[0])
+		endCurrentLine := startCurrentLine + utf8.RuneCountInString(lines[0])
 		return LineClear + ReturnCarriage + string(c.text[startCurrentLine:endCurrentLine-1]) + ReturnCarriage + string(c.text[startCurrentLine:c.pos])
 	}
 
@@ -329,7 +330,7 @@ func (c *Content) RemoveNextSymbol() string {
 	c.text = buffer
 
 	if symbol != NewLine {
-		endCurrentLine := startCurrentLine + len(lines[0])
+		endCurrentLine := startCurrentLine + utf8.RuneCountInString(lines[0])
 		return LineClear + ReturnCarriage + string(c.text[startCurrentLine:endCurrentLine-1]) + ReturnCarriage + string(c.text[startCurrentLine:c.pos])
 	}
 
@@ -380,7 +381,7 @@ func (c *Content) InsertSymbol(symbol rune) string {
 
 	if symbol != NewLine {
 		// here probably I have a room for optimization
-		endCurrentLine := startCurrentLine + len(lines[0])
+		endCurrentLine := startCurrentLine + utf8.RuneCountInString(lines[0])
 		return LineClear + ReturnCarriage + string(c.text[startCurrentLine:endCurrentLine]) + ReturnCarriage + string(c.text[startCurrentLine:c.pos])
 	}
 
