@@ -2,6 +2,9 @@ name: WSGet
 
 on: [push]
 
+permissions:
+  contents: read
+
 jobs:
   tests:
     runs-on: ubuntu-latest
