@@ -18,7 +18,6 @@ import (
 
 const (
 	headerPartsNumber     = 2
-	dialTimeout           = 15 * time.Second
 	DefaultMaxMessageSize = 1024 * 1024
 )
 
@@ -45,6 +44,7 @@ type Options struct {
 	Headers             []string
 	SkipSSLVerification bool
 	MaxMessageSize      int64
+	Timeout             time.Duration
 }
 
 // New initializes a new WebSocket connection configuration with specified URL and options.
@@ -62,7 +62,7 @@ func New(wsURL string, opts Options) (*Connection, error) {
 
 	httpCli := &http.Client{
 		Transport: newRequestLogger(opts.Output, opts.SkipSSLVerification),
-		Timeout:   dialTimeout,
+		Timeout:   opts.Timeout,
 	}
 
 	wsOpts := &websocket.DialOptions{

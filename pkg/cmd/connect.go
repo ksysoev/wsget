@@ -58,6 +58,7 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 		SkipSSLVerification: args.insecure,
 		Headers:             args.headers,
 		MaxMessageSize:      args.maxMsgSize,
+		Timeout:             time.Duration(args.timeout) * time.Second,
 	}
 
 	if args.verbose {
