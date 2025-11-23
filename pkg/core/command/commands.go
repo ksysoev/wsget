@@ -304,14 +304,15 @@ func NewPingCommand() *PingCommand {
 func (c *PingCommand) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 	startTime := time.Now()
 
-	err := exCtx.Ping()
-	if err != nil {
+	if err := exCtx.Print("-> ping\n", color.FgGreen); err != nil {
+		return nil, err
+	}
+
+	if err := exCtx.Ping(); err != nil {
 		return nil, err
 	}
 
 	duration := time.Since(startTime)
 
-	exCtx.Print(fmt.Sprintf("Ping successful! Round-trip time: %v\n", duration), color.FgCyan)
-
-	return nil, nil
+	return nil, exCtx.Print(fmt.Sprintf("<- pong, %v \n", duration), color.FgRed)
 }

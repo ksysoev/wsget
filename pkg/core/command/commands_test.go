@@ -687,8 +687,8 @@ func TestPingExecute_Success(t *testing.T) {
 	exCtx := core.NewMockExecutionContext(t)
 
 	exCtx.EXPECT().Ping().Return(nil)
-	exCtx.EXPECT().Print(mock.Anything, color.FgCyan).Return(nil)
-
+	exCtx.EXPECT().Print(mock.Anything, color.FgGreen).Return(nil)
+	exCtx.EXPECT().Print(mock.Anything, color.FgRed).Return(nil)
 	nextCmd, err := cmd.Execute(exCtx)
 
 	assert.Nil(t, nextCmd)
@@ -701,6 +701,7 @@ func TestPingExecute_Failure(t *testing.T) {
 	exCtx := core.NewMockExecutionContext(t)
 
 	exCtx.EXPECT().Ping().Return(assert.AnError)
+	exCtx.EXPECT().Print(mock.Anything, color.FgGreen).Return(nil)
 
 	nextCmd, err := cmd.Execute(exCtx)
 
