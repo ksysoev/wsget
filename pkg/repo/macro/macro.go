@@ -40,7 +40,6 @@ func (m *Repo) AddCommands(name string, rawCommands []string) error {
 	}
 
 	macro, err := command.NewMacro(rawCommands)
-
 	if err != nil {
 		return err
 	}
@@ -128,7 +127,6 @@ func LoadMacroForDomain(macroDir, domain string) (*Repo, error) {
 		}
 
 		fileMacro, err := LoadFromFile(macroDir + "/" + file.Name())
-
 		if err != nil {
 			return nil, err
 		}
@@ -150,7 +148,6 @@ func LoadMacroForDomain(macroDir, domain string) (*Repo, error) {
 			macro = fileMacro
 		} else {
 			err := macro.merge(fileMacro)
-
 			if err != nil {
 				return nil, fmt.Errorf("fail to loading macro from file %s, %w ", file.Name(), err)
 			}

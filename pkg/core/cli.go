@@ -136,7 +136,6 @@ func (c *CLI) Run(ctx context.Context, opts RunOptions) error {
 			var err error
 			for cmd != nil {
 				cmd, err = cmd.Execute(exCtx)
-
 				if err != nil {
 					return err
 				}
@@ -183,7 +182,6 @@ func (c *CLI) Run(ctx context.Context, opts RunOptions) error {
 			}
 
 			cmd, err := c.cmdFactory.Create(fmt.Sprintf("print %s %s", msg.Type.String(), msg.Data))
-
 			if err != nil {
 				return fmt.Errorf("fail to create print command: %w", err)
 			}

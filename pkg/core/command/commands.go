@@ -81,7 +81,6 @@ func NewPrintMsg(msg core.Message) *PrintMsg {
 // If an output file is provided, it writes the formatted message to the file.
 func (c *PrintMsg) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 	output, err := exCtx.FormatMessage(c.msg, false)
-
 	if err != nil {
 		return nil, fmt.Errorf("fail to format message: %w", err)
 	}
@@ -175,7 +174,6 @@ func (c *CmdEdit) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 	}
 
 	cmd, err := exCtx.CreateCommand(rawCmd)
-
 	if err != nil {
 		err := exCtx.Print(fmt.Sprintf("Invalid command: %s\n", rawCmd), color.FgRed)
 		return nil, err

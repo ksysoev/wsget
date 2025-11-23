@@ -279,7 +279,6 @@ macro:
     - send hello
     - wait 5
 `)
-
 	if err != nil {
 		t.Fatalf("Failed to write to temporary test file: %v", err)
 	}
@@ -304,7 +303,6 @@ macro:
 	}
 
 	cmd, err := macro.Get("test", "")
-
 	if err != nil {
 		t.Errorf("LoadFromFile() error = %v, want nil", err)
 	}

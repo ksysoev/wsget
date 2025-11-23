@@ -80,6 +80,7 @@ func (c *config) validate() error {
 // It returns an error if the YAML encoding fails or if closing the encoder encounters an error.
 func (c *config) Write(w io.Writer) (err error) {
 	enc := yaml.NewEncoder(w)
+
 	defer func() {
 		if e := enc.Close(); err == nil && e != nil {
 			err = fmt.Errorf("fail to write config: %w", e)

@@ -28,14 +28,14 @@ type reader interface {
 }
 
 type Connection struct {
+	output    io.Writer
 	url       *url.URL
 	ws        *websocket.Conn
 	onMessage func(context.Context, []byte)
 	opts      *websocket.DialOptions
 	ready     chan struct{}
-	l         sync.Mutex
 	msgSize   int64
-	output    io.Writer
+	l         sync.Mutex
 }
 
 type Options struct {
@@ -133,6 +133,7 @@ func (c *Connection) Connect(ctx context.Context) error {
 	}
 
 	c.l.Lock()
+
 	if c.ws != nil {
 		c.l.Unlock()
 		return fmt.Errorf("connection already established")

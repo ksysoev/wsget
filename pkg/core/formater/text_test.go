@@ -12,7 +12,6 @@ func TestTextFormat_FormatRequest(t *testing.T) {
 	expectedOutput := color.New(color.FgGreen).Sprintf("test request data")
 
 	output, err := tf.FormatRequest(data)
-
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
@@ -28,7 +27,6 @@ func TestTextFormat_FormatResponse(t *testing.T) {
 	expectedOutput := color.New(color.FgHiRed).Sprintf("test response data")
 
 	output, err := tf.FormatResponse(data)
-
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
@@ -45,7 +43,6 @@ func TestTextFormat_FormatForFile(t *testing.T) {
 	expectedOutput := "test data"
 
 	output, err := tf.FormatForFile(data)
-
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}

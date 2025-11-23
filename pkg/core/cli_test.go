@@ -43,11 +43,13 @@ func TestNewCLI(t *testing.T) {
 	cancel()
 
 	done := make(chan bool)
+
 	go func() {
 		err := cli.Run(ctx, RunOptions{})
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
 		}
+
 		done <- true
 	}()
 
@@ -74,7 +76,6 @@ func TestNewCLIRunWithCommands(t *testing.T) {
 	cmd.EXPECT().Execute(mock.Anything).Return(nil, ErrInterrupted)
 
 	err := cli.Run(context.Background(), RunOptions{Commands: []Executer{cmd}})
-
 	if err == nil {
 		t.Fatalf("Expected error, but got nothing")
 	}

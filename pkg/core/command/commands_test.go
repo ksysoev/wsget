@@ -15,8 +15,8 @@ import (
 
 func TestExit_Execute(t *testing.T) {
 	c := NewExit()
-	_, err := c.Execute(nil)
 
+	_, err := c.Execute(nil)
 	if err == nil {
 		t.Errorf("Exit.Execute() error = %v, wantErr %v", err, true)
 	}
