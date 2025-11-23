@@ -44,7 +44,6 @@ func (rl *requestLogger) RoundTrip(req *http.Request) (*http.Response, error) {
 	}
 
 	resp, err := rl.transport.RoundTrip(req)
-
 	if err != nil {
 		return nil, err
 	}
