@@ -428,3 +428,20 @@ func TestExecutionContext_FormatMessage(t *testing.T) {
 		})
 	}
 }
+
+func TestExecutionContext_Ping(t *testing.T) {
+	mockWsConn := NewMockConnectionHandler(t)
+
+	mockWsConn.EXPECT().Ping(t.Context()).Return(nil)
+
+	excCtx := &executionContext{
+		ctx: t.Context(),
+		cli: &CLI{
+			wsConn: mockWsConn,
+		},
+	}
+
+	err := excCtx.Ping()
+
+	assert.NoError(t, err, "Expected no error on Ping")
+}
