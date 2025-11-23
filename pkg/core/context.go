@@ -65,6 +65,12 @@ func (c *executionContext) SendRequest(req string) error {
 	return c.cli.wsConn.Send(c.ctx, req)
 }
 
+// Ping sends a ping message through the execution context's WebSocket connection.
+// It returns an error if the WebSocket connection fails to send the ping.
+func (c *executionContext) Ping() error {
+	return c.cli.wsConn.Ping(c.ctx)
+}
+
 // WaitForResponse waits for a response message from the CLI within a specified timeout period.
 // It takes timeout of type time.Duration to define the maximum wait time. If timeout is 0, it waits indefinitely.
 // It returns a Message containing the received data and an error if the context deadline exceeds or other issues occur.

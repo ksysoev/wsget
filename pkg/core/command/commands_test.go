@@ -680,3 +680,31 @@ func TestInputFileCommand_Execute(t *testing.T) {
 		})
 	}
 }
+
+func TestPingExecute_Success(t *testing.T) {
+	cmd := NewPingCommand()
+
+	exCtx := core.NewMockExecutionContext(t)
+
+	exCtx.EXPECT().Ping().Return(nil)
+	exCtx.EXPECT().Print(mock.Anything, color.FgGreen).Return(nil)
+	exCtx.EXPECT().Print(mock.Anything, color.FgRed).Return(nil)
+	nextCmd, err := cmd.Execute(exCtx)
+
+	assert.Nil(t, nextCmd)
+	assert.NoError(t, err)
+}
+
+func TestPingExecute_Failure(t *testing.T) {
+	cmd := NewPingCommand()
+
+	exCtx := core.NewMockExecutionContext(t)
+
+	exCtx.EXPECT().Print(mock.Anything, color.FgGreen).Return(nil)
+	exCtx.EXPECT().Ping().Return(assert.AnError)
+
+	nextCmd, err := cmd.Execute(exCtx)
+
+	assert.Nil(t, nextCmd)
+	assert.ErrorIs(t, err, assert.AnError)
+}

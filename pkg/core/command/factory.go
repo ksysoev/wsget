@@ -120,6 +120,8 @@ func (f *Factory) Create(raw string) (core.Executer, error) {
 		}
 
 		return NewSleepCommand(time.Duration(sec) * time.Second), nil
+	case "ping":
+		return NewPingCommand(), nil
 	default:
 		args := ""
 		if len(parts) > 1 {
