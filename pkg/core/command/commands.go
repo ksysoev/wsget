@@ -314,5 +314,5 @@ func (c *PingCommand) Execute(exCtx core.ExecutionContext) (core.Executer, error
 
 	duration := time.Since(startTime)
 
-	return nil, exCtx.Print(fmt.Sprintf("<- pong, %v \n", duration), color.FgRed)
+	return nil, exCtx.Print(fmt.Sprintf("<- pong, %v\n", duration), color.FgRed)
 }
