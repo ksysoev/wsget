@@ -700,8 +700,8 @@ func TestPingExecute_Failure(t *testing.T) {
 
 	exCtx := core.NewMockExecutionContext(t)
 
-	exCtx.EXPECT().Ping().Return(assert.AnError)
 	exCtx.EXPECT().Print(mock.Anything, color.FgGreen).Return(nil)
+	exCtx.EXPECT().Ping().Return(assert.AnError)
 
 	nextCmd, err := cmd.Execute(exCtx)
 
