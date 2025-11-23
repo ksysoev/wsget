@@ -287,7 +287,6 @@ func TestRunConnectCmd_SuccessConnect(t *testing.T) {
 	// tty is not available in the test environment
 	// so the test will fail in some cases and be successful in others
 	err := runConnectCmd(ctx, args, []string{url})
-
 	if err != nil {
 		assert.ErrorContains(t, err, "open /dev/tty: ")
 	} else {

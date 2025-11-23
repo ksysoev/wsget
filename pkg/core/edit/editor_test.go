@@ -53,7 +53,6 @@ func TestEdit(t *testing.T) {
 	}()
 
 	req, err := editor.Edit(context.Background(), "")
-
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
@@ -118,7 +117,6 @@ func TestEditInterrupted(t *testing.T) {
 	}()
 
 	req, err := editor.Edit(context.Background(), "")
-
 	if err == nil {
 		t.Error("Expected error")
 	}
@@ -213,7 +211,6 @@ func TestEditClosingKeyboard(t *testing.T) {
 	editor.SetInput(keyStream)
 
 	req, err := editor.Edit(context.Background(), "")
-
 	if err == nil {
 		t.Error("Expected error")
 	}
@@ -247,7 +244,6 @@ func TestEditSpecialKeys(t *testing.T) {
 	}()
 
 	req, err := editor.Edit(context.Background(), "")
-
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}

@@ -77,8 +77,8 @@ func (f *Format) formatJSONMessage(msgType string, data any) (string, error) {
 // If the string is not a valid JSON, it returns false as the second value.
 func (f *Format) parseJSON(data string) (any, bool) {
 	var obj any
-	err := json.Unmarshal([]byte(data), &obj)
 
+	err := json.Unmarshal([]byte(data), &obj)
 	if err != nil {
 		return obj, false
 	}

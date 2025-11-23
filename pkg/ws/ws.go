@@ -21,22 +21,21 @@ const (
 	DefaultMaxMessageSize = 1024 * 1024
 )
 
-var (
-	ErrConnectionClosed = errors.New("connection closed")
-)
+var ErrConnectionClosed = errors.New("connection closed")
 
 type reader interface {
 	Read(p []byte) (n int, err error)
 }
 
 type Connection struct {
+	output    io.Writer
 	url       *url.URL
 	ws        *websocket.Conn
 	onMessage func(context.Context, []byte)
 	opts      *websocket.DialOptions
 	ready     chan struct{}
-	l         sync.Mutex
 	msgSize   int64
+	l         sync.Mutex
 }
 
 type Options struct {
@@ -93,6 +92,7 @@ func New(wsURL string, opts Options) (*Connection, error) {
 		opts:    wsOpts,
 		ready:   make(chan struct{}),
 		msgSize: msgSize,
+		output:  opts.Output,
 	}, nil
 }
 
@@ -115,7 +115,15 @@ func (c *Connection) Connect(ctx context.Context) error {
 		return fmt.Errorf("onMessage callback is not set")
 	}
 
+	startTime := time.Now()
 	ws, resp, err := websocket.Dial(ctx, c.url.String(), c.opts)
+
+	if c.output != nil {
+		handshakeDuration := time.Since(startTime)
+
+		fmt.Fprintf(c.output, "WebSocket handshake completed in %v\n", handshakeDuration)
+	}
+
 	if err != nil {
 		return handleError(err)
 	}
@@ -125,6 +133,7 @@ func (c *Connection) Connect(ctx context.Context) error {
 	}
 
 	c.l.Lock()
+
 	if c.ws != nil {
 		c.l.Unlock()
 		return fmt.Errorf("connection already established")

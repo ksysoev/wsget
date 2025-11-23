@@ -73,6 +73,7 @@ func (c *executionContext) WaitForResponse(timeout time.Duration) (Message, erro
 
 	if timeout > 0 {
 		var cancel context.CancelFunc
+
 		ctx, cancel = context.WithTimeout(ctx, timeout)
 		defer cancel()
 	}

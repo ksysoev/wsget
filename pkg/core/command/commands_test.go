@@ -15,8 +15,8 @@ import (
 
 func TestExit_Execute(t *testing.T) {
 	c := NewExit()
-	_, err := c.Execute(nil)
 
+	_, err := c.Execute(nil)
 	if err == nil {
 		t.Errorf("Exit.Execute() error = %v, wantErr %v", err, true)
 	}
@@ -377,6 +377,7 @@ func TestRepeat_Execute(t *testing.T) {
 
 				exCtx := core.NewMockExecutionContext(t)
 				exCtx.EXPECT().WaitForResponse(1*time.Millisecond).Return(core.Message{}, assert.AnError)
+
 				return exCtx
 			},
 		},
@@ -451,6 +452,7 @@ func TestEdit_Execute(t *testing.T) {
 
 				exCtx := core.NewMockExecutionContext(t)
 				exCtx.EXPECT().EditorMode("test-content").Return("test-response", nil)
+
 				return exCtx
 			},
 		},
@@ -464,6 +466,7 @@ func TestEdit_Execute(t *testing.T) {
 
 				exCtx := core.NewMockExecutionContext(t)
 				exCtx.EXPECT().EditorMode("error-content").Return("", assert.AnError)
+
 				return exCtx
 			},
 		},
@@ -512,6 +515,7 @@ func TestSend_Execute(t *testing.T) {
 
 				exCtx := core.NewMockExecutionContext(t)
 				exCtx.EXPECT().SendRequest(mockRequest).Return(nil)
+
 				return exCtx
 			},
 		},
@@ -525,6 +529,7 @@ func TestSend_Execute(t *testing.T) {
 
 				exCtx := core.NewMockExecutionContext(t)
 				exCtx.EXPECT().SendRequest(mockRequest).Return(assert.AnError)
+
 				return exCtx
 			},
 		},
@@ -623,6 +628,7 @@ func TestInputFileCommand_Execute(t *testing.T) {
 				if cmd == "valid-command" {
 					return NewPrintMsg(core.Message{Type: core.Request, Data: cmd}), nil
 				}
+
 				return nil, assert.AnError
 			},
 			expectedErr:     true,

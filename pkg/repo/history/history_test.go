@@ -253,7 +253,9 @@ func TestHistory_LoadHistory(t *testing.T) {
 				if err != nil {
 					return err
 				}
+
 				defer func() { _ = f.Close() }()
+
 				return nil
 			},
 			expectedError: false,
@@ -267,8 +269,11 @@ func TestHistory_LoadHistory(t *testing.T) {
 				if err != nil {
 					return err
 				}
+
 				defer func() { _ = f.Close() }()
+
 				_, err = f.WriteString("entry1\n")
+
 				return err
 			},
 			expectedError: false,
@@ -282,8 +287,11 @@ func TestHistory_LoadHistory(t *testing.T) {
 				if err != nil {
 					return err
 				}
+
 				defer func() { _ = f.Close() }()
+
 				_, err = f.WriteString("entry1\nentry2\nentry3\n")
+
 				return err
 			},
 			expectedError: false,
@@ -297,8 +305,11 @@ func TestHistory_LoadHistory(t *testing.T) {
 				if err != nil {
 					return err
 				}
+
 				defer func() { _ = f.Close() }()
+
 				_, err = f.WriteString("\nentry1\n\nentry2\n\nentry3\n\n")
+
 				return err
 			},
 			expectedError: false,

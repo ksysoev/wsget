@@ -221,8 +221,10 @@ func TestExecutionContext_WaitForResponse(t *testing.T) {
 			timeout: 1 * time.Millisecond,
 			setupCLI: func(_ context.Context) *CLI {
 				msgChan := make(chan Message, 1)
+
 				go func() {
 					time.Sleep(2 * time.Second)
+
 					msgChan <- Message{Type: Response, Data: "Response Data"}
 				}()
 
@@ -238,8 +240,10 @@ func TestExecutionContext_WaitForResponse(t *testing.T) {
 			timeout: 1 * time.Millisecond,
 			setupCLI: func(_ context.Context) *CLI {
 				msgChan := make(chan Message, 1)
+
 				go func() {
 					time.Sleep(1 * time.Second)
+
 					msgChan <- Message{Type: Response, Data: "Response Data"}
 				}()
 
