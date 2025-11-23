@@ -234,6 +234,21 @@ func (c *Connection) Send(ctx context.Context, msg string) error {
 	return handleError(err)
 }
 
+// Ping sends a ping frame to the WebSocket server to check the connection's liveness.
+// It takes ctx of type context.Context as a parameter.
+// It returns an error if the context is canceled or if there is a failure sending the ping
+func (c *Connection) Ping(ctx context.Context) error {
+	select {
+	case <-c.ready:
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+
+	err := c.ws.Ping(ctx)
+
+	return handleError(err)
+}
+
 // Close shuts down an established WebSocket connection gracefully.
 // It returns an error if the connection is not yet established.
 // The function ensures a normal closure status is sent to the WebSocket server.

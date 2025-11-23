@@ -19,9 +19,7 @@ const (
 	WelcomMessage = "Use Enter to input request and send it, Ctrl+C to exit"
 )
 
-var (
-	ErrInterrupted = fmt.Errorf("interrupted")
-)
+var ErrInterrupted = fmt.Errorf("interrupted")
 
 type CLI struct {
 	formater    Formater
@@ -57,6 +55,7 @@ type ExecutionContext interface {
 	EditorMode(initBuffer string) (string, error)
 	CommandMode(initBuffer string) (string, error)
 	CreateCommand(raw string) (Executer, error)
+	Ping() error
 }
 
 type Editor interface {
@@ -72,6 +71,7 @@ type Executer interface {
 type ConnectionHandler interface {
 	SetOnMessage(func(context.Context, []byte))
 	Send(ctx context.Context, msg string) error
+	Ping(ctx context.Context) error
 }
 
 // NewCLI creates a new CLI instance with the given wsConn, input, and output.

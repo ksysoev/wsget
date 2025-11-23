@@ -292,3 +292,26 @@ func (c *SleepCommand) Execute(_ core.ExecutionContext) (core.Executer, error) {
 
 	return nil, nil
 }
+
+type PingCommand struct{}
+
+// NewPingCommand creates a new PingCommand instance.
+// It takes no parameters and returns a pointer to a PingCommand.
+func NewPingCommand() *PingCommand {
+	return &PingCommand{}
+}
+
+func (c *PingCommand) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
+	startTime := time.Now()
+
+	err := exCtx.Ping()
+	if err != nil {
+		return nil, err
+	}
+
+	duration := time.Since(startTime)
+
+	exCtx.Print(fmt.Sprintf("Ping successful! Round-trip time: %v\n", duration), color.FgCyan)
+
+	return nil, nil
+}
