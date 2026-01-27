@@ -133,38 +133,11 @@ func (ed *Editor) handleKey(e core.KeyEvent) (next bool, res string, err error) 
 	switch e.Key {
 	case core.KeyAltBackspace:
 		_, _ = fmt.Fprint(ed.output, ed.content.DeleteToPrevWord())
-
 		return true, "", nil
 	case core.KeyCtrlC, core.KeyCtrlD:
 		return false, "", core.ErrInterrupted
 	case core.KeyCtrlR:
-		if ed.fuzzyPicker != nil {
-			// Save current content
-			currentContent := ed.content.String()
-
-			// Launch fuzzy picker
-			ctx := context.Background()
-			selected, pickErr := ed.fuzzyPicker.Pick(ctx)
-
-			if pickErr != nil && pickErr != core.ErrInterrupted {
-				return false, "", pickErr
-			}
-
-			// Restore prompt after picker
-			if pickErr := ed.onOpen(ed.output); pickErr != nil {
-				return false, "", fmt.Errorf("failed to restore prompt: %w", pickErr)
-			}
-
-			// If user selected something, replace content
-			if selected != "" {
-				_, _ = fmt.Fprint(ed.output, ed.content.ReplaceText(selected))
-			} else {
-				// Restore original content
-				_, _ = fmt.Fprint(ed.output, ed.content.ReplaceText(currentContent))
-			}
-		}
-
-		return true, "", nil
+		return ed.handleFuzzySearch()
 	case core.KeyCtrlS:
 		return false, ed.done(), nil
 	case core.KeyEsc:
@@ -194,41 +167,13 @@ func (ed *Editor) handleKey(e core.KeyEvent) (next bool, res string, err error) 
 	case core.KeyArrowDown:
 		ed.nextFromHistory()
 	case core.KeyTab:
-		curWord := ed.content.GetCurrentWord()
-
-		match := ed.history.Search(curWord)
-		if match == "" || match == curWord {
-			return true, "", nil
-		}
-
-		diff := match[len(curWord):]
-
-		for _, r := range diff {
-			_, _ = fmt.Fprint(ed.output, ed.content.InsertSymbol(r))
-		}
+		return ed.handleTabCompletion()
 	case core.KeyHome:
 		_, _ = fmt.Fprint(ed.output, ed.content.MoveToRowStart())
 	case core.KeyEnd:
 		_, _ = fmt.Fprint(ed.output, ed.content.MoveToRowEnd())
 	case core.KeyCtrlL:
-		content := ed.content.String()
-		pos := ed.content.GetPosition()
-
-		if _, err := fmt.Fprint(ed.output, ed.content.Clear()+core.ClearTerminal); err != nil {
-			return false, "", fmt.Errorf("failed to clear terminal: %w", err)
-		}
-
-		if err := ed.onOpen(ed.output); err != nil {
-			return false, "", fmt.Errorf("failed to execute open hook: %w", err)
-		}
-
-		if _, err := fmt.Fprint(ed.output, ed.content.ReplaceText(content)); err != nil {
-			return false, "", fmt.Errorf("failed to write content: %w", err)
-		}
-
-		if _, err := fmt.Fprint(ed.output, ed.content.MoveToPosition(pos)); err != nil {
-			return false, "", fmt.Errorf("failed to move to position: %w", err)
-		}
+		return ed.handleClearScreen()
 	default:
 		if e.Key > 0 {
 			return true, "", nil
@@ -268,6 +213,84 @@ func handleEscKey(e core.KeyEvent, ed *Editor) bool {
 		// Esc + any other key is ignored
 		return true
 	}
+}
+
+// handleFuzzySearch launches the fuzzy search picker and handles the selection.
+// It returns whether to continue processing, the result string, and an error if any.
+func (ed *Editor) handleFuzzySearch() (next bool, res string, err error) {
+	if ed.fuzzyPicker == nil {
+		return true, "", nil
+	}
+
+	// Save current content
+	currentContent := ed.content.String()
+
+	// Launch fuzzy picker
+	ctx := context.Background()
+	selected, pickErr := ed.fuzzyPicker.Pick(ctx)
+
+	if pickErr != nil && pickErr != core.ErrInterrupted {
+		return false, "", pickErr
+	}
+
+	// Restore prompt after picker
+	if pickErr := ed.onOpen(ed.output); pickErr != nil {
+		return false, "", fmt.Errorf("failed to restore prompt: %w", pickErr)
+	}
+
+	// If user selected something, replace content
+	if selected != "" {
+		_, _ = fmt.Fprint(ed.output, ed.content.ReplaceText(selected))
+	} else {
+		// Restore original content
+		_, _ = fmt.Fprint(ed.output, ed.content.ReplaceText(currentContent))
+	}
+
+	return true, "", nil
+}
+
+// handleTabCompletion performs word completion from history.
+// It returns whether to continue processing, the result string, and an error if any.
+func (ed *Editor) handleTabCompletion() (next bool, res string, err error) {
+	curWord := ed.content.GetCurrentWord()
+
+	match := ed.history.Search(curWord)
+	if match == "" || match == curWord {
+		return true, "", nil
+	}
+
+	diff := match[len(curWord):]
+
+	for _, r := range diff {
+		_, _ = fmt.Fprint(ed.output, ed.content.InsertSymbol(r))
+	}
+
+	return true, "", nil
+}
+
+// handleClearScreen clears the terminal screen and redraws the editor content.
+// It returns whether to continue processing, the result string, and an error if any.
+func (ed *Editor) handleClearScreen() (next bool, res string, err error) {
+	content := ed.content.String()
+	pos := ed.content.GetPosition()
+
+	if _, err := fmt.Fprint(ed.output, ed.content.Clear()+core.ClearTerminal); err != nil {
+		return false, "", fmt.Errorf("failed to clear terminal: %w", err)
+	}
+
+	if err := ed.onOpen(ed.output); err != nil {
+		return false, "", fmt.Errorf("failed to execute open hook: %w", err)
+	}
+
+	if _, err := fmt.Fprint(ed.output, ed.content.ReplaceText(content)); err != nil {
+		return false, "", fmt.Errorf("failed to write content: %w", err)
+	}
+
+	if _, err := fmt.Fprint(ed.output, ed.content.MoveToPosition(pos)); err != nil {
+		return false, "", fmt.Errorf("failed to move to position: %w", err)
+	}
+
+	return true, "", nil
 }
 
 // done finalizes the editing process and clears the editor's content.
