@@ -19,18 +19,12 @@ const (
 type FuzzyPicker struct {
 	output  io.Writer
 	input   <-chan core.KeyEvent
-	history FuzzySearchableHistory
+	history HistoryRepo
 	content *Content
 }
 
-// FuzzySearchableHistory extends HistoryRepo with fuzzy search capabilities.
-type FuzzySearchableHistory interface {
-	HistoryRepo
-	FuzzySearch(query string) []history.FuzzyMatch
-}
-
 // NewFuzzyPicker creates a new FuzzyPicker instance.
-func NewFuzzyPicker(output io.Writer, hist FuzzySearchableHistory) *FuzzyPicker {
+func NewFuzzyPicker(output io.Writer, hist HistoryRepo) *FuzzyPicker {
 	return &FuzzyPicker{
 		output:  output,
 		history: hist,

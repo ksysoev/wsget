@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/ksysoev/wsget/pkg/core"
+	"github.com/ksysoev/wsget/pkg/repo/history"
 )
 
 type HistoryRepo interface {
@@ -15,6 +16,7 @@ type HistoryRepo interface {
 	NextRequest() string
 	ResetPosition()
 	Search(prefix string) string
+	FuzzySearch(query string) []history.FuzzyMatch
 }
 
 const (
@@ -42,20 +44,16 @@ type Editor struct {
 // It takes output of type io.Writer for writing, history of type HistoryRepo for request history,
 // and isSingleLine of type bool to specify single-line mode.
 // It returns a pointer to an initialized Editor structure.
-func NewEditor(output io.Writer, history HistoryRepo, isSingleLine bool, opts ...Option) *Editor {
+func NewEditor(output io.Writer, hist HistoryRepo, isSingleLine bool, opts ...Option) *Editor {
 	e := &Editor{
-		history:         history,
+		history:         hist,
 		content:         NewContent(),
 		output:          output,
 		prevPressedTime: time.Now(),
 		isSingleLine:    isSingleLine,
 		onOpen:          func(_ io.Writer) error { return nil },
 		onClose:         func(_ io.Writer) error { return nil },
-	}
-
-	// Initialize fuzzy picker if history supports it
-	if fuzzyHistory, ok := history.(FuzzySearchableHistory); ok {
-		e.fuzzyPicker = NewFuzzyPicker(output, fuzzyHistory)
+		fuzzyPicker:     NewFuzzyPicker(output, hist),
 	}
 
 	for _, opt := range opts {

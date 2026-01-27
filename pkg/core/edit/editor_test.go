@@ -658,22 +658,9 @@ func TestEditor_nextFromHistory(t *testing.T) {
 	}
 }
 
-func TestEditor_HandleFuzzySearch_NoPicker(t *testing.T) {
-	output := new(bytes.Buffer)
-	mockHistory := NewMockHistoryRepo(t)
-	editor := NewEditor(output, mockHistory, false)
-
-	// Should return true with no error when picker is nil
-	next, res, err := editor.handleFuzzySearch()
-
-	assert.True(t, next)
-	assert.Empty(t, res)
-	assert.NoError(t, err)
-}
-
 func TestEditor_HandleFuzzySearch_WithSelection(t *testing.T) {
 	output := new(bytes.Buffer)
-	mockHistory := &MockFuzzySearchableHistory{}
+	mockHistory := NewMockHistoryRepo(t)
 	editor := NewEditor(output, mockHistory, false)
 
 	// Mock FuzzySearch to return some matches
@@ -704,7 +691,7 @@ func TestEditor_HandleFuzzySearch_WithSelection(t *testing.T) {
 
 func TestEditor_HandleFuzzySearch_Canceled(t *testing.T) {
 	output := new(bytes.Buffer)
-	mockHistory := &MockFuzzySearchableHistory{}
+	mockHistory := NewMockHistoryRepo(t)
 	editor := NewEditor(output, mockHistory, false)
 
 	// Mock FuzzySearch
@@ -732,7 +719,7 @@ func TestEditor_HandleFuzzySearch_Canceled(t *testing.T) {
 
 func TestEditor_HandleFuzzySearch_NoSelection(t *testing.T) {
 	output := new(bytes.Buffer)
-	mockHistory := &MockFuzzySearchableHistory{}
+	mockHistory := NewMockHistoryRepo(t)
 	editor := NewEditor(output, mockHistory, false)
 
 	// Mock FuzzySearch to return no matches

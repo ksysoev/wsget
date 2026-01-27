@@ -14,7 +14,7 @@ import (
 
 func TestNewFuzzyPicker(t *testing.T) {
 	output := new(bytes.Buffer)
-	mockHistory := &MockFuzzySearchableHistory{}
+	mockHistory := &MockHistoryRepo{}
 
 	picker := NewFuzzyPicker(output, mockHistory)
 
@@ -26,7 +26,7 @@ func TestNewFuzzyPicker(t *testing.T) {
 
 func TestFuzzyPicker_SetInput(t *testing.T) {
 	output := new(bytes.Buffer)
-	mockHistory := &MockFuzzySearchableHistory{}
+	mockHistory := &MockHistoryRepo{}
 	picker := NewFuzzyPicker(output, mockHistory)
 
 	input := make(chan core.KeyEvent)
@@ -38,7 +38,7 @@ func TestFuzzyPicker_SetInput(t *testing.T) {
 
 func TestFuzzyPicker_Pick_NoInput(t *testing.T) {
 	output := new(bytes.Buffer)
-	mockHistory := &MockFuzzySearchableHistory{}
+	mockHistory := &MockHistoryRepo{}
 	picker := NewFuzzyPicker(output, mockHistory)
 
 	ctx := context.Background()
@@ -51,7 +51,7 @@ func TestFuzzyPicker_Pick_NoInput(t *testing.T) {
 
 func TestFuzzyPicker_Pick_ContextCanceled(t *testing.T) {
 	output := new(bytes.Buffer)
-	mockHistory := &MockFuzzySearchableHistory{}
+	mockHistory := &MockHistoryRepo{}
 	mockHistory.On("FuzzySearch", "").Return([]history.FuzzyMatch{})
 
 	picker := NewFuzzyPicker(output, mockHistory)
@@ -69,7 +69,7 @@ func TestFuzzyPicker_Pick_ContextCanceled(t *testing.T) {
 
 func TestFuzzyPicker_Pick_Escape(t *testing.T) {
 	output := new(bytes.Buffer)
-	mockHistory := &MockFuzzySearchableHistory{}
+	mockHistory := &MockHistoryRepo{}
 	mockHistory.On("FuzzySearch", "").Return([]history.FuzzyMatch{})
 
 	picker := NewFuzzyPicker(output, mockHistory)
@@ -87,7 +87,7 @@ func TestFuzzyPicker_Pick_Escape(t *testing.T) {
 
 func TestFuzzyPicker_Pick_EnterWithSelection(t *testing.T) {
 	output := new(bytes.Buffer)
-	mockHistory := &MockFuzzySearchableHistory{}
+	mockHistory := &MockHistoryRepo{}
 
 	matches := []history.FuzzyMatch{
 		{Request: "test request 1", Score: 100},
@@ -111,7 +111,7 @@ func TestFuzzyPicker_Pick_EnterWithSelection(t *testing.T) {
 
 func TestFuzzyPicker_Pick_EnterWithNoMatches(t *testing.T) {
 	output := new(bytes.Buffer)
-	mockHistory := &MockFuzzySearchableHistory{}
+	mockHistory := &MockHistoryRepo{}
 	mockHistory.On("FuzzySearch", "").Return([]history.FuzzyMatch{})
 
 	picker := NewFuzzyPicker(output, mockHistory)
@@ -129,7 +129,7 @@ func TestFuzzyPicker_Pick_EnterWithNoMatches(t *testing.T) {
 
 func TestFuzzyPicker_Pick_CharInput(t *testing.T) {
 	output := new(bytes.Buffer)
-	mockHistory := &MockFuzzySearchableHistory{}
+	mockHistory := &MockHistoryRepo{}
 
 	// Initial render with empty query
 	mockHistory.On("FuzzySearch", "").Return([]history.FuzzyMatch{})
@@ -157,7 +157,7 @@ func TestFuzzyPicker_Pick_CharInput(t *testing.T) {
 
 func TestFuzzyPicker_Pick_ArrowNavigation(t *testing.T) {
 	output := new(bytes.Buffer)
-	mockHistory := &MockFuzzySearchableHistory{}
+	mockHistory := &MockHistoryRepo{}
 
 	matches := []history.FuzzyMatch{
 		{Request: "first", Score: 100},
@@ -187,7 +187,7 @@ func TestFuzzyPicker_Pick_ArrowNavigation(t *testing.T) {
 
 func TestFuzzyPicker_Pick_ArrowUp(t *testing.T) {
 	output := new(bytes.Buffer)
-	mockHistory := &MockFuzzySearchableHistory{}
+	mockHistory := &MockHistoryRepo{}
 
 	matches := []history.FuzzyMatch{
 		{Request: "first", Score: 100},
@@ -216,7 +216,7 @@ func TestFuzzyPicker_Pick_ArrowUp(t *testing.T) {
 
 func TestFuzzyPicker_Pick_Backspace(t *testing.T) {
 	output := new(bytes.Buffer)
-	mockHistory := &MockFuzzySearchableHistory{}
+	mockHistory := &MockHistoryRepo{}
 
 	mockHistory.On("FuzzySearch", "").Return([]history.FuzzyMatch{})
 	mockHistory.On("FuzzySearch", "t").Return([]history.FuzzyMatch{
@@ -247,7 +247,7 @@ func TestFuzzyPicker_Pick_Backspace(t *testing.T) {
 
 func TestFuzzyPicker_Pick_CtrlU(t *testing.T) {
 	output := new(bytes.Buffer)
-	mockHistory := &MockFuzzySearchableHistory{}
+	mockHistory := &MockHistoryRepo{}
 
 	mockHistory.On("FuzzySearch", "").Return([]history.FuzzyMatch{})
 	mockHistory.On("FuzzySearch", "t").Return([]history.FuzzyMatch{
@@ -324,7 +324,7 @@ func TestFuzzyPicker_FormatMatchLine(t *testing.T) {
 
 func TestFuzzyPicker_Pick_InputStreamClosed(t *testing.T) {
 	output := new(bytes.Buffer)
-	mockHistory := &MockFuzzySearchableHistory{}
+	mockHistory := &MockHistoryRepo{}
 	mockHistory.On("FuzzySearch", "").Return([]history.FuzzyMatch{})
 
 	picker := NewFuzzyPicker(output, mockHistory)
@@ -343,7 +343,7 @@ func TestFuzzyPicker_Pick_InputStreamClosed(t *testing.T) {
 
 func TestFuzzyPicker_Pick_CtrlC(t *testing.T) {
 	output := new(bytes.Buffer)
-	mockHistory := &MockFuzzySearchableHistory{}
+	mockHistory := &MockHistoryRepo{}
 	mockHistory.On("FuzzySearch", "").Return([]history.FuzzyMatch{})
 
 	picker := NewFuzzyPicker(output, mockHistory)
@@ -361,7 +361,7 @@ func TestFuzzyPicker_Pick_CtrlC(t *testing.T) {
 
 func TestFuzzyPicker_Pick_CtrlD(t *testing.T) {
 	output := new(bytes.Buffer)
-	mockHistory := &MockFuzzySearchableHistory{}
+	mockHistory := &MockHistoryRepo{}
 	mockHistory.On("FuzzySearch", "").Return([]history.FuzzyMatch{})
 
 	picker := NewFuzzyPicker(output, mockHistory)
@@ -379,7 +379,7 @@ func TestFuzzyPicker_Pick_CtrlD(t *testing.T) {
 
 func TestFuzzyPicker_Pick_MaxDisplayLines(t *testing.T) {
 	output := new(bytes.Buffer)
-	mockHistory := &MockFuzzySearchableHistory{}
+	mockHistory := &MockHistoryRepo{}
 
 	// Create more matches than maxDisplayLines (10)
 	matches := make([]history.FuzzyMatch, 15)
@@ -413,7 +413,7 @@ func TestFuzzyPicker_Pick_MaxDisplayLines(t *testing.T) {
 
 func TestFuzzyPicker_Pick_BackspaceOnEmpty(t *testing.T) {
 	output := new(bytes.Buffer)
-	mockHistory := &MockFuzzySearchableHistory{}
+	mockHistory := &MockHistoryRepo{}
 	mockHistory.On("FuzzySearch", "").Return([]history.FuzzyMatch{})
 
 	picker := NewFuzzyPicker(output, mockHistory)
@@ -434,7 +434,7 @@ func TestFuzzyPicker_Pick_BackspaceOnEmpty(t *testing.T) {
 
 func TestFuzzyPicker_Pick_ArrowUpAtTop(t *testing.T) {
 	output := new(bytes.Buffer)
-	mockHistory := &MockFuzzySearchableHistory{}
+	mockHistory := &MockHistoryRepo{}
 
 	matches := []history.FuzzyMatch{
 		{Request: "first", Score: 100},
@@ -464,7 +464,7 @@ func TestFuzzyPicker_Pick_ArrowUpAtTop(t *testing.T) {
 
 func TestFuzzyPicker_Pick_IgnoreNewline(t *testing.T) {
 	output := new(bytes.Buffer)
-	mockHistory := &MockFuzzySearchableHistory{}
+	mockHistory := &MockHistoryRepo{}
 	mockHistory.On("FuzzySearch", "").Return([]history.FuzzyMatch{})
 
 	picker := NewFuzzyPicker(output, mockHistory)
@@ -485,7 +485,7 @@ func TestFuzzyPicker_Pick_IgnoreNewline(t *testing.T) {
 
 func TestFuzzyPicker_Pick_IgnoreNonPrintableKeys(t *testing.T) {
 	output := new(bytes.Buffer)
-	mockHistory := &MockFuzzySearchableHistory{}
+	mockHistory := &MockHistoryRepo{}
 	mockHistory.On("FuzzySearch", "").Return([]history.FuzzyMatch{})
 
 	picker := NewFuzzyPicker(output, mockHistory)
