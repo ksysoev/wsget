@@ -656,3 +656,130 @@ func TestEditor_nextFromHistory(t *testing.T) {
 		})
 	}
 }
+
+func TestEditor_HandleFuzzySearch_NoPicker(t *testing.T) {
+	output := new(bytes.Buffer)
+	mockHistory := NewMockHistoryRepo(t)
+	editor := NewEditor(output, mockHistory, false)
+
+	// Should return true with no error when picker is nil
+	next, res, err := editor.handleFuzzySearch()
+
+	assert.True(t, next)
+	assert.Empty(t, res)
+	assert.NoError(t, err)
+}
+
+func TestEditor_HandleTabCompletion(t *testing.T) {
+	tests := []struct {
+		name           string
+		currentWord    string
+		searchResult   string
+		expectedOutput string
+	}{
+		{
+			name:           "No match found",
+			currentWord:    "test",
+			searchResult:   "",
+			expectedOutput: "",
+		},
+		{
+			name:           "Match equals current word",
+			currentWord:    "test",
+			searchResult:   "test",
+			expectedOutput: "",
+		},
+		{
+			name:           "Match found with completion",
+			currentWord:    "tes",
+			searchResult:   "test",
+			expectedOutput: "t",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			output := new(bytes.Buffer)
+			mockHistory := NewMockHistoryRepo(t)
+			mockHistory.EXPECT().Search(tt.currentWord).Return(tt.searchResult)
+
+			content := NewContent()
+			editor := &Editor{
+				history: mockHistory,
+				output:  output,
+				content: content,
+			}
+
+			// Set up content with current word
+			for _, r := range tt.currentWord {
+				content.InsertSymbol(r)
+			}
+
+			next, res, err := editor.handleTabCompletion()
+
+			assert.True(t, next)
+			assert.Empty(t, res)
+			assert.NoError(t, err)
+
+			if tt.expectedOutput != "" {
+				assert.Contains(t, output.String(), tt.expectedOutput)
+			}
+		})
+	}
+}
+
+func TestEditor_HandleClearScreen(t *testing.T) {
+	output := new(bytes.Buffer)
+	mockHistory := NewMockHistoryRepo(t)
+
+	onOpenCalled := false
+	editor := NewEditor(output, mockHistory, false, WithOpenHook(func(_ io.Writer) error {
+		onOpenCalled = true
+		return nil
+	}))
+
+	content := editor.content
+	content.InsertSymbol('t')
+	content.InsertSymbol('e')
+	content.InsertSymbol('s')
+	content.InsertSymbol('t')
+
+	next, res, err := editor.handleClearScreen()
+
+	assert.True(t, next)
+	assert.Empty(t, res)
+	assert.NoError(t, err)
+	assert.True(t, onOpenCalled, "Expected onOpen hook to be called")
+	assert.Contains(t, output.String(), core.ClearTerminal)
+}
+
+func TestEditor_HandleClearScreen_ErrorOnClear(t *testing.T) {
+	mockHistory := NewMockHistoryRepo(t)
+	writer := failingWriter{}
+
+	editor := NewEditor(writer, mockHistory, false)
+
+	next, res, err := editor.handleClearScreen()
+
+	assert.False(t, next)
+	assert.Empty(t, res)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to clear terminal")
+}
+
+func TestEditor_HandleClearScreen_ErrorOnOpen(t *testing.T) {
+	output := new(bytes.Buffer)
+	mockHistory := NewMockHistoryRepo(t)
+
+	expectedErr := errors.New("open hook error")
+	editor := NewEditor(output, mockHistory, false, WithOpenHook(func(_ io.Writer) error {
+		return expectedErr
+	}))
+
+	next, res, err := editor.handleClearScreen()
+
+	assert.False(t, next)
+	assert.Empty(t, res)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to execute open hook")
+}
