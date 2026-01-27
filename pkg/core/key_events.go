@@ -27,4 +27,5 @@ const (
 	KeyHome         Key = 65505
 	KeyEnd          Key = 65507
 	KeyCtrlL        Key = 12
+	KeyCtrlR        Key = 18
 )
