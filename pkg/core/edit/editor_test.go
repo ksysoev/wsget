@@ -8,14 +8,15 @@ import (
 	"testing"
 
 	"github.com/ksysoev/wsget/pkg/core"
+	"github.com/ksysoev/wsget/pkg/repo/history"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
 func TestNewEditor(t *testing.T) {
 	output := new(bytes.Buffer)
-	history := NewMockHistoryRepo(t)
-	editor := NewEditor(output, history, false)
+	mockHistory := NewMockHistoryRepo(t)
+	editor := NewEditor(output, mockHistory, false)
 
 	if editor.content == nil {
 		t.Error("Expected non-nil content")
@@ -25,7 +26,7 @@ func TestNewEditor(t *testing.T) {
 		t.Error("Expected output to be set")
 	}
 
-	if editor.history != history {
+	if editor.history != mockHistory {
 		t.Error("Expected history to be set")
 	}
 }
@@ -33,11 +34,11 @@ func TestNewEditor(t *testing.T) {
 func TestEdit(t *testing.T) {
 	output := new(bytes.Buffer)
 
-	history := NewMockHistoryRepo(t)
-	history.EXPECT().ResetPosition()
-	history.EXPECT().AddRequest("request")
+	mockHistory := NewMockHistoryRepo(t)
+	mockHistory.EXPECT().ResetPosition()
+	mockHistory.EXPECT().AddRequest("request")
 
-	editor := NewEditor(output, history, false)
+	editor := NewEditor(output, mockHistory, false)
 
 	keyStream := make(chan core.KeyEvent)
 	defer close(keyStream)
@@ -63,9 +64,9 @@ func TestEdit(t *testing.T) {
 }
 
 func TestEditor_Edit_FailOpenHook(t *testing.T) {
-	history := NewMockHistoryRepo(t)
+	mockHistory := NewMockHistoryRepo(t)
 
-	editor := NewEditor(io.Discard, history, false, WithOpenHook(func(_ io.Writer) error {
+	editor := NewEditor(io.Discard, mockHistory, false, WithOpenHook(func(_ io.Writer) error {
 		return assert.AnError
 	}))
 
@@ -79,10 +80,10 @@ func TestEditor_Edit_FailOpenHook(t *testing.T) {
 }
 
 func TestEditor_Edit_FailCloseHook(t *testing.T) {
-	history := NewMockHistoryRepo(t)
-	history.EXPECT().ResetPosition()
+	mockHistory := NewMockHistoryRepo(t)
+	mockHistory.EXPECT().ResetPosition()
 
-	editor := NewEditor(io.Discard, history, true, WithCloseHook(func(_ io.Writer) error {
+	editor := NewEditor(io.Discard, mockHistory, true, WithCloseHook(func(_ io.Writer) error {
 		return assert.AnError
 	}))
 
@@ -102,10 +103,10 @@ func TestEditor_Edit_FailCloseHook(t *testing.T) {
 }
 
 func TestEditInterrupted(t *testing.T) {
-	history := NewMockHistoryRepo(t)
-	history.EXPECT().ResetPosition()
+	mockHistory := NewMockHistoryRepo(t)
+	mockHistory.EXPECT().ResetPosition()
 
-	editor := NewEditor(io.Discard, history, false)
+	editor := NewEditor(io.Discard, mockHistory, false)
 
 	keyStream := make(chan core.KeyEvent)
 	defer close(keyStream)
@@ -141,10 +142,10 @@ func TestEditInterrupted(t *testing.T) {
 }
 
 func TestEdit_CancelledContext(t *testing.T) {
-	history := NewMockHistoryRepo(t)
-	history.EXPECT().ResetPosition()
+	mockHistory := NewMockHistoryRepo(t)
+	mockHistory.EXPECT().ResetPosition()
 
-	editor := NewEditor(io.Discard, history, false)
+	editor := NewEditor(io.Discard, mockHistory, false)
 
 	keyStream := make(chan core.KeyEvent)
 	defer close(keyStream)
@@ -166,10 +167,10 @@ func TestEdit_CancelledContext(t *testing.T) {
 }
 
 func TestEdit_NoInput(t *testing.T) {
-	history := NewMockHistoryRepo(t)
-	history.EXPECT().ResetPosition()
+	mockHistory := NewMockHistoryRepo(t)
+	mockHistory.EXPECT().ResetPosition()
 
-	editor := NewEditor(io.Discard, history, false)
+	editor := NewEditor(io.Discard, mockHistory, false)
 
 	req, err := editor.Edit(context.Background(), "")
 
@@ -178,10 +179,10 @@ func TestEdit_NoInput(t *testing.T) {
 }
 
 func TestEditExitEditor(t *testing.T) {
-	history := NewMockHistoryRepo(t)
-	history.EXPECT().ResetPosition()
+	mockHistory := NewMockHistoryRepo(t)
+	mockHistory.EXPECT().ResetPosition()
 
-	editor := NewEditor(io.Discard, history, false)
+	editor := NewEditor(io.Discard, mockHistory, false)
 
 	keyStream := make(chan core.KeyEvent)
 	defer close(keyStream)
@@ -200,10 +201,10 @@ func TestEditExitEditor(t *testing.T) {
 func TestEditClosingKeyboard(t *testing.T) {
 	output := new(bytes.Buffer)
 
-	history := NewMockHistoryRepo(t)
-	history.EXPECT().ResetPosition()
+	mockHistory := NewMockHistoryRepo(t)
+	mockHistory.EXPECT().ResetPosition()
 
-	editor := NewEditor(output, history, false)
+	editor := NewEditor(output, mockHistory, false)
 
 	keyStream := make(chan core.KeyEvent)
 	close(keyStream)
@@ -223,10 +224,10 @@ func TestEditClosingKeyboard(t *testing.T) {
 func TestEditSpecialKeys(t *testing.T) {
 	output := new(bytes.Buffer)
 
-	history := NewMockHistoryRepo(t)
-	history.EXPECT().ResetPosition()
+	mockHistory := NewMockHistoryRepo(t)
+	mockHistory.EXPECT().ResetPosition()
 
-	editor := NewEditor(output, history, false)
+	editor := NewEditor(output, mockHistory, false)
 
 	keyStream := make(chan core.KeyEvent)
 	defer close(keyStream)
@@ -668,6 +669,93 @@ func TestEditor_HandleFuzzySearch_NoPicker(t *testing.T) {
 	assert.True(t, next)
 	assert.Empty(t, res)
 	assert.NoError(t, err)
+}
+
+func TestEditor_HandleFuzzySearch_WithSelection(t *testing.T) {
+	output := new(bytes.Buffer)
+	mockHistory := &MockFuzzySearchableHistory{}
+	editor := NewEditor(output, mockHistory, false)
+
+	// Mock FuzzySearch to return some matches
+	mockHistory.On("FuzzySearch", "").Return([]history.FuzzyMatch{
+		{Request: "first match", Score: 100},
+		{Request: "second match", Score: 90},
+	})
+
+	// Set initial content
+	editor.content.InsertSymbol('a')
+	initialContent := editor.content.String()
+
+	// Create picker and set input
+	input := make(chan core.KeyEvent, 2)
+	input <- core.KeyEvent{Key: core.KeyEnter} // Select first match
+
+	editor.SetInput(input)
+
+	next, res, err := editor.handleFuzzySearch()
+
+	assert.True(t, next)
+	assert.Empty(t, res)
+	assert.NoError(t, err)
+	// Content should be replaced with selection
+	assert.NotEqual(t, initialContent, editor.content.String())
+	assert.Contains(t, editor.content.String(), "first match")
+}
+
+func TestEditor_HandleFuzzySearch_Canceled(t *testing.T) {
+	output := new(bytes.Buffer)
+	mockHistory := &MockFuzzySearchableHistory{}
+	editor := NewEditor(output, mockHistory, false)
+
+	// Mock FuzzySearch
+	mockHistory.On("FuzzySearch", "").Return([]history.FuzzyMatch{})
+
+	// Set initial content
+	editor.content.InsertSymbol('a')
+	editor.content.InsertSymbol('b')
+	initialContent := editor.content.String()
+
+	// Create picker and set input - user presses Escape
+	input := make(chan core.KeyEvent, 1)
+	input <- core.KeyEvent{Key: core.KeyEsc}
+
+	editor.SetInput(input)
+
+	next, res, err := editor.handleFuzzySearch()
+
+	assert.True(t, next)
+	assert.Empty(t, res)
+	assert.NoError(t, err)
+	// Content should be restored
+	assert.Equal(t, initialContent, editor.content.String())
+}
+
+func TestEditor_HandleFuzzySearch_NoSelection(t *testing.T) {
+	output := new(bytes.Buffer)
+	mockHistory := &MockFuzzySearchableHistory{}
+	editor := NewEditor(output, mockHistory, false)
+
+	// Mock FuzzySearch to return no matches
+	mockHistory.On("FuzzySearch", "").Return([]history.FuzzyMatch{})
+
+	// Set initial content
+	editor.content.InsertSymbol('a')
+	editor.content.InsertSymbol('b')
+	initialContent := editor.content.String()
+
+	// Create picker and set input - press Enter with no matches
+	input := make(chan core.KeyEvent, 1)
+	input <- core.KeyEvent{Key: core.KeyEnter}
+
+	editor.SetInput(input)
+
+	next, res, err := editor.handleFuzzySearch()
+
+	assert.True(t, next)
+	assert.Empty(t, res)
+	assert.NoError(t, err)
+	// Content should be restored since no selection was made
+	assert.Equal(t, initialContent, editor.content.String())
 }
 
 func TestEditor_HandleTabCompletion(t *testing.T) {

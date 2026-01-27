@@ -19,6 +19,7 @@ packages:
   github.com/ksysoev/wsget/pkg/core/edit:
     interfaces:
       HistoryRepo:
+      FuzzySearchableHistory:
   github.com/ksysoev/wsget/pkg/ws:
     interfaces:
       reader:
