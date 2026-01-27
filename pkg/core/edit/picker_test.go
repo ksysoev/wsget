@@ -21,7 +21,6 @@ func TestNewFuzzyPicker(t *testing.T) {
 	assert.NotNil(t, picker)
 	assert.Equal(t, output, picker.output)
 	assert.Equal(t, mockHistory, picker.history)
-	assert.NotNil(t, picker.content)
 }
 
 func TestFuzzyPicker_SetInput(t *testing.T) {
@@ -100,6 +99,7 @@ func TestFuzzyPicker_Pick_EnterWithSelection(t *testing.T) {
 	input := make(chan core.KeyEvent, 1)
 	picker.SetInput(input)
 
+	// Send Enter key to select the first match
 	input <- core.KeyEvent{Key: core.KeyEnter}
 
 	ctx := context.Background()
@@ -107,6 +107,147 @@ func TestFuzzyPicker_Pick_EnterWithSelection(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, "test request 1", result)
+}
+
+func TestFuzzyPicker_Pick_UTF8Backspace(t *testing.T) {
+	output := new(bytes.Buffer)
+	mockHistory := &MockHistoryRepo{}
+
+	mockHistory.On("FuzzySearch", "").Return([]history.FuzzyMatch{})
+	mockHistory.On("FuzzySearch", "你").Return([]history.FuzzyMatch{
+		{Request: "你好世界", Score: 100},
+	})
+	mockHistory.On("FuzzySearch", "你好").Return([]history.FuzzyMatch{
+		{Request: "你好世界", Score: 100},
+	})
+	mockHistory.On("FuzzySearch", "你好🎉").Return([]history.FuzzyMatch{
+		{Request: "你好世界🎉", Score: 100},
+	})
+
+	picker := NewFuzzyPicker(output, mockHistory)
+	input := make(chan core.KeyEvent, 10) // Increased buffer size
+	picker.SetInput(input)
+
+	// Type Chinese characters
+	input <- core.KeyEvent{Key: 0, Rune: '你'}
+
+	input <- core.KeyEvent{Key: 0, Rune: '好'}
+
+	// Type emoji
+	input <- core.KeyEvent{Key: 0, Rune: '🎉'}
+
+	// Backspace should remove emoji (multi-byte character)
+	input <- core.KeyEvent{Key: core.KeyBackspace}
+
+	// Backspace should remove '好'
+	input <- core.KeyEvent{Key: core.KeyBackspace}
+
+	input <- core.KeyEvent{Key: core.KeyEnter}
+
+	ctx := context.Background()
+	result, err := picker.Pick(ctx)
+
+	assert.NoError(t, err)
+	assert.Equal(t, "你好世界", result)
+	mockHistory.AssertCalled(t, "FuzzySearch", "你")
+	mockHistory.AssertCalled(t, "FuzzySearch", "你好")
+	mockHistory.AssertCalled(t, "FuzzySearch", "你好🎉")
+}
+
+func TestFuzzyPicker_FormatMatchLine_UTF8Truncation(t *testing.T) {
+	tests := []struct {
+		name       string
+		request    string
+		isSelected bool
+		maxLen     int
+	}{
+		{
+			name:       "ASCII string under limit",
+			request:    "short",
+			isSelected: false,
+			maxLen:     100,
+		},
+		{
+			name:       "Long ASCII string",
+			request:    strings.Repeat("a", 150),
+			isSelected: false,
+			maxLen:     100,
+		},
+		{
+			name:       "UTF-8 Chinese characters",
+			request:    strings.Repeat("你好", 60), // Each character is 3 bytes
+			isSelected: true,
+			maxLen:     100,
+		},
+		{
+			name:       "UTF-8 emoji",
+			request:    strings.Repeat("🎉", 60), // Each emoji is 4 bytes
+			isSelected: false,
+			maxLen:     100,
+		},
+		{
+			name:       "Mixed ASCII and UTF-8",
+			request:    strings.Repeat("Hello你好🎉", 15),
+			isSelected: true,
+			maxLen:     100,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			match := history.FuzzyMatch{Request: tt.request}
+			result := formatMatchLine(match, tt.isSelected)
+
+			// Should not panic on multi-byte characters
+			assert.NotEmpty(t, result)
+
+			// Remove ANSI codes for length checking
+			cleaned := strings.ReplaceAll(result, "\033[7m", "")
+			cleaned = strings.ReplaceAll(cleaned, "\033[0m", "")
+			cleaned = strings.TrimPrefix(cleaned, "> ")
+			cleaned = strings.TrimPrefix(cleaned, "  ")
+
+			// Check that result is properly truncated (in runes, not bytes)
+			if len([]rune(tt.request)) > tt.maxLen {
+				assert.Contains(t, cleaned, "...")
+				// Verify truncation doesn't break UTF-8 encoding
+				assert.True(t, len([]rune(cleaned)) <= tt.maxLen+3) // +3 for "..."
+			}
+		})
+	}
+}
+
+func TestFuzzyPicker_Pick_UTF8CharInput(t *testing.T) {
+	output := new(bytes.Buffer)
+	mockHistory := &MockHistoryRepo{}
+
+	mockHistory.On("FuzzySearch", "").Return([]history.FuzzyMatch{})
+	mockHistory.On("FuzzySearch", "П").Return([]history.FuzzyMatch{})
+	mockHistory.On("FuzzySearch", "Пр").Return([]history.FuzzyMatch{})
+	mockHistory.On("FuzzySearch", "При").Return([]history.FuzzyMatch{})
+	mockHistory.On("FuzzySearch", "Прив").Return([]history.FuzzyMatch{})
+	mockHistory.On("FuzzySearch", "Приве").Return([]history.FuzzyMatch{})
+	mockHistory.On("FuzzySearch", "Привет").Return([]history.FuzzyMatch{
+		{Request: "Привет мир", Score: 100},
+	})
+
+	picker := NewFuzzyPicker(output, mockHistory)
+	input := make(chan core.KeyEvent, 10) // Increased buffer size
+	picker.SetInput(input)
+
+	// Type Russian characters (Cyrillic)
+	for _, r := range "Привет" {
+		input <- core.KeyEvent{Key: 0, Rune: r}
+	}
+
+	input <- core.KeyEvent{Key: core.KeyEnter}
+
+	ctx := context.Background()
+	result, err := picker.Pick(ctx)
+
+	assert.NoError(t, err)
+	assert.Equal(t, "Привет мир", result)
+	mockHistory.AssertCalled(t, "FuzzySearch", "Привет")
 }
 
 func TestFuzzyPicker_Pick_EnterWithNoMatches(t *testing.T) {

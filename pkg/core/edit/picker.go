@@ -20,7 +20,6 @@ type FuzzyPicker struct {
 	output  io.Writer
 	input   <-chan core.KeyEvent
 	history HistoryRepo
-	content *Content
 }
 
 // NewFuzzyPicker creates a new FuzzyPicker instance.
@@ -28,7 +27,6 @@ func NewFuzzyPicker(output io.Writer, hist HistoryRepo) *FuzzyPicker {
 	return &FuzzyPicker{
 		output:  output,
 		history: hist,
-		content: NewContent(),
 	}
 }
 
@@ -126,11 +124,7 @@ func (fp *FuzzyPicker) handleArrowUp(state *pickerState) (result string, done bo
 	if state.selectedIdx > 0 {
 		state.selectedIdx--
 
-		if err := fp.render(state.query); err != nil {
-			return "", true, err
-		}
-
-		if err := fp.highlightSelection(state.selectedIdx, fp.history.FuzzySearch(state.query)); err != nil {
+		if err := fp.updateDisplay(state); err != nil {
 			return "", true, err
 		}
 	}
@@ -150,7 +144,7 @@ func (fp *FuzzyPicker) handleArrowDown(state *pickerState) (result string, done 
 	if state.selectedIdx < maxIdx {
 		state.selectedIdx++
 
-		if err := fp.render(state.query); err != nil {
+		if err := fp.renderMatches(state.query, matches); err != nil {
 			return "", true, err
 		}
 
@@ -165,14 +159,14 @@ func (fp *FuzzyPicker) handleArrowDown(state *pickerState) (result string, done 
 // handleBackspace removes the last character from the query.
 func (fp *FuzzyPicker) handleBackspace(state *pickerState) (result string, done bool, err error) {
 	if state.query != "" {
-		state.query = state.query[:len(state.query)-1]
-		state.selectedIdx = 0
-
-		if err := fp.render(state.query); err != nil {
-			return "", true, err
+		runes := []rune(state.query)
+		if len(runes) > 0 {
+			state.query = string(runes[:len(runes)-1])
 		}
 
-		if err := fp.highlightSelection(state.selectedIdx, fp.history.FuzzySearch(state.query)); err != nil {
+		state.selectedIdx = 0
+
+		if err := fp.updateDisplay(state); err != nil {
 			return "", true, err
 		}
 	}
@@ -185,11 +179,7 @@ func (fp *FuzzyPicker) handleClearQuery(state *pickerState) (result string, done
 	state.query = ""
 	state.selectedIdx = 0
 
-	if err := fp.render(state.query); err != nil {
-		return "", true, err
-	}
-
-	if err := fp.highlightSelection(state.selectedIdx, fp.history.FuzzySearch(state.query)); err != nil {
+	if err := fp.updateDisplay(state); err != nil {
 		return "", true, err
 	}
 
@@ -202,11 +192,7 @@ func (fp *FuzzyPicker) handleCharInput(e core.KeyEvent, state *pickerState) (res
 		state.query += string(e.Rune)
 		state.selectedIdx = 0
 
-		if err := fp.render(state.query); err != nil {
-			return "", true, err
-		}
-
-		if err := fp.highlightSelection(state.selectedIdx, fp.history.FuzzySearch(state.query)); err != nil {
+		if err := fp.updateDisplay(state); err != nil {
 			return "", true, err
 		}
 	}
@@ -214,16 +200,30 @@ func (fp *FuzzyPicker) handleCharInput(e core.KeyEvent, state *pickerState) (res
 	return "", false, nil
 }
 
+// updateDisplay performs a single fuzzy search and updates the display.
+func (fp *FuzzyPicker) updateDisplay(state *pickerState) error {
+	matches := fp.history.FuzzySearch(state.query)
+
+	if err := fp.renderMatches(state.query, matches); err != nil {
+		return err
+	}
+
+	return fp.highlightSelection(state.selectedIdx, matches)
+}
+
 // render displays the fuzzy picker interface with current query and matches.
 func (fp *FuzzyPicker) render(query string) error {
+	matches := fp.history.FuzzySearch(query)
+	return fp.renderMatches(query, matches)
+}
+
+// renderMatches displays the fuzzy picker interface with provided matches.
+func (fp *FuzzyPicker) renderMatches(query string, matches []history.FuzzyMatch) error {
 	// Move cursor to beginning and clear from cursor to end of screen
-	output := "\r\033[K"
+	output := "\r\033[K\033[J"
 
 	// Show prompt and query
 	output += pickerPrompt + query + "\n"
-
-	// Get matches
-	matches := fp.history.FuzzySearch(query)
 
 	// Display up to maxDisplayLines matches
 	displayCount := len(matches)
@@ -296,9 +296,10 @@ func formatMatchLine(match history.FuzzyMatch, isSelected bool) string {
 	const maxLineLength = 100
 
 	display := match.Request
-	// Truncate long lines
-	if len(display) > maxLineLength {
-		display = display[:maxLineLength-3] + "..."
+	// Truncate long lines (UTF-8 safe)
+	runes := []rune(display)
+	if len(runes) > maxLineLength {
+		display = string(runes[:maxLineLength-3]) + "..."
 	}
 
 	// Replace newlines with spaces for display

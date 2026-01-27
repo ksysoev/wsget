@@ -157,7 +157,7 @@ func calculateScore(text string, queryRunes []rune, positions []int) int {
 		// Check if this starts a consecutive sequence
 		if i == 0 || positions[i] != positions[i-1]+1 {
 			// This is the start of a new sequence
-			if pos == 0 || (pos > 0 && (unicode.IsSpace(textRunes[pos-1]) || textRunes[pos-1] == '_' || textRunes[pos-1] == '-')) {
+			if pos == 0 || (pos > 0 && (unicode.IsSpace(textRunes[pos-1]) || textRunes[pos-1] == '_' || textRunes[pos-1] == '-' || textRunes[pos-1] == '.')) {
 				score += 15 //nolint:mnd // Bonus for sequence start at word boundary
 			}
 		}
