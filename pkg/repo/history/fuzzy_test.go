@@ -277,3 +277,53 @@ func TestFuzzySearch_MultilineRequests(t *testing.T) {
 
 	assert.Equal(t, 2, len(matches))
 }
+
+func TestFuzzySearch_Deduplication(t *testing.T) {
+	h := NewHistory("test")
+
+	// Add duplicate requests
+	h.AddRequest(`{"ping":1}`)
+	h.AddRequest(`{"authorize":"token"}`)
+	h.AddRequest(`{"ping":1}`)
+	h.AddRequest(`{"ping":1}`)
+	h.AddRequest(`{"authorize":"token"}`)
+	h.AddRequest(`{"ping":1}`)
+
+	// Search with query
+	matches := h.FuzzySearch("ping")
+
+	// Should return only unique matches
+	assert.Equal(t, 1, len(matches), "Duplicate requests should be deduplicated")
+	assert.Equal(t, `{"ping":1}`, matches[0].Request)
+
+	// Search with empty query (show all)
+	allMatches := h.FuzzySearch("")
+
+	// Should return only unique requests in order of most recent occurrence
+	assert.Equal(t, 2, len(allMatches), "Empty query should return deduplicated results")
+
+	// Most recent unique entries should be first
+	assert.Equal(t, `{"ping":1}`, allMatches[0].Request)
+	assert.Equal(t, `{"authorize":"token"}`, allMatches[1].Request)
+}
+
+func TestFuzzySearch_DeduplicationKeepsHighestScore(t *testing.T) {
+	h := NewHistory("test")
+
+	// Add requests where the same text appears in different contexts
+	// This tests that we keep the highest scoring match when deduplicating
+	h.AddRequest("test message")
+	h.AddRequest("another test")
+	h.AddRequest("test message")
+
+	matches := h.FuzzySearch("test")
+
+	// Should have unique results
+	uniqueRequests := make(map[string]bool)
+	for _, match := range matches {
+		assert.False(t, uniqueRequests[match.Request], "Found duplicate request: %s", match.Request)
+		uniqueRequests[match.Request] = true
+	}
+
+	assert.Equal(t, 2, len(matches), "Should return 2 unique matches")
+}

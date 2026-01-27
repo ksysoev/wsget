@@ -20,16 +20,23 @@ type FuzzyMatch struct {
 // - Matches at word boundaries (higher score)
 // - Earlier matches in the string (higher score)
 // - Case-insensitive matching
+// Results are deduplicated, keeping only the highest-scoring instance of each unique request.
 func (h *History) FuzzySearch(query string) []FuzzyMatch {
 	if query == "" {
-		// Return all requests in reverse order (most recent first)
+		// Return all requests in reverse order (most recent first), deduplicated
+		seen := make(map[string]bool)
 		matches := make([]FuzzyMatch, 0, len(h.requests))
+
 		for i := len(h.requests) - 1; i >= 0; i-- {
-			matches = append(matches, FuzzyMatch{
-				Request:   h.requests[i],
-				Positions: nil,
-				Score:     0,
-			})
+			req := h.requests[i]
+			if !seen[req] {
+				seen[req] = true
+				matches = append(matches, FuzzyMatch{
+					Request:   req,
+					Positions: nil,
+					Score:     0,
+				})
+			}
 		}
 
 		return matches
@@ -59,7 +66,18 @@ func (h *History) FuzzySearch(query string) []FuzzyMatch {
 		return i > j
 	})
 
-	return matches
+	// Deduplicate matches, keeping the highest-scoring instance
+	deduplicated := make([]FuzzyMatch, 0, len(matches))
+	seen := make(map[string]bool)
+
+	for _, match := range matches {
+		if !seen[match.Request] {
+			seen[match.Request] = true
+			deduplicated = append(deduplicated, match)
+		}
+	}
+
+	return deduplicated
 }
 
 // fuzzyMatch checks if the query matches the text and calculates a score.
