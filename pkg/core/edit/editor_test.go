@@ -663,6 +663,9 @@ func TestEditor_HandleFuzzySearch_WithSelection(t *testing.T) {
 	mockHistory := NewMockHistoryRepo(t)
 	editor := NewEditor(output, mockHistory, false)
 
+	// Set context for handleFuzzySearch
+	editor.ctx = context.Background()
+
 	// Mock FuzzySearch to return some matches
 	mockHistory.On("FuzzySearch", "").Return([]history.FuzzyMatch{
 		{Request: "first match", Score: 100},
@@ -694,6 +697,9 @@ func TestEditor_HandleFuzzySearch_Canceled(t *testing.T) {
 	mockHistory := NewMockHistoryRepo(t)
 	editor := NewEditor(output, mockHistory, false)
 
+	// Set context for handleFuzzySearch
+	editor.ctx = context.Background()
+
 	// Mock FuzzySearch
 	mockHistory.On("FuzzySearch", "").Return([]history.FuzzyMatch{})
 
@@ -722,6 +728,9 @@ func TestEditor_HandleFuzzySearch_NoSelection(t *testing.T) {
 	mockHistory := NewMockHistoryRepo(t)
 	editor := NewEditor(output, mockHistory, false)
 
+	// Set context for handleFuzzySearch
+	editor.ctx = context.Background()
+
 	// Mock FuzzySearch to return no matches
 	mockHistory.On("FuzzySearch", "").Return([]history.FuzzyMatch{})
 
@@ -743,6 +752,36 @@ func TestEditor_HandleFuzzySearch_NoSelection(t *testing.T) {
 	assert.NoError(t, err)
 	// Content should be restored since no selection was made
 	assert.Equal(t, initialContent, editor.content.String())
+}
+
+func TestEditor_HandleFuzzySearch_ContextCancellation(t *testing.T) {
+	output := new(bytes.Buffer)
+	mockHistory := NewMockHistoryRepo(t)
+	editor := NewEditor(output, mockHistory, false)
+
+	// Create a cancellable context
+	ctx, cancel := context.WithCancel(context.Background())
+	editor.ctx = ctx
+
+	// Mock FuzzySearch
+	mockHistory.On("FuzzySearch", "").Return([]history.FuzzyMatch{
+		{Request: "first match", Score: 100},
+	})
+
+	// Create input channel but don't send anything - picker will wait
+	input := make(chan core.KeyEvent, 1)
+	editor.SetInput(input)
+
+	// Cancel context before picker can process
+	cancel()
+
+	// handleFuzzySearch should respect the cancelled context
+	next, res, err := editor.handleFuzzySearch()
+
+	// Picker should return with ErrInterrupted due to context cancellation
+	assert.True(t, next)
+	assert.Empty(t, res)
+	assert.NoError(t, err) // handleFuzzySearch handles ErrInterrupted internally
 }
 
 func TestEditor_HandleTabCompletion(t *testing.T) {

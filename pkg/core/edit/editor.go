@@ -31,6 +31,7 @@ type Editor struct {
 	prevPressedTime time.Time
 	history         HistoryRepo
 	output          io.Writer
+	ctx             context.Context
 	input           <-chan core.KeyEvent
 	content         *Content
 	onOpen          func(io.Writer) error
@@ -77,6 +78,9 @@ func (ed *Editor) SetInput(input <-chan core.KeyEvent) {
 // It takes a context ctx of type context.Context for cancellation and an initial buffer initBuffer of type string.
 // It returns the final edited string content or an error if input is unavailable, keyboard stream is closed, or an interrupt occurs.
 func (ed *Editor) Edit(ctx context.Context, initBuffer string) (res string, err error) {
+	// Store context for use in handlers
+	ed.ctx = ctx
+
 	if err := ed.onOpen(ed.output); err != nil {
 		return "", fmt.Errorf("failed to execute open hook: %w", err)
 	}
@@ -223,9 +227,8 @@ func (ed *Editor) handleFuzzySearch() (next bool, res string, err error) {
 	// Save current content
 	currentContent := ed.content.String()
 
-	// Launch fuzzy picker
-	ctx := context.Background()
-	selected, pickErr := ed.fuzzyPicker.Pick(ctx)
+	// Launch fuzzy picker with the Edit context
+	selected, pickErr := ed.fuzzyPicker.Pick(ed.ctx)
 
 	if pickErr != nil && pickErr != core.ErrInterrupted {
 		return false, "", pickErr
