@@ -231,11 +231,6 @@ func (ed *Editor) handleFuzzySearch() (next bool, res string, err error) {
 		return false, "", pickErr
 	}
 
-	// Restore prompt after picker
-	if pickErr := ed.onOpen(ed.output); pickErr != nil {
-		return false, "", fmt.Errorf("failed to restore prompt: %w", pickErr)
-	}
-
 	// If user selected something, replace content
 	if selected != "" {
 		_, _ = fmt.Fprint(ed.output, ed.content.ReplaceText(selected))
