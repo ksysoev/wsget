@@ -114,6 +114,8 @@ Use Enter to input request and send it, Ctrl+C to exit
 | --- | --- |
 | **Up Arrow** | Cycle to the previous request in history. |
 | **Down Arrow** | Cycle to the next request in history. |
+| **Ctrl + R** | Open interactive fuzzy search to find and select from history. |
+| **Tab** | Autocomplete current word from history. |
 
 ### Miscellaneous Shortcuts
 

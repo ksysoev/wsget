@@ -34,6 +34,7 @@ type Editor struct {
 	onOpen          func(io.Writer) error
 	onClose         func(io.Writer) error
 	buffer          *string
+	fuzzyPicker     *FuzzyPicker
 	isSingleLine    bool
 }
 
@@ -52,6 +53,11 @@ func NewEditor(output io.Writer, history HistoryRepo, isSingleLine bool, opts ..
 		onClose:         func(_ io.Writer) error { return nil },
 	}
 
+	// Initialize fuzzy picker if history supports it
+	if fuzzyHistory, ok := history.(FuzzySearchableHistory); ok {
+		e.fuzzyPicker = NewFuzzyPicker(output, fuzzyHistory)
+	}
+
 	for _, opt := range opts {
 		opt(e)
 	}
@@ -64,6 +70,9 @@ func NewEditor(output io.Writer, history HistoryRepo, isSingleLine bool, opts ..
 // This method does not return any value.
 func (ed *Editor) SetInput(input <-chan core.KeyEvent) {
 	ed.input = input
+	if ed.fuzzyPicker != nil {
+		ed.fuzzyPicker.SetInput(input)
+	}
 }
 
 // Edit processes keyboard input to manipulate and return the edited content.
@@ -128,6 +137,34 @@ func (ed *Editor) handleKey(e core.KeyEvent) (next bool, res string, err error) 
 		return true, "", nil
 	case core.KeyCtrlC, core.KeyCtrlD:
 		return false, "", core.ErrInterrupted
+	case core.KeyCtrlR:
+		if ed.fuzzyPicker != nil {
+			// Save current content
+			currentContent := ed.content.String()
+
+			// Launch fuzzy picker
+			ctx := context.Background()
+			selected, pickErr := ed.fuzzyPicker.Pick(ctx)
+
+			if pickErr != nil && pickErr != core.ErrInterrupted {
+				return false, "", pickErr
+			}
+
+			// Restore prompt after picker
+			if pickErr := ed.onOpen(ed.output); pickErr != nil {
+				return false, "", fmt.Errorf("failed to restore prompt: %w", pickErr)
+			}
+
+			// If user selected something, replace content
+			if selected != "" {
+				_, _ = fmt.Fprint(ed.output, ed.content.ReplaceText(selected))
+			} else {
+				// Restore original content
+				_, _ = fmt.Fprint(ed.output, ed.content.ReplaceText(currentContent))
+			}
+		}
+
+		return true, "", nil
 	case core.KeyCtrlS:
 		return false, ed.done(), nil
 	case core.KeyEsc:
