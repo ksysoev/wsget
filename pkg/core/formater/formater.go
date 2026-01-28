@@ -55,7 +55,7 @@ func (f *Format) formatTextMessage(msgType, data string) (string, error) {
 	case "NotDefined":
 		return "", fmt.Errorf("unknown message type")
 	default:
-		panic("Unexpected message type: " + msgType)
+		return "", fmt.Errorf("unexpected message type: %s", msgType)
 	}
 }
 
@@ -69,7 +69,7 @@ func (f *Format) formatJSONMessage(msgType string, data any) (string, error) {
 	case "NotDefined":
 		return "", fmt.Errorf("unknown message type")
 	default:
-		panic("Unexpected message type: " + msgType)
+		return "", fmt.Errorf("unexpected message type: %s", msgType)
 	}
 }
 
