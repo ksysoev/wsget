@@ -2,7 +2,6 @@ package macro
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"strings"
 
@@ -116,7 +115,7 @@ func LoadFromFile(path string) (r *Repo, err error) {
 func LoadMacroForDomain(macroDir, domain string) (*Repo, error) {
 	files, err := os.ReadDir(macroDir)
 	if err != nil {
-		log.Fatal(err)
+		return nil, fmt.Errorf("failed to read macro directory %s: %w", macroDir, err)
 	}
 
 	var macro *Repo
