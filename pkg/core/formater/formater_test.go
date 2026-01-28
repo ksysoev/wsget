@@ -229,3 +229,102 @@ func TestFormatMessage_UnexpectedType(t *testing.T) {
 	_, err = formater.FormatMessage("Unknown", `{"test": "data"}`)
 	assert.ErrorContains(t, err, "unexpected message type")
 }
+
+func TestJSONFormat_FormatRequest(t *testing.T) {
+	jsonFormat := NewJSONFormat()
+
+	tests := []struct {
+		name   string
+		data   any
+		expect string
+	}{
+		{
+			name: "Valid data",
+			data: map[string]interface{}{
+				"test": "data",
+			},
+			expect: "test",
+		},
+		{
+			name:   "Simple string",
+			data:   "test string",
+			expect: "test string",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := jsonFormat.FormatRequest(tt.data)
+			assert.NoError(t, err)
+			assert.Contains(t, result, tt.expect)
+		})
+	}
+}
+
+func TestJSONFormat_FormatResponse(t *testing.T) {
+	jsonFormat := NewJSONFormat()
+
+	tests := []struct {
+		name   string
+		data   any
+		expect string
+	}{
+		{
+			name: "Valid data",
+			data: map[string]interface{}{
+				"status": 200,
+				"body":   "OK",
+			},
+			expect: "status",
+		},
+		{
+			name:   "Simple string",
+			data:   "response",
+			expect: "response",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := jsonFormat.FormatResponse(tt.data)
+			assert.NoError(t, err)
+			assert.Contains(t, result, tt.expect)
+		})
+	}
+}
+
+func TestJSONFormat_FormatForFile(t *testing.T) {
+	jsonFormat := NewJSONFormat()
+
+	tests := []struct {
+		data        any
+		name        string
+		expectError bool
+	}{
+		{
+			name: "Valid data",
+			data: map[string]interface{}{
+				"test": "data",
+			},
+			expectError: false,
+		},
+		{
+			name:        "Invalid data (channel type)",
+			data:        make(chan int),
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := jsonFormat.FormatForFile(tt.data)
+			if tt.expectError {
+				assert.Error(t, err)
+				assert.Empty(t, result)
+			} else {
+				assert.NoError(t, err)
+				assert.NotEmpty(t, result)
+			}
+		})
+	}
+}
