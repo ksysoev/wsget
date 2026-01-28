@@ -204,8 +204,7 @@ func TestFormat_UnexpectedTextMessageType(t *testing.T) {
 	formater := NewFormat()
 
 	_, err := formater.formatTextMessage("Unknown", "test")
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "unexpected message type")
+	assert.ErrorContains(t, err, "unexpected message type")
 }
 
 func TestFormat_UnexpectedJSONMessageType(t *testing.T) {
@@ -216,8 +215,7 @@ func TestFormat_UnexpectedJSONMessageType(t *testing.T) {
 	}
 
 	_, err := formater.formatJSONMessage("Unknown", testData)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "unexpected message type")
+	assert.ErrorContains(t, err, "unexpected message type")
 }
 
 func TestFormatMessage_UnexpectedType(t *testing.T) {
@@ -225,11 +223,9 @@ func TestFormatMessage_UnexpectedType(t *testing.T) {
 
 	// Test with text data
 	_, err := formater.FormatMessage("Unknown", "test")
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "unexpected message type")
+	assert.ErrorContains(t, err, "unexpected message type")
 
 	// Test with JSON data
 	_, err = formater.FormatMessage("Unknown", `{"test": "data"}`)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "unexpected message type")
+	assert.ErrorContains(t, err, "unexpected message type")
 }
