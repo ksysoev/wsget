@@ -199,3 +199,37 @@ func TestFormat_parseJSON(t *testing.T) {
 	assert.False(t, ok)
 	assert.Nil(t, parsedInvalidJSON)
 }
+
+func TestFormat_UnexpectedTextMessageType(t *testing.T) {
+	formater := NewFormat()
+
+	_, err := formater.formatTextMessage("Unknown", "test")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "unexpected message type")
+}
+
+func TestFormat_UnexpectedJSONMessageType(t *testing.T) {
+	formater := NewFormat()
+
+	testData := map[string]interface{}{
+		"test": "data",
+	}
+
+	_, err := formater.formatJSONMessage("Unknown", testData)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "unexpected message type")
+}
+
+func TestFormatMessage_UnexpectedType(t *testing.T) {
+	formater := NewFormat()
+
+	// Test with text data
+	_, err := formater.FormatMessage("Unknown", "test")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "unexpected message type")
+
+	// Test with JSON data
+	_, err = formater.FormatMessage("Unknown", `{"test": "data"}`)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "unexpected message type")
+}
