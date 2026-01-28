@@ -125,7 +125,12 @@ func (c *Connection) Connect(ctx context.Context) error {
 	}
 
 	if err != nil {
-		return fmt.Errorf("failed to dial WebSocket: %w", handleError(err))
+		err = handleError(err)
+		if err != nil {
+			return fmt.Errorf("failed to dial WebSocket: %w", err)
+		}
+
+		return nil
 	}
 
 	if resp.Body != nil {
@@ -163,11 +168,21 @@ func (c *Connection) handleResponses(ctx context.Context, ws *websocket.Conn) er
 	for ctx.Err() == nil {
 		msgType, reader, err := ws.Reader(ctx)
 		if err != nil {
-			return fmt.Errorf("failed to read from WebSocket: %w", handleError(err))
+			err = handleError(err)
+			if err != nil {
+				return fmt.Errorf("failed to read from WebSocket: %w", err)
+			}
+
+			return nil
 		}
 
 		if err := c.handleMessage(ctx, msgType, reader); err != nil {
-			return fmt.Errorf("failed to handle message: %w", handleError(err))
+			err = handleError(err)
+			if err != nil {
+				return fmt.Errorf("failed to handle message: %w", err)
+			}
+
+			return nil
 		}
 	}
 
@@ -231,7 +246,10 @@ func (c *Connection) Send(ctx context.Context, msg string) error {
 
 	err := c.ws.Write(ctx, websocket.MessageText, []byte(msg))
 	if err != nil {
-		return fmt.Errorf("failed to write to WebSocket: %w", handleError(err))
+		err = handleError(err)
+		if err != nil {
+			return fmt.Errorf("failed to write to WebSocket: %w", err)
+		}
 	}
 
 	return nil
@@ -249,7 +267,10 @@ func (c *Connection) Ping(ctx context.Context) error {
 
 	err := c.ws.Ping(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to send ping: %w", handleError(err))
+		err = handleError(err)
+		if err != nil {
+			return fmt.Errorf("failed to send ping: %w", err)
+		}
 	}
 
 	return nil
