@@ -78,7 +78,7 @@ func LoadFromFile(fileName string) (*History, error) {
 func (h *History) Close() error {
 	fileHandler, err := os.OpenFile(h.fileName, os.O_WRONLY|os.O_CREATE, HistoryFileRigths)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to open history file %q for writing: %w", h.fileName, err)
 	}
 
 	writer := bufio.NewWriter(fileHandler)
@@ -100,15 +100,19 @@ func (h *History) Close() error {
 
 		_, err := writer.WriteString(request + "\n")
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to write to history file %q: %w", h.fileName, err)
 		}
 	}
 
 	if err := writer.Flush(); err != nil {
-		return err
+		return fmt.Errorf("failed to flush history file %q: %w", h.fileName, err)
 	}
 
-	return fileHandler.Close()
+	if err := fileHandler.Close(); err != nil {
+		return fmt.Errorf("failed to close history file %q: %w", h.fileName, err)
+	}
+
+	return nil
 }
 
 // AddRequest adds a new request to the history if it is not empty and not a duplicate of the last request.

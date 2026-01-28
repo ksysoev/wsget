@@ -189,11 +189,11 @@ func TestCmdEdit_Execute(t *testing.T) {
 		{
 			name:             "CreateCommandError",
 			mockCommandError: nil,
-			mockRawCommand:   "invalid-command",
+			mockRawCommand:   "invalidCommand",
 			mockCreateCmd:    nil,
 			mockCreateCmdErr: assert.AnError,
 			expectedNextCmd:  nil,
-			expectedErr:      nil,
+			expectedErr:      assert.AnError,
 		},
 		{
 			name:             "EmptyRawCommand",
@@ -430,7 +430,7 @@ func TestRepeat_Execute(t *testing.T) {
 			if tt.expectedErr != nil {
 				assert.Error(t, err)
 				assert.Nil(t, nextCmd)
-				assert.EqualError(t, err, tt.expectedErr.Error())
+				assert.ErrorIs(t, err, tt.expectedErr)
 			} else {
 				assert.NoError(t, err)
 				assert.Nil(t, nextCmd)

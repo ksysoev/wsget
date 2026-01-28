@@ -86,8 +86,8 @@ func (ed *Editor) Edit(ctx context.Context, initBuffer string) (res string, err 
 	}
 
 	defer func() {
-		if closeErr := ed.onClose(ed.output); err == nil {
-			err = closeErr
+		if closeErr := ed.onClose(ed.output); err == nil && closeErr != nil {
+			err = fmt.Errorf("failed to execute close hook: %w", closeErr)
 		}
 	}()
 
@@ -115,7 +115,7 @@ func (ed *Editor) Edit(ctx context.Context, initBuffer string) (res string, err 
 
 			switch {
 			case err != nil:
-				return "", err
+				return "", fmt.Errorf("failed to handle key event: %w", err)
 			case next:
 				continue
 			default:
@@ -231,7 +231,7 @@ func (ed *Editor) handleFuzzySearch() (next bool, res string, err error) {
 	selected, pickErr := ed.fuzzyPicker.Pick(ed.ctx)
 
 	if pickErr != nil && pickErr != core.ErrInterrupted {
-		return false, "", pickErr
+		return false, "", fmt.Errorf("failed to pick from fuzzy search: %w", pickErr)
 	}
 
 	// If user selected something, replace content
