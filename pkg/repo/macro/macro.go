@@ -40,7 +40,7 @@ func (m *Repo) AddCommands(name string, rawCommands []string) error {
 
 	macro, err := command.NewMacro(rawCommands)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create macro %q: %w", name, err)
 	}
 
 	m.macro[name] = macro
@@ -53,7 +53,7 @@ func (m *Repo) AddCommands(name string, rawCommands []string) error {
 func (m *Repo) merge(macro *Repo) error {
 	for name, cmd := range macro.macro {
 		if _, ok := m.macro[name]; ok {
-			return fmt.Errorf("duplicate macro: %s", name)
+			return fmt.Errorf("duplicate macro %q during merge", name)
 		}
 
 		m.macro[name] = cmd
@@ -66,7 +66,13 @@ func (m *Repo) merge(macro *Repo) error {
 func (m *Repo) Get(name, argString string) (core.Executer, error) {
 	if cmd, ok := m.macro[name]; ok {
 		args := strings.Fields(argString)
-		return cmd.GetExecuter(args)
+
+		exec, err := cmd.GetExecuter(args)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get executer for macro %q: %w", name, err)
+		}
+
+		return exec, nil
 	}
 
 	return nil, fmt.Errorf("unknown command: %s", name)
@@ -127,7 +133,7 @@ func LoadMacroForDomain(macroDir, domain string) (*Repo, error) {
 
 		fileMacro, err := LoadFromFile(macroDir + "/" + file.Name())
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to load macro from file %q: %w", file.Name(), err)
 		}
 
 		hasDomain := false
@@ -148,7 +154,7 @@ func LoadMacroForDomain(macroDir, domain string) (*Repo, error) {
 		} else {
 			err := macro.merge(fileMacro)
 			if err != nil {
-				return nil, fmt.Errorf("fail to loading macro from file %s, %w ", file.Name(), err)
+				return nil, fmt.Errorf("failed to merge macro from file %q: %w", file.Name(), err)
 			}
 		}
 	}

@@ -56,7 +56,7 @@ func New(wsURL string, opts Options) (*Connection, error) {
 
 	parsedURL, err := url.Parse(wsURL)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse WebSocket URL %q: %w", wsURL, err)
 	}
 
 	httpCli := &http.Client{
@@ -125,7 +125,7 @@ func (c *Connection) Connect(ctx context.Context) error {
 	}
 
 	if err != nil {
-		return handleError(err)
+		return fmt.Errorf("failed to dial WebSocket: %w", handleError(err))
 	}
 
 	if resp.Body != nil {
@@ -163,11 +163,11 @@ func (c *Connection) handleResponses(ctx context.Context, ws *websocket.Conn) er
 	for ctx.Err() == nil {
 		msgType, reader, err := ws.Reader(ctx)
 		if err != nil {
-			return handleError(err)
+			return fmt.Errorf("failed to read from WebSocket: %w", handleError(err))
 		}
 
 		if err := c.handleMessage(ctx, msgType, reader); err != nil {
-			return handleError(err)
+			return fmt.Errorf("failed to handle message: %w", handleError(err))
 		}
 	}
 
@@ -226,12 +226,15 @@ func (c *Connection) Send(ctx context.Context, msg string) error {
 	select {
 	case <-c.ready:
 	case <-ctx.Done():
-		return ctx.Err()
+		return fmt.Errorf("context canceled while waiting to send: %w", ctx.Err())
 	}
 
 	err := c.ws.Write(ctx, websocket.MessageText, []byte(msg))
+	if err != nil {
+		return fmt.Errorf("failed to write to WebSocket: %w", handleError(err))
+	}
 
-	return handleError(err)
+	return nil
 }
 
 // Ping sends a ping frame to the WebSocket server to check the connection's liveness.
@@ -241,12 +244,15 @@ func (c *Connection) Ping(ctx context.Context) error {
 	select {
 	case <-c.ready:
 	case <-ctx.Done():
-		return ctx.Err()
+		return fmt.Errorf("context canceled while waiting to ping: %w", ctx.Err())
 	}
 
 	err := c.ws.Ping(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to send ping: %w", handleError(err))
+	}
 
-	return handleError(err)
+	return nil
 }
 
 // Close shuts down an established WebSocket connection gracefully.

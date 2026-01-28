@@ -137,7 +137,7 @@ func (c *CLI) Run(ctx context.Context, opts RunOptions) error {
 			for cmd != nil {
 				cmd, err = cmd.Execute(exCtx)
 				if err != nil {
-					return err
+					return fmt.Errorf("failed to execute command: %w", err)
 				}
 			}
 		case event := <-c.inputStream:
