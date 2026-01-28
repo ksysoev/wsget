@@ -254,8 +254,24 @@ func TestValidateArgs(t *testing.T) {
 }
 
 func TestCreateConnectRunner(t *testing.T) {
-	runner := createConnectRunner(&flags{})
+	args := &flags{
+		request:      "test",
+		waitResponse: -1,
+	}
+	runner := createConnectRunner(args)
 	assert.NotNil(t, runner)
+}
+
+func TestRunConnectCmd_InvalidHeaders(t *testing.T) {
+	ctx := context.Background()
+	args := &flags{
+		headers:      []string{"InvalidHeader"},
+		request:      "test",
+		waitResponse: 0,
+	}
+	err := runConnectCmd(ctx, args, []string{"ws://localhost:8080"})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "unable to connect to the server")
 }
 func TestRunConnectCmd_FailToConnect(t *testing.T) {
 	ctx := context.Background()

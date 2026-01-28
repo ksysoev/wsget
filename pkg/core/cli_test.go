@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -223,5 +224,153 @@ func TestMessageType_String(t *testing.T) {
 				t.Errorf("MessageType.String() = %v, want %v", result, tt.expected)
 			}
 		})
+	}
+}
+
+func TestCLI_Run_KeyboardEvents(t *testing.T) {
+	tests := []struct {
+		name         string
+		expectedCmd  string
+		keyEvent     KeyEvent
+		shouldCreate bool
+	}{
+		{
+			name:         "Enter key triggers edit command",
+			keyEvent:     KeyEvent{Key: KeyEnter},
+			expectedCmd:  "edit",
+			shouldCreate: true,
+		},
+		{
+			name:         "Ctrl+C triggers exit command",
+			keyEvent:     KeyEvent{Key: KeyCtrlC},
+			expectedCmd:  "exit",
+			shouldCreate: true,
+		},
+		{
+			name:         "Ctrl+D triggers exit command",
+			keyEvent:     KeyEvent{Key: KeyCtrlD},
+			expectedCmd:  "exit",
+			shouldCreate: true,
+		},
+		{
+			name:         "Esc triggers exit command",
+			keyEvent:     KeyEvent{Key: KeyEsc},
+			expectedCmd:  "exit",
+			shouldCreate: true,
+		},
+		{
+			name:         "Colon triggers editcmd command",
+			keyEvent:     KeyEvent{Rune: ':'},
+			expectedCmd:  "editcmd",
+			shouldCreate: true,
+		},
+		{
+			name:         "Ctrl+L clears screen",
+			keyEvent:     KeyEvent{Key: KeyCtrlL},
+			expectedCmd:  "",
+			shouldCreate: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			wsConn := NewMockConnectionHandler(t)
+			wsConn.EXPECT().SetOnMessage(mock.Anything)
+
+			factory := NewMockCommandFactory(t)
+
+			if tt.shouldCreate {
+				mockCmd := NewMockExecuter(t)
+				mockCmd.EXPECT().Execute(mock.Anything).Return(nil, ErrInterrupted)
+				factory.EXPECT().Create(tt.expectedCmd).Return(mockCmd, nil)
+			}
+
+			editor := NewMockEditor(t)
+			editor.EXPECT().SetInput(mock.Anything)
+
+			output := os.Stdout
+			cli := NewCLI(factory, wsConn, output, editor, NewMockFormater(t))
+
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			// Start CLI.Run in a goroutine
+			errChan := make(chan error)
+
+			go func() {
+				errChan <- cli.Run(ctx, RunOptions{})
+			}()
+
+			// Wait a bit for the Run to start
+			time.Sleep(10 * time.Millisecond)
+
+			// Send the key event
+			cli.OnKeyEvent(tt.keyEvent)
+
+			// Wait for error or timeout
+			select {
+			case err := <-errChan:
+				if tt.shouldCreate && !errors.Is(err, ErrInterrupted) {
+					t.Errorf("Expected ErrInterrupted, got %v", err)
+				}
+			case <-time.After(100 * time.Millisecond):
+				if tt.shouldCreate {
+					t.Error("Test timed out waiting for command execution")
+				}
+
+				cancel()
+			}
+		})
+	}
+}
+
+func TestCLI_Run_MessagesChannel(t *testing.T) {
+	wsConn := NewMockConnectionHandler(t)
+
+	var onMessageFunc func(context.Context, []byte)
+
+	wsConn.EXPECT().SetOnMessage(mock.Anything).Run(func(f func(context.Context, []byte)) {
+		onMessageFunc = f
+	})
+
+	factory := NewMockCommandFactory(t)
+
+	mockCmd := NewMockExecuter(t)
+	mockCmd.EXPECT().Execute(mock.Anything).Return(nil, ErrInterrupted)
+	factory.EXPECT().Create(mock.MatchedBy(func(s string) bool {
+		return strings.HasPrefix(s, "print Response")
+	})).Return(mockCmd, nil)
+
+	editor := NewMockEditor(t)
+	editor.EXPECT().SetInput(mock.Anything)
+
+	output := os.Stdout
+	cli := NewCLI(factory, wsConn, output, editor, NewMockFormater(t))
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Start CLI.Run in a goroutine
+	errChan := make(chan error)
+
+	go func() {
+		errChan <- cli.Run(ctx, RunOptions{})
+	}()
+
+	// Wait for Run to start
+	time.Sleep(10 * time.Millisecond)
+
+	// Send a message through the WebSocket handler
+	go onMessageFunc(ctx, []byte("test message"))
+
+	// Wait for error or timeout
+	select {
+	case err := <-errChan:
+		if !errors.Is(err, ErrInterrupted) {
+			t.Errorf("Expected ErrInterrupted, got %v", err)
+		}
+	case <-time.After(100 * time.Millisecond):
+		t.Error("Test timed out waiting for message processing")
+		cancel()
 	}
 }

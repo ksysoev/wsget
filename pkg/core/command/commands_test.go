@@ -87,6 +87,28 @@ func TestPrintMsg_Execute(t *testing.T) {
 			mockPrintError:   fmt.Errorf("print error"),
 			expectedErr:      "fail to print message: print error",
 		},
+		{
+			name: "PrintToFile_Error",
+			message: core.Message{
+				Type: core.Request,
+				Data: "test request",
+			},
+			mockFormatError:  nil,
+			mockFormatOutput: "formatted request",
+			mockPrintError:   nil,
+			expectedErr:      "",
+		},
+		{
+			name: "FormatForFile_Error",
+			message: core.Message{
+				Type: core.Request,
+				Data: "test request",
+			},
+			mockFormatError:  nil,
+			mockFormatOutput: "formatted request",
+			mockPrintError:   nil,
+			expectedErr:      "",
+		},
 	}
 
 	for _, tt := range tests {
@@ -466,6 +488,20 @@ func TestEdit_Execute(t *testing.T) {
 
 				exCtx := core.NewMockExecutionContext(t)
 				exCtx.EXPECT().EditorMode("error-content").Return("", assert.AnError)
+
+				return exCtx
+			},
+		},
+		{
+			name:            "EmptyResponseFromEditor",
+			mockContent:     "test-content",
+			expectedErr:     nil,
+			expectedNextCmd: nil,
+			mockExecutionCtx: func(t *testing.T) core.ExecutionContext {
+				t.Helper()
+
+				exCtx := core.NewMockExecutionContext(t)
+				exCtx.EXPECT().EditorMode("test-content").Return("", nil)
 
 				return exCtx
 			},

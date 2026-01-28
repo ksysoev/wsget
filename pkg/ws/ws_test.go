@@ -448,3 +448,60 @@ func TestConnection_Close_NotConnected(t *testing.T) {
 	err = conn.Close()
 	assert.EqualError(t, err, "connection is not established")
 }
+
+func TestConnection_Ping_Success(t *testing.T) {
+	s := httptest.NewServer(createEchoWSHandler())
+	defer s.Close()
+
+	conn, err := New("ws://"+s.Listener.Addr().String(), Options{})
+	assert.NoError(t, err)
+
+	conn.SetOnMessage(func(context.Context, []byte) {})
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+
+	defer func() {
+		_ = conn.Close()
+
+		wg.Wait()
+	}()
+
+	go func() {
+		defer wg.Done()
+
+		err = conn.Connect(context.Background())
+		assert.ErrorIs(t, err, ErrConnectionClosed)
+	}()
+
+	select {
+	case <-conn.Ready():
+	case <-time.After(1 * time.Second):
+		t.Fatal("timeout waiting for connection")
+	}
+
+	err = conn.Ping(context.Background())
+	assert.NoError(t, err)
+}
+
+func TestConnection_Ping_ContextCancelled(t *testing.T) {
+	conn, err := New("ws://localhost:0", Options{})
+	assert.NoError(t, err)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	err = conn.Ping(ctx)
+	assert.ErrorIs(t, err, context.Canceled)
+}
+
+func TestConnection_Ping_NotConnected(t *testing.T) {
+	conn, err := New("ws://localhost:0", Options{})
+	assert.NoError(t, err)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+
+	err = conn.Ping(ctx)
+	assert.Error(t, err)
+}
