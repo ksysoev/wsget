@@ -139,7 +139,7 @@ func TestConfig_CreateRepo(t *testing.T) {
 			config: &config{
 				Macro: map[string][]string{"test": {"invalid {{ command }"}},
 			},
-			wantErr: "fail to add macro: template: macro:1: function \"command\" not defined",
+			wantErr: "failed to create macro \"test\"",
 		},
 	}
 

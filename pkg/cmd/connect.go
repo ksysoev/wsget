@@ -51,7 +51,7 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 	wsURL := unnamedArgs[0]
 
 	if err := validateArgs(wsURL, args); err != nil {
-		return err
+		return fmt.Errorf("invalid arguments: %w", err)
 	}
 
 	wsOpts := ws.Options{
@@ -82,26 +82,26 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 	}
 
 	if err = os.MkdirAll(filepath.Join(args.configDir, macroDir), configDirMode); err != nil {
-		return fmt.Errorf("fail to get current user: %s", err)
+		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 
 	reqHistory, err := history.LoadFromFile(filepath.Join(args.configDir, historyFilename))
 	if err != nil {
-		return fmt.Errorf("fail to load history: %s", err)
+		return fmt.Errorf("failed to load request history: %w", err)
 	}
 
 	defer func() { _ = reqHistory.Close() }()
 
 	cmdHistory, err := history.LoadFromFile(filepath.Join(args.configDir, historyCmdFilename))
 	if err != nil {
-		return fmt.Errorf("fail to load command history: %s", err)
+		return fmt.Errorf("failed to load command history: %w", err)
 	}
 
 	defer func() { _ = cmdHistory.Close() }()
 
 	macroRepo, err := macro.LoadMacroForDomain(filepath.Join(args.configDir, macroDir), wsConn.Hostname())
 	if err != nil {
-		return fmt.Errorf("fail to load macro: %s", err)
+		return fmt.Errorf("failed to load macros for domain %q: %w", wsConn.Hostname(), err)
 	}
 
 	var cmdFactory *command2.Factory
@@ -122,17 +122,25 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 
 	opts, err := initRunOptions(args)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to initialize run options: %w", err)
 	}
 
 	eg, ctx := errgroup.WithContext(ctx)
 
 	eg.Go(func() error {
-		return keyboard.Run(ctx)
+		if err := keyboard.Run(ctx); err != nil {
+			return fmt.Errorf("keyboard input failed: %w", err)
+		}
+
+		return nil
 	})
 
 	eg.Go(func() error {
-		return wsConn.Connect(ctx)
+		if err := wsConn.Connect(ctx); err != nil {
+			return fmt.Errorf("websocket connection failed: %w", err)
+		}
+
+		return nil
 	})
 
 	eg.Go(func() error {
@@ -142,7 +150,11 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 		case <-wsConn.Ready():
 		}
 
-		return client.Run(ctx, *opts)
+		if err := client.Run(ctx, *opts); err != nil {
+			return fmt.Errorf("CLI run failed: %w", err)
+		}
+
+		return nil
 	})
 
 	err = eg.Wait()

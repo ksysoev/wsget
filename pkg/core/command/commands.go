@@ -33,7 +33,7 @@ func NewEdit(content string) *Edit {
 func (c *Edit) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 	req, err := exCtx.EditorMode(c.content)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to enter editor mode: %w", err)
 	}
 
 	if req == "" {
@@ -59,7 +59,7 @@ func NewSend(request string) *Send {
 func (c *Send) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 	err := exCtx.SendRequest(c.request)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
 
 	return NewPrintMsg(core.Message{Type: core.Request, Data: c.request}), nil
@@ -146,7 +146,11 @@ func NewWaitForResp(timeout time.Duration) *WaitForResp {
 func (c *WaitForResp) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 	msg, err := exCtx.WaitForResponse(c.timeout)
 	if err != nil {
-		return nil, err
+		if c.timeout == 0 {
+			return nil, fmt.Errorf("failed to wait for response (no timeout): %w", err)
+		}
+
+		return nil, fmt.Errorf("failed to wait for response (timeout: %v): %w", c.timeout, err)
 	}
 
 	return NewPrintMsg(msg), nil
@@ -166,7 +170,7 @@ func NewCmdEdit() *CmdEdit {
 func (c *CmdEdit) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 	rawCmd, err := exCtx.CommandMode("")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to enter command mode: %w", err)
 	}
 
 	if rawCmd == "" {
@@ -175,8 +179,12 @@ func (c *CmdEdit) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 
 	cmd, err := exCtx.CreateCommand(rawCmd)
 	if err != nil {
-		err := exCtx.Print(fmt.Sprintf("Invalid command: %s\n", rawCmd), color.FgRed)
-		return nil, err
+		printErr := exCtx.Print(fmt.Sprintf("Invalid command: %s\n", rawCmd), color.FgRed)
+		if printErr != nil {
+			return nil, fmt.Errorf("failed to print error message: %w", printErr)
+		}
+
+		return nil, fmt.Errorf("failed to create command: %w", err)
 	}
 
 	return cmd, nil
@@ -196,11 +204,11 @@ func NewSequence(subCommands []core.Executer) *Sequence {
 // Execute executes the command sequence by iterating over all sub-commands and executing them recursively.
 // It takes a core.ExecutionContext as input and returns a core.Executer and an error.
 func (c *Sequence) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
-	for _, cmd := range c.subCommands {
+	for i, cmd := range c.subCommands {
 		for cmd != nil {
 			var err error
 			if cmd, err = cmd.Execute(exCtx); err != nil {
-				return nil, err
+				return nil, fmt.Errorf("failed to execute command %d in sequence: %w", i, err)
 			}
 		}
 	}
@@ -224,20 +232,20 @@ func NewInputFileCommand(filePath string) *InputFileCommand {
 func (c *InputFileCommand) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 	data, err := os.ReadFile(c.filePath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read input file %q: %w", c.filePath, err)
 	}
 
 	var rawCommands []string
 	if err := yaml.Unmarshal(data, &rawCommands); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse YAML from file %q: %w", c.filePath, err)
 	}
 
 	cmds := make([]core.Executer, 0, len(rawCommands))
 
-	for _, rawCommand := range rawCommands {
+	for i, rawCommand := range rawCommands {
 		cmd, err := exCtx.CreateCommand(rawCommand)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to create command %d (%q) from file %q: %w", i, rawCommand, c.filePath, err)
 		}
 
 		cmds = append(cmds, cmd)
@@ -266,7 +274,7 @@ func (c *RepeatCommand) Execute(exCtx core.ExecutionContext) (core.Executer, err
 		for cmd != nil {
 			var err error
 			if cmd, err = cmd.Execute(exCtx); err != nil {
-				return nil, err
+				return nil, fmt.Errorf("failed to execute repeat command iteration %d: %w", i+1, err)
 			}
 		}
 	}
@@ -305,14 +313,18 @@ func (c *PingCommand) Execute(exCtx core.ExecutionContext) (core.Executer, error
 	startTime := time.Now()
 
 	if err := exCtx.Print("-> ping\n", color.FgGreen); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to print ping message: %w", err)
 	}
 
 	if err := exCtx.Ping(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to ping server: %w", err)
 	}
 
 	duration := time.Since(startTime)
 
-	return nil, exCtx.Print(fmt.Sprintf("<- pong, %v\n", duration), color.FgRed)
+	if err := exCtx.Print(fmt.Sprintf("<- pong, %v\n", duration), color.FgRed); err != nil {
+		return nil, fmt.Errorf("failed to print pong message: %w", err)
+	}
+
+	return nil, nil
 }
