@@ -160,7 +160,7 @@ func TestRequestLogger_RoundTrip(t *testing.T) {
 
 			tt.request.URL, _ = url.Parse(s.URL)
 
-			resp, err := cl.Do(tt.request)
+			resp, err := cl.Do(tt.request) //nolint:gosec // request URL is set from a local test server; taint analysis false positive
 
 			if tt.expectError {
 				assert.Error(t, err)

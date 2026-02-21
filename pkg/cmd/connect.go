@@ -54,9 +54,10 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 		return fmt.Errorf("invalid arguments: %w", err)
 	}
 
-	wsOpts := ws.Options{
+	wsOpts := &ws.Options{
 		SkipSSLVerification: args.insecure,
 		Headers:             args.headers,
+		UserAgent:           "wsget/" + args.version,
 		MaxMessageSize:      args.maxMsgSize,
 		Timeout:             time.Duration(args.timeout) * time.Second,
 	}
