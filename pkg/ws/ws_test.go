@@ -134,6 +134,22 @@ func TestNew(t *testing.T) {
 			wantError: false,
 		},
 		{
+			name: "Header value containing colons",
+			url:  "ws://localhost:8080",
+			options: &Options{
+				Headers: []string{"Authorization: Bearer abc:def"},
+			},
+			wantError: false,
+		},
+		{
+			name: "Header value with multiple colons",
+			url:  "ws://localhost:8080",
+			options: &Options{
+				Headers: []string{"X-Custom: value:with:colons"},
+			},
+			wantError: false,
+		},
+		{
 			name:      "Invalid URL format",
 			url:       "invalid_url" + string(rune(0)),
 			options:   &Options{},
@@ -217,6 +233,45 @@ func TestNew_MultipleValuesForSameHeader(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, []string{"a=1", "b=2"}, conn.opts.HTTPHeader["Cookie"])
+}
+
+func TestNew_HeaderValueWithColons(t *testing.T) {
+	tests := []struct {
+		name          string
+		headerInput   string
+		expectedName  string
+		expectedValue string
+	}{
+		{
+			name:          "Bearer token with colon in value",
+			headerInput:   "Authorization: Bearer abc:def",
+			expectedName:  "Authorization",
+			expectedValue: "Bearer abc:def",
+		},
+		{
+			name:          "Header value with multiple colons",
+			headerInput:   "X-Custom: value:with:colons",
+			expectedName:  "X-Custom",
+			expectedValue: "value:with:colons",
+		},
+		{
+			name:          "Simple header without colons in value",
+			headerInput:   "Authorization: Bearer token",
+			expectedName:  "Authorization",
+			expectedValue: "Bearer token",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			conn, err := New("ws://localhost:8080", &Options{
+				Headers: []string{tt.headerInput},
+			})
+
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expectedValue, conn.opts.HTTPHeader.Get(tt.expectedName))
+		})
+	}
 }
 
 func TestConnection_Connect_UserAgent(t *testing.T) {
