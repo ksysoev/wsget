@@ -55,6 +55,10 @@ func New(wsURL string, opts *Options) (*Connection, error) {
 		return nil, errors.New("url is empty")
 	}
 
+	if opts == nil {
+		opts = &Options{}
+	}
+
 	parsedURL, err := url.Parse(wsURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse WebSocket URL %q: %w", wsURL, err)
@@ -67,10 +71,6 @@ func New(wsURL string, opts *Options) (*Connection, error) {
 
 	headers := make(http.Header)
 
-	if opts.UserAgent != "" {
-		headers.Set("User-Agent", opts.UserAgent)
-	}
-
 	for _, headerInput := range opts.Headers {
 		splited := strings.Split(headerInput, ":")
 		if len(splited) != headerPartsNumber {
@@ -80,7 +80,11 @@ func New(wsURL string, opts *Options) (*Connection, error) {
 		header := strings.TrimSpace(splited[0])
 		value := strings.TrimSpace(splited[1])
 
-		headers.Set(header, value)
+		headers.Add(header, value)
+	}
+
+	if opts.UserAgent != "" && headers.Get("User-Agent") == "" {
+		headers.Set("User-Agent", opts.UserAgent)
 	}
 
 	wsOpts := &websocket.DialOptions{

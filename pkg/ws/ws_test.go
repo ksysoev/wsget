@@ -153,6 +153,12 @@ func TestNew(t *testing.T) {
 			options:   &Options{},
 			wantError: true,
 		},
+		{
+			name:      "Nil options treated as defaults",
+			url:       "ws://localhost:8080",
+			options:   nil,
+			wantError: false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -202,6 +208,15 @@ func TestNew_UserAgent(t *testing.T) {
 			assert.Equal(t, tt.expectedUserAgent, conn.opts.HTTPHeader.Get("User-Agent"))
 		})
 	}
+}
+
+func TestNew_MultipleValuesForSameHeader(t *testing.T) {
+	conn, err := New("ws://localhost:8080", &Options{
+		Headers: []string{"Cookie: a=1", "Cookie: b=2"},
+	})
+
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"a=1", "b=2"}, conn.opts.HTTPHeader["Cookie"])
 }
 
 func TestConnection_Connect_UserAgent(t *testing.T) {
