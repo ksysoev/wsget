@@ -655,3 +655,51 @@ func TestConnection_Ping_NotConnected(t *testing.T) {
 	err = conn.Ping(ctx)
 	assert.Error(t, err)
 }
+
+func TestConnection_ConcurrentOperations(t *testing.T) {
+	s := httptest.NewServer(createEchoWSHandler())
+	defer s.Close()
+
+	conn, err := New("ws://"+s.Listener.Addr().String(), &Options{})
+	assert.NoError(t, err)
+
+	conn.SetOnMessage(func(context.Context, []byte) {})
+
+	connectDone := make(chan struct{})
+
+	go func() {
+		defer close(connectDone)
+
+		_ = conn.Connect(context.Background())
+	}()
+
+	// Wait until the connection is ready before hammering it concurrently.
+	select {
+	case <-conn.Ready():
+	case <-time.After(1 * time.Second):
+		t.Fatal("timeout waiting for connection")
+	}
+
+	const goroutines = 10
+
+	var wg sync.WaitGroup
+
+	wg.Add(goroutines)
+
+	for range goroutines {
+		go func() {
+			defer wg.Done()
+
+			for range 20 {
+				_ = conn.Send(context.Background(), "ping")
+				_ = conn.Ping(context.Background())
+			}
+		}()
+	}
+
+	wg.Wait()
+
+	_ = conn.Close()
+
+	<-connectDone
+}

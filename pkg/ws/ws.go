@@ -247,7 +247,15 @@ func (c *Connection) Send(ctx context.Context, msg string) error {
 		return fmt.Errorf("context canceled while waiting to send: %w", ctx.Err())
 	}
 
-	err := c.ws.Write(ctx, websocket.MessageText, []byte(msg))
+	c.l.Lock()
+	ws := c.ws
+	c.l.Unlock()
+
+	if ws == nil {
+		return fmt.Errorf("connection not established")
+	}
+
+	err := ws.Write(ctx, websocket.MessageText, []byte(msg))
 	if err != nil {
 		err = handleError(err)
 		if err != nil {
@@ -268,7 +276,15 @@ func (c *Connection) Ping(ctx context.Context) error {
 		return fmt.Errorf("context canceled while waiting to ping: %w", ctx.Err())
 	}
 
-	err := c.ws.Ping(ctx)
+	c.l.Lock()
+	ws := c.ws
+	c.l.Unlock()
+
+	if ws == nil {
+		return fmt.Errorf("connection not established")
+	}
+
+	err := ws.Ping(ctx)
 	if err != nil {
 		err = handleError(err)
 		if err != nil {
@@ -283,13 +299,15 @@ func (c *Connection) Ping(ctx context.Context) error {
 // It returns an error if the connection is not yet established.
 // The function ensures a normal closure status is sent to the WebSocket server.
 func (c *Connection) Close() error {
-	select {
-	case <-c.ready:
-	default:
+	c.l.Lock()
+	ws := c.ws
+	c.l.Unlock()
+
+	if ws == nil {
 		return fmt.Errorf("connection is not established")
 	}
 
-	return c.ws.Close(websocket.StatusNormalClosure, "closing connection")
+	return ws.Close(websocket.StatusNormalClosure, "closing connection")
 }
 
 // Ready returns a channel that is closed when the WebSocket connection is established.
