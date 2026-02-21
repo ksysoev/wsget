@@ -40,16 +40,17 @@ type Connection struct {
 
 type Options struct {
 	Output              io.Writer
+	UserAgent           string
 	Headers             []string
-	SkipSSLVerification bool
 	MaxMessageSize      int64
 	Timeout             time.Duration
+	SkipSSLVerification bool
 }
 
 // New initializes a new WebSocket connection configuration with specified URL and options.
-// It takes wsURL, a string representing the WebSocket URL, and opts, an instance of Options with custom settings.
+// It takes wsURL, a string representing the WebSocket URL, and opts, a pointer to Options with custom settings.
 // It returns a pointer to a Connection and possible error if the URL is empty, poorly formatted, or headers are invalid.
-func New(wsURL string, opts Options) (*Connection, error) {
+func New(wsURL string, opts *Options) (*Connection, error) {
 	if wsURL == "" {
 		return nil, errors.New("url is empty")
 	}
@@ -64,25 +65,27 @@ func New(wsURL string, opts Options) (*Connection, error) {
 		Timeout:   opts.Timeout,
 	}
 
-	wsOpts := &websocket.DialOptions{
-		HTTPClient: httpCli,
+	headers := make(http.Header)
+
+	if opts.UserAgent != "" {
+		headers.Set("User-Agent", opts.UserAgent)
 	}
 
-	if len(opts.Headers) > 0 {
-		Headers := make(http.Header)
-		for _, headerInput := range opts.Headers {
-			splited := strings.Split(headerInput, ":")
-			if len(splited) != headerPartsNumber {
-				return nil, fmt.Errorf("invalid header: %s", headerInput)
-			}
-
-			header := strings.TrimSpace(splited[0])
-			value := strings.TrimSpace(splited[1])
-
-			Headers.Add(header, value)
+	for _, headerInput := range opts.Headers {
+		splited := strings.Split(headerInput, ":")
+		if len(splited) != headerPartsNumber {
+			return nil, fmt.Errorf("invalid header: %s", headerInput)
 		}
 
-		wsOpts.HTTPHeader = Headers
+		header := strings.TrimSpace(splited[0])
+		value := strings.TrimSpace(splited[1])
+
+		headers.Set(header, value)
+	}
+
+	wsOpts := &websocket.DialOptions{
+		HTTPClient: httpCli,
+		HTTPHeader: headers,
 	}
 
 	var msgSize int64 = DefaultMaxMessageSize

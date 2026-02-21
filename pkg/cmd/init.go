@@ -35,6 +35,7 @@ type flags struct {
 	outputFile   string
 	inputFile    string
 	configDir    string
+	version      string
 	headers      []string
 	maxMsgSize   int64
 	waitResponse int
@@ -48,6 +49,7 @@ type flags struct {
 // It returns a pointer to a cobra.Command configured with various flags for interacting with WebSocket servers.
 func InitCommands(version string) *cobra.Command {
 	args := &flags{}
+	args.version = version
 
 	cmd := &cobra.Command{
 		Use:        "wsget url [flags]",

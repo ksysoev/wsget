@@ -112,15 +112,15 @@ func TestConnection_HandleMessage(t *testing.T) {
 
 func TestNew(t *testing.T) {
 	tests := []struct {
+		options   *Options
 		name      string
 		url       string
-		options   Options
 		wantError bool
 	}{
 		{
 			name: "Valid URL without headers",
 			url:  "ws://localhost:8080",
-			options: Options{
+			options: &Options{
 				Headers: []string{},
 			},
 			wantError: false,
@@ -128,7 +128,7 @@ func TestNew(t *testing.T) {
 		{
 			name: "Valid URL with headers",
 			url:  "ws://localhost:8080",
-			options: Options{
+			options: &Options{
 				Headers: []string{"Authorization: Bearer token"},
 			},
 			wantError: false,
@@ -136,13 +136,13 @@ func TestNew(t *testing.T) {
 		{
 			name:      "Invalid URL format",
 			url:       "invalid_url" + string(rune(0)),
-			options:   Options{},
+			options:   &Options{},
 			wantError: true,
 		},
 		{
 			name: "Headers with incorrect format",
 			url:  "ws://localhost:8080",
-			options: Options{
+			options: &Options{
 				Headers: []string{"X-Test"},
 			},
 			wantError: true,
@@ -150,7 +150,7 @@ func TestNew(t *testing.T) {
 		{
 			name:      "Empty URL",
 			url:       "",
-			options:   Options{},
+			options:   &Options{},
 			wantError: true,
 		},
 	}
@@ -165,6 +165,86 @@ func TestNew(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestNew_UserAgent(t *testing.T) {
+	tests := []struct {
+		name              string
+		userAgent         string
+		expectedUserAgent string
+		headers           []string
+	}{
+		{
+			name:              "Custom user agent is set",
+			userAgent:         "wsget/1.0.0",
+			expectedUserAgent: "wsget/1.0.0",
+		},
+		{
+			name:              "Empty user agent leaves header empty",
+			userAgent:         "",
+			expectedUserAgent: "",
+		},
+		{
+			name:              "User header overrides user agent",
+			userAgent:         "wsget/1.0.0",
+			headers:           []string{"User-Agent: custom-agent"},
+			expectedUserAgent: "custom-agent",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			conn, err := New("ws://localhost:8080", &Options{
+				UserAgent: tt.userAgent,
+				Headers:   tt.headers,
+			})
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expectedUserAgent, conn.opts.HTTPHeader.Get("User-Agent"))
+		})
+	}
+}
+
+func TestConnection_Connect_UserAgent(t *testing.T) {
+	receivedUA := make(chan string, 1)
+
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		receivedUA <- r.Header.Get("User-Agent")
+
+		c, err := websocket.Accept(w, r, nil)
+		if err != nil {
+			return
+		}
+
+		_ = c.Close(websocket.StatusNormalClosure, "")
+	}))
+	defer s.Close()
+
+	conn, err := New("ws://"+s.Listener.Addr().String(), &Options{
+		UserAgent: "wsget/1.2.3",
+	})
+	assert.NoError(t, err)
+
+	conn.SetOnMessage(func(context.Context, []byte) {})
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+
+		_ = conn.Connect(context.Background())
+	}()
+
+	select {
+	case ua := <-receivedUA:
+		assert.Equal(t, "wsget/1.2.3", ua)
+	case <-time.After(5 * time.Second):
+		t.Fatal("timeout waiting for user agent")
+	}
+
+	_ = conn.Close()
+
+	wg.Wait()
 }
 
 func TestSetOnMessage(t *testing.T) {
@@ -332,7 +412,7 @@ func TestConnection_Connect_Success(t *testing.T) {
 	s := httptest.NewServer(createEchoWSHandler())
 	defer s.Close()
 
-	conn, err := New("ws://"+s.Listener.Addr().String(), Options{})
+	conn, err := New("ws://"+s.Listener.Addr().String(), &Options{})
 	assert.NoError(t, err)
 
 	expectedData := "test data"
@@ -376,7 +456,7 @@ func TestConnection_Connect_Success(t *testing.T) {
 }
 
 func TestConnection_Connect_NoCallback(t *testing.T) {
-	conn, err := New("ws://localhost:0", Options{})
+	conn, err := New("ws://localhost:0", &Options{})
 	assert.NoError(t, err)
 
 	err = conn.Connect(context.Background())
@@ -387,7 +467,7 @@ func TestConnection_Connect_AlreadyConnected(t *testing.T) {
 	s := httptest.NewServer(createEchoWSHandler())
 	defer s.Close()
 
-	conn, err := New("ws://"+s.Listener.Addr().String(), Options{})
+	conn, err := New("ws://"+s.Listener.Addr().String(), &Options{})
 	assert.NoError(t, err)
 
 	conn.SetOnMessage(func(context.Context, []byte) {})
@@ -418,7 +498,7 @@ func TestConnection_Connect_AlreadyConnected(t *testing.T) {
 }
 
 func TestConnection_Connect_ContextCancelled(t *testing.T) {
-	conn, err := New("ws://localhost:0", Options{})
+	conn, err := New("ws://localhost:0", &Options{})
 	assert.NoError(t, err)
 
 	conn.SetOnMessage(func(context.Context, []byte) {})
@@ -431,7 +511,7 @@ func TestConnection_Connect_ContextCancelled(t *testing.T) {
 }
 
 func TestConnection_Send_ContextCancelled(t *testing.T) {
-	conn, err := New("ws://localhost:0", Options{})
+	conn, err := New("ws://localhost:0", &Options{})
 	assert.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -442,7 +522,7 @@ func TestConnection_Send_ContextCancelled(t *testing.T) {
 }
 
 func TestConnection_Close_NotConnected(t *testing.T) {
-	conn, err := New("ws://localhost:0", Options{})
+	conn, err := New("ws://localhost:0", &Options{})
 	assert.NoError(t, err)
 
 	err = conn.Close()
@@ -453,7 +533,7 @@ func TestConnection_Ping_Success(t *testing.T) {
 	s := httptest.NewServer(createEchoWSHandler())
 	defer s.Close()
 
-	conn, err := New("ws://"+s.Listener.Addr().String(), Options{})
+	conn, err := New("ws://"+s.Listener.Addr().String(), &Options{})
 	assert.NoError(t, err)
 
 	conn.SetOnMessage(func(context.Context, []byte) {})
@@ -485,7 +565,7 @@ func TestConnection_Ping_Success(t *testing.T) {
 }
 
 func TestConnection_Ping_ContextCancelled(t *testing.T) {
-	conn, err := New("ws://localhost:0", Options{})
+	conn, err := New("ws://localhost:0", &Options{})
 	assert.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -496,7 +576,7 @@ func TestConnection_Ping_ContextCancelled(t *testing.T) {
 }
 
 func TestConnection_Ping_NotConnected(t *testing.T) {
-	conn, err := New("ws://localhost:0", Options{})
+	conn, err := New("ws://localhost:0", &Options{})
 	assert.NoError(t, err)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
