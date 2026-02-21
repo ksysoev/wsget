@@ -27,6 +27,7 @@ type CLI struct {
 	editor      Editor
 	inputStream chan KeyEvent
 	messages    chan Message
+	done        chan struct{}
 	output      io.Writer
 	commands    chan Executer
 	cmdFactory  CommandFactory
@@ -84,6 +85,7 @@ func NewCLI(cmdFactory CommandFactory, wsConn ConnectionHandler, output io.Write
 		wsConn:      wsConn,
 		inputStream: make(chan KeyEvent),
 		messages:    make(chan Message),
+		done:        make(chan struct{}),
 		output:      output,
 		commands:    make(chan Executer, CommandsLimit),
 		cmdFactory:  cmdFactory,
@@ -102,7 +104,10 @@ func NewCLI(cmdFactory CommandFactory, wsConn ConnectionHandler, output io.Write
 }
 
 func (c *CLI) OnKeyEvent(event KeyEvent) {
-	c.inputStream <- event
+	select {
+	case c.inputStream <- event:
+	case <-c.done:
+	}
 }
 
 func (c *CLI) onMessage(ctx context.Context, msg Message) {
@@ -116,8 +121,10 @@ func (c *CLI) onMessage(ctx context.Context, msg Message) {
 // It listens for user input and executes commands accordingly.
 func (c *CLI) Run(ctx context.Context, opts RunOptions) error {
 	defer func() {
+		close(c.done)
 		c.showCursor()
 		close(c.messages)
+		close(c.commands)
 	}()
 
 	c.hideCursor()

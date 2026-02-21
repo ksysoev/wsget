@@ -324,6 +324,98 @@ func TestCLI_Run_KeyboardEvents(t *testing.T) {
 	}
 }
 
+func TestCLI_ChannelsClosedAfterRun(t *testing.T) {
+	wsConn := NewMockConnectionHandler(t)
+	wsConn.EXPECT().SetOnMessage(mock.Anything)
+
+	factory := NewMockCommandFactory(t)
+
+	editor := NewMockEditor(t)
+	editor.EXPECT().SetInput(mock.Anything)
+
+	cli := NewCLI(factory, wsConn, os.Stdout, editor, NewMockFormater(t))
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	errCh := make(chan error, 1)
+
+	go func() {
+		errCh <- cli.Run(ctx, RunOptions{})
+	}()
+
+	time.Sleep(10 * time.Millisecond)
+	cancel()
+
+	select {
+	case err := <-errCh:
+		if err != nil {
+			t.Fatalf("unexpected error from Run: %v", err)
+		}
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("Run did not exit after context cancellation")
+	}
+
+	// done and commands channels should be closed after Run exits.
+	_, ok := <-cli.done
+	if ok {
+		t.Error("done should be closed after Run exits")
+	}
+
+	_, ok = <-cli.commands
+	if ok {
+		t.Error("commands should be closed after Run exits")
+	}
+
+	_, ok = <-cli.messages
+	if ok {
+		t.Error("messages should be closed after Run exits")
+	}
+}
+
+func TestCLI_OnKeyEvent_NonBlockingAfterRunExits(t *testing.T) {
+	wsConn := NewMockConnectionHandler(t)
+	wsConn.EXPECT().SetOnMessage(mock.Anything)
+
+	factory := NewMockCommandFactory(t)
+
+	editor := NewMockEditor(t)
+	editor.EXPECT().SetInput(mock.Anything)
+
+	cli := NewCLI(factory, wsConn, os.Stdout, editor, NewMockFormater(t))
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	errCh := make(chan error, 1)
+
+	go func() {
+		errCh <- cli.Run(ctx, RunOptions{})
+	}()
+
+	time.Sleep(10 * time.Millisecond)
+	cancel()
+
+	select {
+	case <-errCh:
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("Run did not exit after context cancellation")
+	}
+
+	// OnKeyEvent must not block after Run has exited.
+	done := make(chan struct{})
+
+	go func() {
+		cli.OnKeyEvent(KeyEvent{Key: KeyEnter})
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		// success — OnKeyEvent returned without blocking
+	case <-time.After(100 * time.Millisecond):
+		t.Error("OnKeyEvent blocked after Run exited")
+	}
+}
+
 func TestCLI_Run_MessagesChannel(t *testing.T) {
 	wsConn := NewMockConnectionHandler(t)
 
