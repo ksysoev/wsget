@@ -17,7 +17,6 @@ import (
 )
 
 const (
-	headerPartsNumber     = 2
 	DefaultMaxMessageSize = 1024 * 1024
 )
 
@@ -72,15 +71,12 @@ func New(wsURL string, opts *Options) (*Connection, error) {
 	headers := make(http.Header)
 
 	for _, headerInput := range opts.Headers {
-		splited := strings.Split(headerInput, ":")
-		if len(splited) != headerPartsNumber {
+		header, value, found := strings.Cut(headerInput, ":")
+		if !found {
 			return nil, fmt.Errorf("invalid header: %s", headerInput)
 		}
 
-		header := strings.TrimSpace(splited[0])
-		value := strings.TrimSpace(splited[1])
-
-		headers.Add(header, value)
+		headers.Add(strings.TrimSpace(header), strings.TrimSpace(value))
 	}
 
 	if opts.UserAgent != "" && headers.Get("User-Agent") == "" {
