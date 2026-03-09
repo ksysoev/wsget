@@ -94,7 +94,7 @@ func (m *Repo) GetNames() []string {
 // LoadFromFile loads a macro configuration from a file at the given path.
 // It returns a Repo instance and an error if the file cannot be read or parsed.
 func LoadFromFile(path string) (r *Repo, err error) {
-	file, err := os.Open(path) //nolint:gosec // path is a user-supplied CLI argument; taint analysis false positive
+	file, err := os.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("fail to open macro file %s: %w", path, err)
 	}

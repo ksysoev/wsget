@@ -1,6 +1,6 @@
 module github.com/ksysoev/wsget
 
-go 1.24.1
+go 1.26.1
 
 require (
 	github.com/TylerBrock/colorjson v0.0.0-20200706003622-8a50f05110d2
