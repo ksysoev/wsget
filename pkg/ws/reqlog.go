@@ -36,7 +36,7 @@ func (rl *requestLogger) RoundTrip(req *http.Request) (*http.Response, error) {
 		tx := color.New(color.FgGreen)
 		tx.SetWriter(rl.output)
 
-		_, _ = fmt.Fprintf(rl.output, "> %s %s %s\n", req.Method, req.URL.String(), req.Proto) //nolint:gosec // output is a trusted io.Writer; taint analysis false positive
+		_, _ = fmt.Fprintf(rl.output, "> %s %s %s\n", req.Method, req.URL.String(), req.Proto)
 		printHeaders(req.Header, rl.output, ">")
 		_, _ = fmt.Fprintln(rl.output)
 
@@ -52,7 +52,7 @@ func (rl *requestLogger) RoundTrip(req *http.Request) (*http.Response, error) {
 		rx := color.New(color.FgYellow)
 		rx.SetWriter(rl.output)
 
-		_, _ = fmt.Fprintf(rl.output, "< %s %s\n", resp.Proto, resp.Status) //nolint:gosec // output is a trusted io.Writer; taint analysis false positive
+		_, _ = fmt.Fprintf(rl.output, "< %s %s\n", resp.Proto, resp.Status)
 		printHeaders(resp.Header, rl.output, "<")
 		_, _ = fmt.Fprintln(rl.output)
 		rx.UnsetWriter(rl.output)
@@ -76,7 +76,7 @@ func printHeaders(headers http.Header, out io.Writer, prefix string) {
 	for _, header := range headerNames {
 		values := headers[header]
 		for _, value := range values {
-			_, _ = fmt.Fprintf(out, "%s %s: %s\n", prefix, header, value) //nolint:gosec // out is a trusted io.Writer; taint analysis false positive
+			_, _ = fmt.Fprintf(out, "%s %s: %s\n", prefix, header, value)
 		}
 	}
 }
