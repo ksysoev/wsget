@@ -118,9 +118,9 @@ func TestCLI_OnKeyEvent(t *testing.T) {
 func TestCLI_OnMessage(t *testing.T) {
 	wsConn := NewMockConnectionHandler(t)
 
-	var onMessageFunc func(context.Context, []byte)
+	var onMessageFunc func(context.Context, []byte, bool)
 
-	wsConn.EXPECT().SetOnMessage(mock.Anything).Run(func(f func(context.Context, []byte)) {
+	wsConn.EXPECT().SetOnMessage(mock.Anything).Run(func(f func(context.Context, []byte, bool)) {
 		onMessageFunc = f
 	})
 
@@ -135,9 +135,10 @@ func TestCLI_OnMessage(t *testing.T) {
 	// Test that onMessage is called and sends message to messages channel
 	ctx := context.Background()
 	testMsg := []byte("test message")
+	isBinary := false
 
 	// Send message in a goroutine
-	go onMessageFunc(ctx, testMsg)
+	go onMessageFunc(ctx, testMsg, isBinary)
 
 	// Receive the message from the messages channel with timeout
 	select {
@@ -157,9 +158,9 @@ func TestCLI_OnMessage(t *testing.T) {
 func TestCLI_OnMessage_ContextCancelled(t *testing.T) {
 	wsConn := NewMockConnectionHandler(t)
 
-	var onMessageFunc func(context.Context, []byte)
+	var onMessageFunc func(context.Context, []byte, bool)
 
-	wsConn.EXPECT().SetOnMessage(mock.Anything).Run(func(f func(context.Context, []byte)) {
+	wsConn.EXPECT().SetOnMessage(mock.Anything).Run(func(f func(context.Context, []byte, bool)) {
 		onMessageFunc = f
 	})
 
@@ -176,12 +177,13 @@ func TestCLI_OnMessage_ContextCancelled(t *testing.T) {
 	cancel() // Cancel immediately
 
 	testMsg := []byte("test message")
+	testIsBinary := false
 
 	// This should not block
 	done := make(chan bool)
 
 	go func() {
-		onMessageFunc(ctx, testMsg)
+		onMessageFunc(ctx, testMsg, testIsBinary)
 
 		done <- true
 	}()
@@ -419,9 +421,9 @@ func TestCLI_OnKeyEvent_NonBlockingAfterRunExits(t *testing.T) {
 func TestCLI_Run_MessagesChannel(t *testing.T) {
 	wsConn := NewMockConnectionHandler(t)
 
-	var onMessageFunc func(context.Context, []byte)
+	var onMessageFunc func(context.Context, []byte, bool)
 
-	wsConn.EXPECT().SetOnMessage(mock.Anything).Run(func(f func(context.Context, []byte)) {
+	wsConn.EXPECT().SetOnMessage(mock.Anything).Run(func(f func(context.Context, []byte, bool)) {
 		onMessageFunc = f
 	})
 
@@ -453,7 +455,7 @@ func TestCLI_Run_MessagesChannel(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 
 	// Send a message through the WebSocket handler
-	go onMessageFunc(ctx, []byte("test message"))
+	go onMessageFunc(ctx, []byte("test message"), false)
 
 	// Wait for error or timeout
 	select {

@@ -70,7 +70,7 @@ type Executer interface {
 }
 
 type ConnectionHandler interface {
-	SetOnMessage(func(context.Context, []byte))
+	SetOnMessage(func(context.Context, []byte, bool))
 	Send(ctx context.Context, msg string) error
 	Ping(ctx context.Context) error
 }
@@ -91,7 +91,7 @@ func NewCLI(cmdFactory CommandFactory, wsConn ConnectionHandler, output io.Write
 		cmdFactory:  cmdFactory,
 	}
 
-	wsConn.SetOnMessage(func(ctx context.Context, msg []byte) {
+	wsConn.SetOnMessage(func(ctx context.Context, msg []byte, isBinary bool) {
 		c.onMessage(ctx, Message{
 			Data: string(msg),
 			Type: Response,
