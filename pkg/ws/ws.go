@@ -30,7 +30,7 @@ type Connection struct {
 	output    io.Writer
 	url       *url.URL
 	ws        *websocket.Conn
-	onMessage func(context.Context, []byte)
+	onMessage func(context.Context, []byte, bool)
 	opts      *websocket.DialOptions
 	ready     chan struct{}
 	msgSize   int64
@@ -100,9 +100,9 @@ func New(wsURL string, opts *Options) (*Connection, error) {
 }
 
 // SetOnMessage sets the callback function to handle incoming messages on the connection.
-// It takes onMessage, a function with parameters context.Context and a byte slice [], as input.
+// It takes onMessage, a function with parameters context.Context, a byte slice [] and bool flag as input.
 // The method does not return any value and is thread-safe, locking access to the callback function.
-func (c *Connection) SetOnMessage(onMessage func(context.Context, []byte)) {
+func (c *Connection) SetOnMessage(onMessage func(context.Context, []byte, bool)) {
 	c.l.Lock()
 	defer c.l.Unlock()
 
@@ -197,16 +197,14 @@ func (c *Connection) handleResponses(ctx context.Context, ws *websocket.Conn) er
 // It returns an error if the message type is binary or if reading from the reader fails.
 // The function reads all data from msgReader and invokes the onMessage callback with the read data.
 func (c *Connection) handleMessage(ctx context.Context, msgType websocket.MessageType, msgReader reader) error {
-	if msgType == websocket.MessageBinary {
-		return fmt.Errorf("unexpected binary message")
-	}
+	isBinary := msgType == websocket.MessageBinary
 
 	data, err := io.ReadAll(msgReader)
 	if err != nil {
 		return fmt.Errorf("fail to read message: %w", err)
 	}
 
-	c.onMessage(ctx, data)
+	c.onMessage(ctx, data, isBinary)
 
 	return nil
 }

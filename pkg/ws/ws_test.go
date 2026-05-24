@@ -62,21 +62,26 @@ func TestConnection_HandleMessage(t *testing.T) {
 		msgContent string
 		msgType    websocket.MessageType
 		expectErr  bool
+		isBinary   bool
 	}{
 		{
-			name:      "Unexpected binary message",
-			msgType:   websocket.MessageBinary,
-			expectErr: true,
+			name:       "Unexpected binary message",
+			msgType:    websocket.MessageBinary,
+			msgContent: "",
+			isBinary:   true,
+			expectErr:  false,
 		},
 		{
 			name:       "Successful text message",
 			msgType:    websocket.MessageText,
 			msgContent: "",
+			isBinary:   false,
 			expectErr:  false,
 		},
 		{
 			name:      "Read error occurs",
 			msgType:   websocket.MessageText,
+			isBinary:  false,
 			expectErr: true,
 		},
 	}
@@ -85,17 +90,19 @@ func TestConnection_HandleMessage(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			msgReader := NewMockreader(t)
 
-			if tt.msgType == websocket.MessageText && tt.expectErr {
+			if tt.expectErr {
 				msgReader.On("Read", mock.Anything).Return(0, assert.AnError)
-			} else if tt.msgType == websocket.MessageText {
+			} else {
 				msgReader.On("Read", mock.Anything).Return(0, io.EOF)
 			}
 
 			conn := &Connection{
-				onMessage: func(_ context.Context, data []byte) {
+				onMessage: func(_ context.Context, data []byte, isBinary bool) {
 					if tt.msgContent != "" {
 						assert.Equal(t, tt.msgContent, string(data))
 					}
+
+					assert.Equal(t, tt.isBinary, isBinary)
 				},
 			}
 
@@ -294,7 +301,7 @@ func TestConnection_Connect_UserAgent(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	conn.SetOnMessage(func(context.Context, []byte) {})
+	conn.SetOnMessage(func(context.Context, []byte, bool) {})
 
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
@@ -319,32 +326,32 @@ func TestConnection_Connect_UserAgent(t *testing.T) {
 
 func TestSetOnMessage(t *testing.T) {
 	tests := []struct {
-		initialFunc  func(context.Context, []byte)
-		newFunc      func(context.Context, []byte)
-		expectedFunc func(context.Context, []byte)
+		initialFunc  func(context.Context, []byte, bool)
+		newFunc      func(context.Context, []byte, bool)
+		expectedFunc func(context.Context, []byte, bool)
 		name         string
 	}{
 		{
 			name:         "Set new simple function",
 			initialFunc:  nil,
-			newFunc:      func(_ context.Context, _ []byte) {},
-			expectedFunc: func(_ context.Context, _ []byte) {},
+			newFunc:      func(_ context.Context, _ []byte, _ bool) {},
+			expectedFunc: func(_ context.Context, _ []byte, _ bool) {},
 		},
 		{
 			name:         "Set nil function",
-			initialFunc:  func(_ context.Context, _ []byte) {},
+			initialFunc:  func(_ context.Context, _ []byte, _ bool) {},
 			newFunc:      nil,
 			expectedFunc: nil,
 		},
 		{
 			name: "Replace existing function",
-			initialFunc: func(_ context.Context, _ []byte) {
+			initialFunc: func(_ context.Context, _ []byte, _ bool) {
 				fmt.Println("Old")
 			},
-			newFunc: func(_ context.Context, _ []byte) {
+			newFunc: func(_ context.Context, _ []byte, _ bool) {
 				fmt.Println("New")
 			},
-			expectedFunc: func(_ context.Context, _ []byte) {
+			expectedFunc: func(_ context.Context, _ []byte, _ bool) {
 				fmt.Println("New")
 			},
 		},
@@ -488,7 +495,7 @@ func TestConnection_Connect_Success(t *testing.T) {
 	expectedData := "test data"
 	respRecieved := make(chan struct{})
 
-	conn.SetOnMessage(func(_ context.Context, data []byte) {
+	conn.SetOnMessage(func(_ context.Context, data []byte, _ bool) {
 		assert.Equal(t, expectedData, string(data))
 		close(respRecieved)
 	})
@@ -540,7 +547,7 @@ func TestConnection_Connect_AlreadyConnected(t *testing.T) {
 	conn, err := New("ws://"+s.Listener.Addr().String(), &Options{})
 	assert.NoError(t, err)
 
-	conn.SetOnMessage(func(context.Context, []byte) {})
+	conn.SetOnMessage(func(context.Context, []byte, bool) {})
 
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
@@ -571,7 +578,7 @@ func TestConnection_Connect_ContextCancelled(t *testing.T) {
 	conn, err := New("ws://localhost:0", &Options{})
 	assert.NoError(t, err)
 
-	conn.SetOnMessage(func(context.Context, []byte) {})
+	conn.SetOnMessage(func(context.Context, []byte, bool) {})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
@@ -606,7 +613,7 @@ func TestConnection_Ping_Success(t *testing.T) {
 	conn, err := New("ws://"+s.Listener.Addr().String(), &Options{})
 	assert.NoError(t, err)
 
-	conn.SetOnMessage(func(context.Context, []byte) {})
+	conn.SetOnMessage(func(context.Context, []byte, bool) {})
 
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
@@ -663,7 +670,7 @@ func TestConnection_ConcurrentOperations(t *testing.T) {
 	conn, err := New("ws://"+s.Listener.Addr().String(), &Options{})
 	assert.NoError(t, err)
 
-	conn.SetOnMessage(func(context.Context, []byte) {})
+	conn.SetOnMessage(func(context.Context, []byte, bool) {})
 
 	connectDone := make(chan struct{})
 

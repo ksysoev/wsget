@@ -216,6 +216,8 @@ type MessageType uint8
 const (
 	Request MessageType = iota
 	Response
+	RequestBinary
+	ResponseBinary
 )
 
 func (mt MessageType) String() string {
@@ -224,6 +226,10 @@ func (mt MessageType) String() string {
 		return "Request"
 	case Response:
 		return "Response"
+	case RequestBinary:
+		return "RequestBinary"
+	case ResponseBinary:
+		return "ResponseBinary"
 	default:
 		return "Not defined"
 	}
