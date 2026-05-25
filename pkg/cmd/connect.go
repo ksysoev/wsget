@@ -22,11 +22,12 @@ import (
 )
 
 const (
-	macroDir           = "macro"
-	historyFilename    = "history"
-	historyCmdFilename = "cmd_history"
-	configDirMode      = 0o755
-	defaultConfigDir   = ".wsget"
+	macroDir              = "macro"
+	historyFilename       = "history"
+	historyCmdFilename    = "cmd_history"
+	historyBinaryFilename = "history_binary"
+	configDirMode         = 0o755
+	defaultConfigDir      = ".wsget"
 )
 
 // createConnectRunner creates a runner function for the connect command.
@@ -100,6 +101,13 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 
 	defer func() { _ = cmdHistory.Close() }()
 
+	binHistory, err := history.LoadFromFile(filepath.Join(args.configDir, historyBinaryFilename))
+	if err != nil {
+		return fmt.Errorf("failed to load binary history: %w", err)
+	}
+
+	defer func() { _ = binHistory.Close() }()
+
 	macroRepo, err := macro.LoadMacroForDomain(filepath.Join(args.configDir, macroDir), wsConn.Hostname())
 	if err != nil {
 		return fmt.Errorf("failed to load macros for domain %q: %w", wsConn.Hostname(), err)
@@ -114,7 +122,7 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 		cmdFactory = command2.NewFactory(nil)
 	}
 
-	editor := edit.NewMultiMode(os.Stdout, reqHistory, cmdHistory)
+	editor := edit.NewMultiMode(os.Stdout, reqHistory, cmdHistory, binHistory)
 
 	client := core.NewCLI(cmdFactory, wsConn, os.Stdout, editor, formater.NewFormat())
 

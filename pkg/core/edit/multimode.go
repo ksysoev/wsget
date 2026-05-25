@@ -23,7 +23,7 @@ type MultiMode struct {
 // NewMultiMode initializes a new MultiMode structure with separate editors for command and standard input modes.
 // It takes an io.Writer, two HistoryRepo instances for request and command histories, and an optional Dictionary.
 // It returns a pointer to the created MultiMode, setting up command and edit modes appropriately.
-func NewMultiMode(output io.Writer, reqHistory, cmdHistory HistoryRepo) *MultiMode {
+func NewMultiMode(output io.Writer, reqHistory, cmdHistory, binHistory HistoryRepo) *MultiMode {
 	commandMode := NewEditor(
 		output,
 		cmdHistory,
@@ -42,7 +42,7 @@ func NewMultiMode(output io.Writer, reqHistory, cmdHistory HistoryRepo) *MultiMo
 
 	binaryMode := NewEditor(
 		output,
-		reqHistory,
+		binHistory,
 		false,
 		WithOpenHook(binaryEditorOpenHook),
 		WithCloseHook(binaryEditorCloseHook),

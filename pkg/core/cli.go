@@ -63,6 +63,7 @@ type ExecutionContext interface {
 type Editor interface {
 	Edit(ctx context.Context, initBuffer string) (string, error)
 	CommandMode(ctx context.Context, initBuffer string) (string, error)
+	BinaryEdit(ctx context.Context, initBuffer string) (string, error)
 	SetInput(input <-chan KeyEvent)
 }
 

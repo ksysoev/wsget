@@ -15,8 +15,9 @@ func TestNewMultiMode(t *testing.T) {
 	output := io.Discard
 	reqHistory := NewMockHistoryRepo(t)
 	cmdHistory := NewMockHistoryRepo(t)
+	binHistory := NewMockHistoryRepo(t)
 
-	multiMode := NewMultiMode(output, reqHistory, cmdHistory)
+	multiMode := NewMultiMode(output, reqHistory, cmdHistory, binHistory)
 	assert.NotNil(t, multiMode)
 	assert.NotNil(t, multiMode.commandMode)
 	assert.NotNil(t, multiMode.editMode)

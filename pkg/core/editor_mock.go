@@ -23,6 +23,63 @@ func (_m *MockEditor) EXPECT() *MockEditor_Expecter {
 	return &MockEditor_Expecter{mock: &_m.Mock}
 }
 
+// BinaryEdit provides a mock function with given fields: ctx, initBuffer
+func (_m *MockEditor) BinaryEdit(ctx context.Context, initBuffer string) (string, error) {
+	ret := _m.Called(ctx, initBuffer)
+
+	if len(ret) == 0 {
+		panic("no return value specified for BinaryEdit")
+	}
+
+	var r0 string
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) (string, error)); ok {
+		return rf(ctx, initBuffer)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string) string); ok {
+		r0 = rf(ctx, initBuffer)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, initBuffer)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockEditor_BinaryEdit_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BinaryEdit'
+type MockEditor_BinaryEdit_Call struct {
+	*mock.Call
+}
+
+// BinaryEdit is a helper method to define mock.On call
+//   - ctx context.Context
+//   - initBuffer string
+func (_e *MockEditor_Expecter) BinaryEdit(ctx interface{}, initBuffer interface{}) *MockEditor_BinaryEdit_Call {
+	return &MockEditor_BinaryEdit_Call{Call: _e.mock.On("BinaryEdit", ctx, initBuffer)}
+}
+
+func (_c *MockEditor_BinaryEdit_Call) Run(run func(ctx context.Context, initBuffer string)) *MockEditor_BinaryEdit_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *MockEditor_BinaryEdit_Call) Return(_a0 string, _a1 error) *MockEditor_BinaryEdit_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockEditor_BinaryEdit_Call) RunAndReturn(run func(context.Context, string) (string, error)) *MockEditor_BinaryEdit_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // CommandMode provides a mock function with given fields: ctx, initBuffer
 func (_m *MockEditor) CommandMode(ctx context.Context, initBuffer string) (string, error) {
 	ret := _m.Called(ctx, initBuffer)
