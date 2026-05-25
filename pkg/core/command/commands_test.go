@@ -62,7 +62,7 @@ func TestPrintMsg_Execute(t *testing.T) {
 		{
 			name: "UnsupportedMessageType",
 			message: core.Message{
-				Type: core.MessageType(3),
+				Type: core.MessageType(5),
 				Data: "unsupported",
 			},
 			expectedErr: "unsupported message type",

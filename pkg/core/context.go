@@ -109,7 +109,7 @@ func (c *executionContext) CommandMode(initBuffer string) (string, error) {
 // BinaryEdit initiates binary edit mode in the editor with the provided initial buffer.
 // It takes initBuffer of type string, which is the input buffer to initialize the binary edit mode.
 // It returns a string representing the final buffer after editing and an error if binary edit mode fails.
-func (c *executionContext) BinaryEdit(initBuffer string) (string, error) {
+func (c *executionContext) BinaryMode(initBuffer string) (string, error) {
 	return c.cli.editor.BinaryEdit(c.ctx, initBuffer)
 }
 

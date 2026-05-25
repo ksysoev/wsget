@@ -56,6 +56,7 @@ type ExecutionContext interface {
 	WaitForResponse(timeout time.Duration) (Message, error)
 	EditorMode(initBuffer string) (string, error)
 	CommandMode(initBuffer string) (string, error)
+	BinaryMode(initBuffer string) (string, error)
 	CreateCommand(raw string) (Executer, error)
 	Ping() error
 }

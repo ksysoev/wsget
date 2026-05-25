@@ -194,6 +194,30 @@ func (c *CmdEdit) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 	return cmd, nil
 }
 
+type BinEdit struct{}
+
+// NewCmdEdit initializes and returns a new instance of CmdEdit.
+// It does not take any parameters.
+// It returns a pointer to CmdEdit, which can execute an edit command.
+func NewBinEdit() *BinEdit {
+	return &BinEdit{}
+}
+
+// Execute executes the CmdEdit and returns a core.Executer and an error.
+// It prompts the user to edit a command and returns the corresponding Command object.
+func (c *BinEdit) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
+	req, err := exCtx.BinaryMode("")
+	if err != nil {
+		return nil, fmt.Errorf("failed to enter editor mode: %w", err)
+	}
+
+	if req == "" {
+		return nil, nil
+	}
+
+	return NewSend(req), nil
+}
+
 type Sequence struct {
 	subCommands []core.Executer
 }
