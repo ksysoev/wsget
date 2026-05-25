@@ -17,6 +17,7 @@ const (
 type MultiMode struct {
 	commandMode *Editor
 	editMode    *Editor
+	binaryMode  *Editor
 }
 
 // NewMultiMode initializes a new MultiMode structure with separate editors for command and standard input modes.
@@ -39,9 +40,18 @@ func NewMultiMode(output io.Writer, reqHistory, cmdHistory HistoryRepo) *MultiMo
 		WithCloseHook(editorCloseHook),
 	)
 
+	binaryMode := NewEditor(
+		output,
+		reqHistory,
+		false,
+		WithOpenHook(binaryEditorOpenHook),
+		WithCloseHook(binaryEditorCloseHook),
+	)
+
 	return &MultiMode{
 		commandMode: commandMode,
 		editMode:    editMode,
+		binaryMode:  binaryMode,
 	}
 }
 
@@ -55,6 +65,12 @@ func (m *MultiMode) CommandMode(ctx context.Context, initBuffer string) (string,
 // It returns the final string after editing or an error if an issue occurs.
 func (m *MultiMode) Edit(ctx context.Context, initBuffer string) (string, error) {
 	return m.editMode.Edit(ctx, initBuffer)
+}
+
+// BinaryEdit activates the binary edit mode, allowing users to edit binary data with an initial buffer.
+// it returns the edited binary string or an error if any issue occurs during the editing process.
+func (m *MultiMode) BinaryEdit(ctx context.Context, initBuffer string) (string, error) {
+	return m.binaryMode.Edit(ctx, initBuffer)
 }
 
 // SetInput sets the input channel for both command and edit modes.
@@ -80,6 +96,28 @@ func editorOpenHook(w io.Writer) error {
 // It takes w of type io.Writer to write cleanup sequences.
 // It returns an error if writing to the provided io.Writer fails.
 func editorCloseHook(w io.Writer) error {
+	_, err := fmt.Fprint(w, LineUp+LineClear+HideCursor)
+
+	return err
+}
+
+// binaryEditorOpenHook prepares the binary editor's environment when it opens.
+// it takes w of type io.Writer to write initialization sequences specific to binary editing.
+// it returns an error if writing to the provided io.Writer fails.
+func binaryEditorOpenHook(w io.Writer) error {
+	if _, err := color.New(color.FgGreen).Fprint(w, "0101 ->"); err != nil {
+		return err
+	}
+
+	_, err := fmt.Fprint(w, "\n"+ShowCursor)
+
+	return err
+}
+
+// binaryEditorCloseHook restores the binary editor's environment when it closes.
+// it takes w of type io.Writer to write cleanup sequences specific to binary editing.
+// it returns an error if writing to the provided io.Writer fails.
+func binaryEditorCloseHook(w io.Writer) error {
 	_, err := fmt.Fprint(w, LineUp+LineClear+HideCursor)
 
 	return err
