@@ -90,6 +90,10 @@ func (c *PrintMsg) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 		err = exCtx.Print("->\n", color.FgGreen)
 	case core.Response:
 		err = exCtx.Print("<-\n", color.FgRed)
+	case core.ResponseBinary:
+		err = exCtx.Print("0101 ->\n", color.FgGreen)
+	case core.RequestBinary:
+		err = exCtx.Print("0101 <-\n", color.FgRed)
 	default:
 		return nil, fmt.Errorf("unsupported message type: %s", c.msg.Type.String())
 	}

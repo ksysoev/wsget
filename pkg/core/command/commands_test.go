@@ -139,6 +139,16 @@ func TestPrintMsg_Execute(t *testing.T) {
 						Print("<-\n", color.FgRed).
 						Return(tt.mockPrintError).
 						Maybe()
+				case core.RequestBinary:
+					exCtx.EXPECT().
+						Print("0101 -> \n", color.FgGreen).
+						Return(tt.mockPrintError).
+						Maybe()
+				case core.ResponseBinary:
+					exCtx.EXPECT().
+						Print("0101 <- \n", color.FgRed).
+						Return(tt.mockPrintError).
+						Maybe()
 				}
 			}
 

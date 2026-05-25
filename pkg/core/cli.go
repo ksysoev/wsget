@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"time"
@@ -92,6 +93,14 @@ func NewCLI(cmdFactory CommandFactory, wsConn ConnectionHandler, output io.Write
 	}
 
 	wsConn.SetOnMessage(func(ctx context.Context, msg []byte, isBinary bool) {
+		if isBinary {
+			data := base64.StdEncoding.EncodeToString(msg)
+			c.onMessage(ctx, Message{
+				Data: data,
+				Type: ResponseBinary,
+			})
+		}
+
 		c.onMessage(ctx, Message{
 			Data: string(msg),
 			Type: Response,
