@@ -710,3 +710,143 @@ func TestConnection_ConcurrentOperations(t *testing.T) {
 
 	<-connectDone
 }
+
+func TestConnection_SendBinary_Success(t *testing.T) {
+	received := make(chan []byte, 1)
+	msgType := make(chan websocket.MessageType, 1)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		c, err := websocket.Accept(w, r, nil)
+		if err != nil {
+			return
+		}
+
+		defer func() {
+			_ = c.Close(websocket.StatusNormalClosure, "")
+		}()
+
+		mt, reader, err := c.Reader(r.Context())
+		if err != nil {
+			return
+		}
+
+		data, err := io.ReadAll(reader)
+		if err != nil {
+			return
+		}
+
+		msgType <- mt
+		received <- data
+	}))
+	defer server.Close()
+
+	conn, err := New("ws://"+server.Listener.Addr().String(), &Options{})
+	assert.NoError(t, err)
+
+	conn.SetOnMessage(func(context.Context, []byte, bool) {})
+
+	connectDone := make(chan struct{})
+
+	go func() {
+		defer close(connectDone)
+
+		_ = conn.Connect(context.Background())
+	}()
+
+	select {
+	case <-conn.Ready():
+	case <-time.After(time.Second):
+		t.Fatal("timeout waiting for connection")
+	}
+
+	payload := []byte{0xDE, 0xAD, 0xBE, 0xEF}
+	err = conn.SendBinary(context.Background(), payload)
+	assert.NoError(t, err)
+
+	select {
+	case mt := <-msgType:
+		assert.Equal(t, websocket.MessageBinary, mt)
+	case <-time.After(time.Second):
+		t.Fatal("timeout waiting for message type")
+	}
+
+	select {
+	case data := <-received:
+		assert.Equal(t, payload, data)
+	case <-time.After(time.Second):
+		t.Fatal("timeout waiting for received data")
+	}
+}
+
+func TestConnection_SendBinary_ContextCancelled(t *testing.T) {
+	conn, err := New("ws://localhost:0", &Options{})
+	assert.NoError(t, err)
+
+	conn.SetOnMessage(func(context.Context, []byte, bool) {})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	err = conn.SendBinary(ctx, []byte{0x01})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "context canceled while waiting to send")
+}
+
+func TestConnection_HandleMessage_Binary(t *testing.T) {
+	payload := []byte{0x01, 0x02, 0x03}
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		c, err := websocket.Accept(w, r, nil)
+		if err != nil {
+			return
+		}
+
+		defer func() {
+			_ = c.Close(websocket.StatusNormalClosure, "")
+		}()
+
+		if err := c.Write(r.Context(), websocket.MessageBinary, payload); err != nil {
+			return
+		}
+
+		// Keep connection open until client closes.
+		<-r.Context().Done()
+	}))
+	defer server.Close()
+
+	receivedData := make(chan []byte, 1)
+	receivedBinary := make(chan bool, 1)
+
+	conn, err := New("ws://"+server.Listener.Addr().String(), &Options{})
+	assert.NoError(t, err)
+
+	conn.SetOnMessage(func(_ context.Context, data []byte, isBinary bool) {
+		receivedData <- data
+		receivedBinary <- isBinary
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	connectDone := make(chan struct{})
+
+	go func() {
+		defer close(connectDone)
+
+		_ = conn.Connect(ctx)
+	}()
+
+	select {
+	case data := <-receivedData:
+		assert.Equal(t, payload, data)
+	case <-time.After(time.Second):
+		t.Fatal("timeout waiting for binary message data")
+	}
+
+	select {
+	case isBinary := <-receivedBinary:
+		assert.True(t, isBinary, "expected isBinary=true for binary frame")
+	case <-time.After(time.Second):
+		t.Fatal("timeout waiting for isBinary flag")
+	}
+}

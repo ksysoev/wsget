@@ -217,6 +217,41 @@ func TestFactory_Create(t *testing.T) {
 			want:    nil,
 			wantErr: true,
 		},
+		{
+			name:    "editbin command",
+			raw:     "editbin",
+			macro:   nil,
+			want:    NewBinEdit(),
+			wantErr: false,
+		},
+		{
+			name:    "sendbin command with data",
+			raw:     "sendbin dGVzdA==",
+			macro:   nil,
+			want:    NewSendBinary("dGVzdA=="),
+			wantErr: false,
+		},
+		{
+			name:    "sendbin command without data",
+			raw:     "sendbin",
+			macro:   nil,
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "print command with RequestBinary type",
+			raw:     "print RequestBinary dGVzdA==",
+			macro:   nil,
+			want:    NewPrintMsg(core.Message{Type: core.RequestBinary, Data: "dGVzdA=="}),
+			wantErr: false,
+		},
+		{
+			name:    "print command with ResponseBinary type",
+			raw:     "print ResponseBinary dGVzdA==",
+			macro:   nil,
+			want:    NewPrintMsg(core.Message{Type: core.ResponseBinary, Data: "dGVzdA=="}),
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -259,16 +294,30 @@ func TestFactory_Create(t *testing.T) {
 					if gotType.request != send.request {
 						t.Errorf("Factory() type %v, got = %v, want %v", gotType, got, tt.want)
 					}
-				case *WaitForResp:
-					wait, ok := tt.want.(*WaitForResp)
-					if !ok {
-						t.Errorf("Factory() type %v, got = %v, want %v", gotType, got, tt.want)
-					}
-
-					if gotType.timeout != wait.timeout {
-						t.Errorf("Factory() type %v, got = %v, want %v", gotType, got, tt.want)
-					}
+			case *WaitForResp:
+				wait, ok := tt.want.(*WaitForResp)
+				if !ok {
+					t.Errorf("Factory() type %v, got = %v, want %v", gotType, got, tt.want)
 				}
+
+				if gotType.timeout != wait.timeout {
+					t.Errorf("Factory() type %v, got = %v, want %v", gotType, got, tt.want)
+				}
+			case *SendBinary:
+				want, ok := tt.want.(*SendBinary)
+				if !ok {
+					t.Errorf("Factory() type %v, got = %v, want %v", gotType, got, tt.want)
+				}
+
+				assert.Equal(t, want.request, gotType.request)
+			case *PrintMsg:
+				want, ok := tt.want.(*PrintMsg)
+				if !ok {
+					t.Errorf("Factory() type %v, got = %v, want %v", gotType, got, tt.want)
+				}
+
+				assert.Equal(t, want.msg, gotType.msg)
+			}
 			}
 		})
 	}

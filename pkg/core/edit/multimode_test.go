@@ -31,6 +31,7 @@ func TestMultiMode_CommandMode(t *testing.T) {
 	multiMode := &MultiMode{
 		editMode:    NewEditor(io.Discard, history, true),
 		commandMode: NewEditor(io.Discard, history, true),
+		binaryMode:  NewEditor(io.Discard, history, true),
 	}
 	keyStream := make(chan core.KeyEvent, 1)
 
@@ -53,6 +54,7 @@ func TestMultiMode_Edit(t *testing.T) {
 	multiMode := &MultiMode{
 		commandMode: NewEditor(io.Discard, history, true),
 		editMode:    NewEditor(io.Discard, history, true),
+		binaryMode:  NewEditor(io.Discard, history, true),
 	}
 
 	keyStream := make(chan core.KeyEvent, 1)
@@ -227,6 +229,102 @@ func TestCmdEditorCloseHook(t *testing.T) {
 			assert.Equal(t, tt.expectedError, err)
 
 			// Check writer contents for successful cases
+			if ok {
+				assert.Equal(t, tt.expectedOutput, builder.String())
+			}
+		})
+	}
+}
+
+func TestMultiMode_BinaryEdit(t *testing.T) {
+	history := NewMockHistoryRepo(t)
+	history.EXPECT().ResetPosition()
+	history.EXPECT().AddRequest("bindata")
+
+	multiMode := &MultiMode{
+		commandMode: NewEditor(io.Discard, history, true),
+		editMode:    NewEditor(io.Discard, history, true),
+		binaryMode:  NewEditor(io.Discard, history, true),
+	}
+
+	keyStream := make(chan core.KeyEvent, 1)
+
+	defer close(keyStream)
+
+	keyStream <- core.KeyEvent{Key: core.KeyEnter}
+
+	multiMode.SetInput(keyStream)
+
+	result, err := multiMode.BinaryEdit(context.Background(), "bindata")
+	assert.NoError(t, err)
+	assert.Equal(t, "bindata", result)
+}
+
+func TestBinaryEditorOpenHook(t *testing.T) {
+	tests := []struct {
+		writer         io.Writer
+		expectedError  error
+		name           string
+		expectedOutput string
+	}{
+		{
+			name:           "Success with valid writer",
+			writer:         &strings.Builder{},
+			expectedOutput: "0101 ->\n" + ShowCursor,
+			expectedError:  nil,
+		},
+		{
+			name:           "Error on colored write",
+			writer:         failingWriter{},
+			expectedOutput: "",
+			expectedError:  errors.New("failed to write"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			builder, ok := tt.writer.(*strings.Builder)
+
+			err := binaryEditorOpenHook(tt.writer)
+
+			assert.Equal(t, tt.expectedError, err)
+
+			if ok {
+				assert.Equal(t, tt.expectedOutput, builder.String())
+			}
+		})
+	}
+}
+
+func TestBinaryEditorCloseHook(t *testing.T) {
+	tests := []struct {
+		writer         io.Writer
+		expectedError  error
+		name           string
+		expectedOutput string
+	}{
+		{
+			name:           "Success with valid writer",
+			writer:         &strings.Builder{},
+			expectedOutput: LineUp + LineClear + HideCursor,
+			expectedError:  nil,
+		},
+		{
+			name:           "Error with failing writer",
+			writer:         failingWriter{},
+			expectedOutput: "",
+			expectedError:  errors.New("failed to write"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			builder, ok := tt.writer.(*strings.Builder)
+
+			err := binaryEditorCloseHook(tt.writer)
+
+			assert.Equal(t, tt.expectedError, err)
+
 			if ok {
 				assert.Equal(t, tt.expectedOutput, builder.String())
 			}

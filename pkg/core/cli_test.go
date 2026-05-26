@@ -2,12 +2,14 @@ package core
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"os"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -217,6 +219,16 @@ func TestMessageType_String(t *testing.T) {
 			msgType:  MessageType(99),
 			expected: "Not defined",
 		},
+		{
+			name:     "RequestBinary type",
+			msgType:  RequestBinary,
+			expected: "RequestBinary",
+		},
+		{
+			name:     "ResponseBinary type",
+			msgType:  ResponseBinary,
+			expected: "ResponseBinary",
+		},
 	}
 
 	for _, tt := range tests {
@@ -271,6 +283,12 @@ func TestCLI_Run_KeyboardEvents(t *testing.T) {
 			keyEvent:     KeyEvent{Key: KeyCtrlL},
 			expectedCmd:  "",
 			shouldCreate: false,
+		},
+		{
+			name:         "Ctrl+B triggers editbin command",
+			keyEvent:     KeyEvent{Key: KeyCtrlB},
+			expectedCmd:  "editbin",
+			shouldCreate: true,
 		},
 	}
 
@@ -466,5 +484,37 @@ func TestCLI_Run_MessagesChannel(t *testing.T) {
 	case <-time.After(100 * time.Millisecond):
 		t.Error("Test timed out waiting for message processing")
 		cancel()
+	}
+}
+
+func TestCLI_OnMessage_Binary(t *testing.T) {
+	wsConn := NewMockConnectionHandler(t)
+
+	var onMessageFunc func(context.Context, []byte, bool)
+
+	wsConn.EXPECT().SetOnMessage(mock.Anything).Run(func(f func(context.Context, []byte, bool)) {
+		onMessageFunc = f
+	})
+
+	factory := NewMockCommandFactory(t)
+
+	editor := NewMockEditor(t)
+	editor.EXPECT().SetInput(mock.Anything)
+
+	output := os.Stdout
+	cli := NewCLI(factory, wsConn, output, editor, NewMockFormater(t))
+
+	ctx := context.Background()
+	testMsg := []byte{0x01, 0x02, 0x03}
+	expectedData := base64.StdEncoding.EncodeToString(testMsg)
+
+	go onMessageFunc(ctx, testMsg, true)
+
+	select {
+	case receivedMsg := <-cli.messages:
+		assert.Equal(t, expectedData, receivedMsg.Data, "binary message data should be base64-encoded")
+		assert.Equal(t, ResponseBinary, receivedMsg.Type, "binary message type should be ResponseBinary")
+	case <-time.After(100 * time.Millisecond):
+		t.Error("Timeout waiting for binary message")
 	}
 }
