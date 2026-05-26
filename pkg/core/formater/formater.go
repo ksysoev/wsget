@@ -48,9 +48,9 @@ func (f *Format) FormatForFile(_, msgData string) (string, error) {
 // formatTextMessage formats the given WebSocket message data as text based on its type.
 func (f *Format) formatTextMessage(msgType, data string) (string, error) {
 	switch msgType {
-	case "Request":
+	case "Request", "RequestBinary":
 		return f.text.FormatRequest(data)
-	case "Response":
+	case "Response", "ResponseBinary":
 		return f.text.FormatResponse(data)
 	case "NotDefined":
 		return "", fmt.Errorf("unknown message type")

@@ -73,6 +73,10 @@ func (f *Factory) Create(raw string) (core.Executer, error) {
 			msgType = core.Request
 		case "Response":
 			msgType = core.Response
+		case "RequestBinary":
+			msgType = core.RequestBinary
+		case "ResponseBinary":
+			msgType = core.ResponseBinary
 		default:
 			return nil, fmt.Errorf("invalid message type: %s", parts[0])
 		}

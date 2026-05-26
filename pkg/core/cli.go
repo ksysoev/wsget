@@ -103,6 +103,8 @@ func NewCLI(cmdFactory CommandFactory, wsConn ConnectionHandler, output io.Write
 				Data: data,
 				Type: ResponseBinary,
 			})
+
+			return
 		}
 
 		c.onMessage(ctx, Message{
