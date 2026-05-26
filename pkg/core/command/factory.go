@@ -41,12 +41,20 @@ func (f *Factory) Create(raw string) (core.Executer, error) {
 		return NewEdit(content), nil
 	case "editcmd":
 		return NewCmdEdit(), nil
+	case "editbin":
+		return NewBinEdit(), nil
 	case "send":
 		if len(parts) == 1 {
 			return nil, &ErrEmptyRequest{}
 		}
 
 		return NewSend(parts[1]), nil
+	case "sendbin":
+		if len(parts) == 1 {
+			return nil, &ErrEmptyRequest{}
+		}
+
+		return NewSendBinary(parts[1]), nil
 	case "print":
 		if len(parts) == 1 {
 			return nil, &ErrEmptyRequest{}

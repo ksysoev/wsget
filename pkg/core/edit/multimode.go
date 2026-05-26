@@ -77,6 +77,7 @@ func (m *MultiMode) BinaryEdit(ctx context.Context, initBuffer string) (string, 
 func (m *MultiMode) SetInput(input <-chan core.KeyEvent) {
 	m.commandMode.SetInput(input)
 	m.editMode.SetInput(input)
+	m.binaryMode.SetInput(input)
 }
 
 // editorOpenHook prepares the editor's environment when it opens.

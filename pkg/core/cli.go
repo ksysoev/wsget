@@ -178,6 +178,13 @@ func (c *CLI) Run(ctx context.Context, opts RunOptions) error {
 				}
 
 				c.commands <- cmd
+			case KeyCtrlB:
+				cmd, err := c.cmdFactory.Create("editbin")
+				if err != nil {
+					return fmt.Errorf("fail to create editbin command: %w", err)
+				}
+
+				c.commands <- cmd
 			default:
 				if event.Key > 0 {
 					continue
