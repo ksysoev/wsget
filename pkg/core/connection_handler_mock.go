@@ -116,6 +116,53 @@ func (_c *MockConnectionHandler_Send_Call) RunAndReturn(run func(context.Context
 	return _c
 }
 
+// SendBinary provides a mock function with given fields: ctx, data
+func (_m *MockConnectionHandler) SendBinary(ctx context.Context, data []byte) error {
+	ret := _m.Called(ctx, data)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SendBinary")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, []byte) error); ok {
+		r0 = rf(ctx, data)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockConnectionHandler_SendBinary_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SendBinary'
+type MockConnectionHandler_SendBinary_Call struct {
+	*mock.Call
+}
+
+// SendBinary is a helper method to define mock.On call
+//   - ctx context.Context
+//   - data []byte
+func (_e *MockConnectionHandler_Expecter) SendBinary(ctx interface{}, data interface{}) *MockConnectionHandler_SendBinary_Call {
+	return &MockConnectionHandler_SendBinary_Call{Call: _e.mock.On("SendBinary", ctx, data)}
+}
+
+func (_c *MockConnectionHandler_SendBinary_Call) Run(run func(ctx context.Context, data []byte)) *MockConnectionHandler_SendBinary_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].([]byte))
+	})
+	return _c
+}
+
+func (_c *MockConnectionHandler_SendBinary_Call) Return(_a0 error) *MockConnectionHandler_SendBinary_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockConnectionHandler_SendBinary_Call) RunAndReturn(run func(context.Context, []byte) error) *MockConnectionHandler_SendBinary_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SetOnMessage provides a mock function with given fields: _a0
 func (_m *MockConnectionHandler) SetOnMessage(_a0 func(context.Context, []byte, bool)) {
 	_m.Called(_a0)

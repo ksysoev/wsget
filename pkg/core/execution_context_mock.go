@@ -459,6 +459,52 @@ func (_c *MockExecutionContext_PrintToFile_Call) RunAndReturn(run func(string) e
 	return _c
 }
 
+// SendBinaryRequest provides a mock function with given fields: data
+func (_m *MockExecutionContext) SendBinaryRequest(data []byte) error {
+	ret := _m.Called(data)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SendBinaryRequest")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func([]byte) error); ok {
+		r0 = rf(data)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockExecutionContext_SendBinaryRequest_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SendBinaryRequest'
+type MockExecutionContext_SendBinaryRequest_Call struct {
+	*mock.Call
+}
+
+// SendBinaryRequest is a helper method to define mock.On call
+//   - data []byte
+func (_e *MockExecutionContext_Expecter) SendBinaryRequest(data interface{}) *MockExecutionContext_SendBinaryRequest_Call {
+	return &MockExecutionContext_SendBinaryRequest_Call{Call: _e.mock.On("SendBinaryRequest", data)}
+}
+
+func (_c *MockExecutionContext_SendBinaryRequest_Call) Run(run func(data []byte)) *MockExecutionContext_SendBinaryRequest_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].([]byte))
+	})
+	return _c
+}
+
+func (_c *MockExecutionContext_SendBinaryRequest_Call) Return(_a0 error) *MockExecutionContext_SendBinaryRequest_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockExecutionContext_SendBinaryRequest_Call) RunAndReturn(run func([]byte) error) *MockExecutionContext_SendBinaryRequest_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SendRequest provides a mock function with given fields: req
 func (_m *MockExecutionContext) SendRequest(req string) error {
 	ret := _m.Called(req)

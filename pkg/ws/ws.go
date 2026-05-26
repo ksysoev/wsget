@@ -264,6 +264,35 @@ func (c *Connection) Send(ctx context.Context, msg string) error {
 	return nil
 }
 
+// SendBinary transmits binary data over an established WebSocket connection within a given context.
+// It takes ctx of type context.Context and data of type []byte as parameters.
+// It returns an error if the context is canceled or if there is a failure writing to the WebSocket.
+func (c *Connection) SendBinary(ctx context.Context, data []byte) error {
+	select {
+	case <-c.ready:
+	case <-ctx.Done():
+		return fmt.Errorf("context canceled while waiting to send: %w", ctx.Err())
+	}
+
+	c.l.Lock()
+	ws := c.ws
+	c.l.Unlock()
+
+	if ws == nil {
+		return fmt.Errorf("connection not established")
+	}
+
+	err := ws.Write(ctx, websocket.MessageBinary, data)
+	if err != nil {
+		err = handleError(err)
+		if err != nil {
+			return fmt.Errorf("failed to write to WebSocket: %w", err)
+		}
+	}
+
+	return nil
+}
+
 // Ping sends a ping frame to the WebSocket server to check the connection's liveness.
 // It takes ctx of type context.Context as a parameter.
 // It returns an error if the context is canceled or if there is a failure sending the ping

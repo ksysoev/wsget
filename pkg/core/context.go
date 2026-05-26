@@ -65,6 +65,13 @@ func (c *executionContext) SendRequest(req string) error {
 	return c.cli.wsConn.Send(c.ctx, req)
 }
 
+// SendBinaryRequest sends binary data as a request through the execution context's WebSocket connection.
+// It takes data of type []byte, which represents the binary data to be sent.
+// It returns an error if the WebSocket connection fails to send the binary data.
+func (c *executionContext) SendBinaryRequest(data []byte) error {
+	return c.cli.wsConn.SendBinary(c.ctx, data)
+}
+
 // Ping sends a ping message through the execution context's WebSocket connection.
 // It returns an error if the WebSocket connection fails to send the ping.
 func (c *executionContext) Ping() error {

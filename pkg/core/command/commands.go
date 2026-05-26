@@ -1,6 +1,7 @@
 package command
 
 import (
+	"encoding/base64"
 	"fmt"
 	"os"
 	"time"
@@ -63,6 +64,30 @@ func (c *Send) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 	}
 
 	return NewPrintMsg(core.Message{Type: core.Request, Data: c.request}), nil
+}
+
+type SendBinary struct {
+	request string
+}
+
+// NewSendBinary creates a new SendBinary command with the provided binary request data.
+func NewSendBinary(request string) *SendBinary {
+	return &SendBinary{request}
+}
+
+// Execute sends the binary request using the WebSocket connection and returns a PrintMsg to print the response message.
+func (c *SendBinary) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
+	data, err := base64.StdEncoding.DecodeString(c.request)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode base64 request: %w", err)
+	}
+
+	err = exCtx.SendBinaryRequest(data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send binary request: %w", err)
+	}
+
+	return NewPrintMsg(core.Message{Type: core.RequestBinary, Data: c.request}), nil
 }
 
 type PrintMsg struct {
@@ -215,7 +240,7 @@ func (c *BinEdit) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 		return nil, nil
 	}
 
-	return NewSend(req), nil
+	return NewSendBinary(req), nil
 }
 
 type Sequence struct {

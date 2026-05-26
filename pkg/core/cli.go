@@ -53,6 +53,7 @@ type ExecutionContext interface {
 	PrintToFile(data string) error
 	FormatMessage(msg Message, noColor bool) (string, error)
 	SendRequest(req string) error
+	SendBinaryRequest(data []byte) error
 	WaitForResponse(timeout time.Duration) (Message, error)
 	EditorMode(initBuffer string) (string, error)
 	CommandMode(initBuffer string) (string, error)
@@ -75,6 +76,7 @@ type Executer interface {
 type ConnectionHandler interface {
 	SetOnMessage(func(context.Context, []byte, bool))
 	Send(ctx context.Context, msg string) error
+	SendBinary(ctx context.Context, data []byte) error
 	Ping(ctx context.Context) error
 }
 
