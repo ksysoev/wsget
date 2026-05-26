@@ -736,6 +736,7 @@ func TestConnection_SendBinary_Success(t *testing.T) {
 		}
 
 		msgType <- mt
+
 		received <- data
 	}))
 	defer server.Close()
@@ -822,6 +823,7 @@ func TestConnection_HandleMessage_Binary(t *testing.T) {
 
 	conn.SetOnMessage(func(_ context.Context, data []byte, isBinary bool) {
 		receivedData <- data
+
 		receivedBinary <- isBinary
 	})
 

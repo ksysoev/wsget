@@ -450,10 +450,10 @@ func TestExecutionContext_SendBinaryRequest(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name        string
-		data        []byte
 		sendErr     error
 		expectedErr error
+		name        string
+		data        []byte
 	}{
 		{
 			name:        "Success",
@@ -494,11 +494,11 @@ func TestExecutionContext_BinaryMode(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
+		editorErr      error
+		expectedErr    error
 		name           string
 		editorResult   string
-		editorErr      error
 		expectedResult string
-		expectedErr    error
 	}{
 		{
 			name:           "Success",

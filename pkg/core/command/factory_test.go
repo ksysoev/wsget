@@ -294,30 +294,30 @@ func TestFactory_Create(t *testing.T) {
 					if gotType.request != send.request {
 						t.Errorf("Factory() type %v, got = %v, want %v", gotType, got, tt.want)
 					}
-			case *WaitForResp:
-				wait, ok := tt.want.(*WaitForResp)
-				if !ok {
-					t.Errorf("Factory() type %v, got = %v, want %v", gotType, got, tt.want)
-				}
+				case *WaitForResp:
+					wait, ok := tt.want.(*WaitForResp)
+					if !ok {
+						t.Errorf("Factory() type %v, got = %v, want %v", gotType, got, tt.want)
+					}
 
-				if gotType.timeout != wait.timeout {
-					t.Errorf("Factory() type %v, got = %v, want %v", gotType, got, tt.want)
-				}
-			case *SendBinary:
-				want, ok := tt.want.(*SendBinary)
-				if !ok {
-					t.Errorf("Factory() type %v, got = %v, want %v", gotType, got, tt.want)
-				}
+					if gotType.timeout != wait.timeout {
+						t.Errorf("Factory() type %v, got = %v, want %v", gotType, got, tt.want)
+					}
+				case *SendBinary:
+					want, ok := tt.want.(*SendBinary)
+					if !ok {
+						t.Errorf("Factory() type %v, got = %v, want %v", gotType, got, tt.want)
+					}
 
-				assert.Equal(t, want.request, gotType.request)
-			case *PrintMsg:
-				want, ok := tt.want.(*PrintMsg)
-				if !ok {
-					t.Errorf("Factory() type %v, got = %v, want %v", gotType, got, tt.want)
-				}
+					assert.Equal(t, want.request, gotType.request)
+				case *PrintMsg:
+					want, ok := tt.want.(*PrintMsg)
+					if !ok {
+						t.Errorf("Factory() type %v, got = %v, want %v", gotType, got, tt.want)
+					}
 
-				assert.Equal(t, want.msg, gotType.msg)
-			}
+					assert.Equal(t, want.msg, gotType.msg)
+				}
 			}
 		})
 	}

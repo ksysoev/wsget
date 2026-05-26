@@ -797,6 +797,7 @@ func TestSendBinary_Execute(t *testing.T) {
 				t.Helper()
 				exCtx := core.NewMockExecutionContext(t)
 				exCtx.EXPECT().SendBinaryRequest(validBytes).Return(nil)
+
 				return exCtx
 			},
 			expectedNextCmd: NewPrintMsg(core.Message{Type: core.RequestBinary, Data: validBase64}),
@@ -819,6 +820,7 @@ func TestSendBinary_Execute(t *testing.T) {
 				t.Helper()
 				exCtx := core.NewMockExecutionContext(t)
 				exCtx.EXPECT().SendBinaryRequest(validBytes).Return(assert.AnError)
+
 				return exCtx
 			},
 			expectedNextCmd: nil,
@@ -862,6 +864,7 @@ func TestBinEdit_Execute(t *testing.T) {
 				t.Helper()
 				exCtx := core.NewMockExecutionContext(t)
 				exCtx.EXPECT().BinaryMode("").Return("dGVzdA==", nil)
+
 				return exCtx
 			},
 			expectedNextCmd: NewSendBinary("dGVzdA=="),
@@ -873,6 +876,7 @@ func TestBinEdit_Execute(t *testing.T) {
 				t.Helper()
 				exCtx := core.NewMockExecutionContext(t)
 				exCtx.EXPECT().BinaryMode("").Return("", nil)
+
 				return exCtx
 			},
 			expectedNextCmd: nil,
@@ -884,6 +888,7 @@ func TestBinEdit_Execute(t *testing.T) {
 				t.Helper()
 				exCtx := core.NewMockExecutionContext(t)
 				exCtx.EXPECT().BinaryMode("").Return("", assert.AnError)
+
 				return exCtx
 			},
 			expectedNextCmd: nil,
