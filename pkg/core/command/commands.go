@@ -1,6 +1,7 @@
 package command
 
 import (
+	"encoding/base64"
 	"fmt"
 	"os"
 	"time"
@@ -65,6 +66,30 @@ func (c *Send) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 	return NewPrintMsg(core.Message{Type: core.Request, Data: c.request}), nil
 }
 
+type SendBinary struct {
+	request string
+}
+
+// NewSendBinary creates a new SendBinary command with the provided binary request data.
+func NewSendBinary(request string) *SendBinary {
+	return &SendBinary{request}
+}
+
+// Execute sends the binary request using the WebSocket connection and returns a PrintMsg to print the response message.
+func (c *SendBinary) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
+	data, err := base64.StdEncoding.DecodeString(c.request)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode base64 request: %w", err)
+	}
+
+	err = exCtx.SendBinaryRequest(data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send binary request: %w", err)
+	}
+
+	return NewPrintMsg(core.Message{Type: core.RequestBinary, Data: c.request}), nil
+}
+
 type PrintMsg struct {
 	msg core.Message
 }
@@ -90,6 +115,10 @@ func (c *PrintMsg) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 		err = exCtx.Print("->\n", color.FgGreen)
 	case core.Response:
 		err = exCtx.Print("<-\n", color.FgRed)
+	case core.ResponseBinary:
+		err = exCtx.Print("0101 <-\n", color.FgRed)
+	case core.RequestBinary:
+		err = exCtx.Print("0101 ->\n", color.FgGreen)
 	default:
 		return nil, fmt.Errorf("unsupported message type: %s", c.msg.Type.String())
 	}
@@ -188,6 +217,30 @@ func (c *CmdEdit) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 	}
 
 	return cmd, nil
+}
+
+type BinEdit struct{}
+
+// NewBinEdit initializes and returns a new instance of BinEdit.
+// It does not take any parameters.
+// It returns a pointer to BinEdit, which can execute a binary edit command.
+func NewBinEdit() *BinEdit {
+	return &BinEdit{}
+}
+
+// Execute executes the BinEdit command and returns a core.Executer and an error.
+// It prompts the user to enter binary data in the binary editor and returns a SendBinary command.
+func (c *BinEdit) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
+	req, err := exCtx.BinaryMode("")
+	if err != nil {
+		return nil, fmt.Errorf("failed to enter editor mode: %w", err)
+	}
+
+	if req == "" {
+		return nil, nil
+	}
+
+	return NewSendBinary(req), nil
 }
 
 type Sequence struct {

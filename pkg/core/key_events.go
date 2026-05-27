@@ -9,6 +9,7 @@ type KeyEvent struct {
 
 const (
 	KeyEsc          Key = 27
+	KeyCtrlB        Key = 2
 	KeyCtrlC        Key = 3
 	KeyCtrlD        Key = 4
 	KeyEnter        Key = 13

@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"time"
@@ -52,9 +53,11 @@ type ExecutionContext interface {
 	PrintToFile(data string) error
 	FormatMessage(msg Message, noColor bool) (string, error)
 	SendRequest(req string) error
+	SendBinaryRequest(data []byte) error
 	WaitForResponse(timeout time.Duration) (Message, error)
 	EditorMode(initBuffer string) (string, error)
 	CommandMode(initBuffer string) (string, error)
+	BinaryMode(initBuffer string) (string, error)
 	CreateCommand(raw string) (Executer, error)
 	Ping() error
 }
@@ -62,6 +65,7 @@ type ExecutionContext interface {
 type Editor interface {
 	Edit(ctx context.Context, initBuffer string) (string, error)
 	CommandMode(ctx context.Context, initBuffer string) (string, error)
+	BinaryEdit(ctx context.Context, initBuffer string) (string, error)
 	SetInput(input <-chan KeyEvent)
 }
 
@@ -70,8 +74,9 @@ type Executer interface {
 }
 
 type ConnectionHandler interface {
-	SetOnMessage(func(context.Context, []byte))
+	SetOnMessage(func(context.Context, []byte, bool))
 	Send(ctx context.Context, msg string) error
+	SendBinary(ctx context.Context, data []byte) error
 	Ping(ctx context.Context) error
 }
 
@@ -91,7 +96,17 @@ func NewCLI(cmdFactory CommandFactory, wsConn ConnectionHandler, output io.Write
 		cmdFactory:  cmdFactory,
 	}
 
-	wsConn.SetOnMessage(func(ctx context.Context, msg []byte) {
+	wsConn.SetOnMessage(func(ctx context.Context, msg []byte, isBinary bool) {
+		if isBinary {
+			data := base64.StdEncoding.EncodeToString(msg)
+			c.onMessage(ctx, Message{
+				Data: data,
+				Type: ResponseBinary,
+			})
+
+			return
+		}
+
 		c.onMessage(ctx, Message{
 			Data: string(msg),
 			Type: Response,
@@ -165,6 +180,13 @@ func (c *CLI) Run(ctx context.Context, opts RunOptions) error {
 				}
 
 				c.commands <- cmd
+			case KeyCtrlB:
+				cmd, err := c.cmdFactory.Create("editbin")
+				if err != nil {
+					return fmt.Errorf("fail to create editbin command: %w", err)
+				}
+
+				c.commands <- cmd
 			default:
 				if event.Key > 0 {
 					continue
@@ -216,6 +238,8 @@ type MessageType uint8
 const (
 	Request MessageType = iota
 	Response
+	RequestBinary
+	ResponseBinary
 )
 
 func (mt MessageType) String() string {
@@ -224,6 +248,10 @@ func (mt MessageType) String() string {
 		return "Request"
 	case Response:
 		return "Response"
+	case RequestBinary:
+		return "RequestBinary"
+	case ResponseBinary:
+		return "ResponseBinary"
 	default:
 		return "Not defined"
 	}

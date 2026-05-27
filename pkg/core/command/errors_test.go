@@ -61,7 +61,7 @@ func TestInvalidTimeout_Error(t *testing.T) {
 
 func TestEmptyCommand_Error(t *testing.T) {
 	err := ErrEmptyCommand{}
-	want := "empty command"
+	want := errEmptyCommandMsg
 
 	if got := err.Error(); got != want {
 		t.Errorf("Error() = %v, want %v", got, want)

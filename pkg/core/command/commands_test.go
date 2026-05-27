@@ -62,7 +62,7 @@ func TestPrintMsg_Execute(t *testing.T) {
 		{
 			name: "UnsupportedMessageType",
 			message: core.Message{
-				Type: core.MessageType(3),
+				Type: core.MessageType(5),
 				Data: "unsupported",
 			},
 			expectedErr: "unsupported message type",
@@ -109,6 +109,28 @@ func TestPrintMsg_Execute(t *testing.T) {
 			mockPrintError:   nil,
 			expectedErr:      "",
 		},
+		{
+			name: "RequestBinaryMessage_Success",
+			message: core.Message{
+				Type: core.RequestBinary,
+				Data: "dGVzdA==",
+			},
+			mockFormatError:  nil,
+			mockFormatOutput: "formatted binary request",
+			mockPrintError:   nil,
+			expectedErr:      "",
+		},
+		{
+			name: "ResponseBinaryMessage_Success",
+			message: core.Message{
+				Type: core.ResponseBinary,
+				Data: "dGVzdA==",
+			},
+			mockFormatError:  nil,
+			mockFormatOutput: "formatted binary response",
+			mockPrintError:   nil,
+			expectedErr:      "",
+		},
 	}
 
 	for _, tt := range tests {
@@ -137,6 +159,16 @@ func TestPrintMsg_Execute(t *testing.T) {
 				case core.Response:
 					exCtx.EXPECT().
 						Print("<-\n", color.FgRed).
+						Return(tt.mockPrintError).
+						Maybe()
+				case core.RequestBinary:
+					exCtx.EXPECT().
+						Print("0101 ->\n", color.FgGreen).
+						Return(tt.mockPrintError).
+						Maybe()
+				case core.ResponseBinary:
+					exCtx.EXPECT().
+						Print("0101 <-\n", color.FgRed).
 						Return(tt.mockPrintError).
 						Maybe()
 				}
@@ -743,4 +775,144 @@ func TestPingExecute_Failure(t *testing.T) {
 
 	assert.Nil(t, nextCmd)
 	assert.ErrorIs(t, err, assert.AnError)
+}
+
+func TestSendBinary_Execute(t *testing.T) {
+	t.Parallel()
+
+	validBase64 := "dGVzdA==" // "test"
+	validBytes := []byte("test")
+
+	tests := []struct {
+		mockExecutionCtx func(t *testing.T) core.ExecutionContext
+		expectedNextCmd  core.Executer
+		expectedErr      string
+		name             string
+		request          string
+	}{
+		{
+			name:    "Success",
+			request: validBase64,
+			mockExecutionCtx: func(t *testing.T) core.ExecutionContext {
+				t.Helper()
+				exCtx := core.NewMockExecutionContext(t)
+				exCtx.EXPECT().SendBinaryRequest(validBytes).Return(nil)
+
+				return exCtx
+			},
+			expectedNextCmd: NewPrintMsg(core.Message{Type: core.RequestBinary, Data: validBase64}),
+			expectedErr:     "",
+		},
+		{
+			name:    "InvalidBase64",
+			request: "not-valid!!!",
+			mockExecutionCtx: func(t *testing.T) core.ExecutionContext {
+				t.Helper()
+				return core.NewMockExecutionContext(t)
+			},
+			expectedNextCmd: nil,
+			expectedErr:     "failed to decode base64 request",
+		},
+		{
+			name:    "SendBinaryRequestError",
+			request: validBase64,
+			mockExecutionCtx: func(t *testing.T) core.ExecutionContext {
+				t.Helper()
+				exCtx := core.NewMockExecutionContext(t)
+				exCtx.EXPECT().SendBinaryRequest(validBytes).Return(assert.AnError)
+
+				return exCtx
+			},
+			expectedNextCmd: nil,
+			expectedErr:     "failed to send binary request",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			exCtx := tt.mockExecutionCtx(t)
+			cmd := NewSendBinary(tt.request)
+			nextCmd, err := cmd.Execute(exCtx)
+
+			if tt.expectedErr != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedErr)
+				assert.Nil(t, nextCmd)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expectedNextCmd, nextCmd)
+			}
+		})
+	}
+}
+
+func TestBinEdit_Execute(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		mockExecutionCtx func(t *testing.T) core.ExecutionContext
+		expectedNextCmd  core.Executer
+		expectedErr      string
+		name             string
+	}{
+		{
+			name: "Success",
+			mockExecutionCtx: func(t *testing.T) core.ExecutionContext {
+				t.Helper()
+				exCtx := core.NewMockExecutionContext(t)
+				exCtx.EXPECT().BinaryMode("").Return("dGVzdA==", nil)
+
+				return exCtx
+			},
+			expectedNextCmd: NewSendBinary("dGVzdA=="),
+			expectedErr:     "",
+		},
+		{
+			name: "EmptyResponse",
+			mockExecutionCtx: func(t *testing.T) core.ExecutionContext {
+				t.Helper()
+				exCtx := core.NewMockExecutionContext(t)
+				exCtx.EXPECT().BinaryMode("").Return("", nil)
+
+				return exCtx
+			},
+			expectedNextCmd: nil,
+			expectedErr:     "",
+		},
+		{
+			name: "BinaryModeError",
+			mockExecutionCtx: func(t *testing.T) core.ExecutionContext {
+				t.Helper()
+				exCtx := core.NewMockExecutionContext(t)
+				exCtx.EXPECT().BinaryMode("").Return("", assert.AnError)
+
+				return exCtx
+			},
+			expectedNextCmd: nil,
+			expectedErr:     "failed to enter editor mode",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			exCtx := tt.mockExecutionCtx(t)
+			cmd := NewBinEdit()
+			nextCmd, err := cmd.Execute(exCtx)
+
+			if tt.expectedErr != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedErr)
+				assert.Nil(t, nextCmd)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expectedNextCmd, nextCmd)
+			}
+		})
+	}
 }

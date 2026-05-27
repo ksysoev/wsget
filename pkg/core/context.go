@@ -65,6 +65,13 @@ func (c *executionContext) SendRequest(req string) error {
 	return c.cli.wsConn.Send(c.ctx, req)
 }
 
+// SendBinaryRequest sends binary data as a request through the execution context's WebSocket connection.
+// It takes data of type []byte, which represents the binary data to be sent.
+// It returns an error if the WebSocket connection fails to send the binary data.
+func (c *executionContext) SendBinaryRequest(data []byte) error {
+	return c.cli.wsConn.SendBinary(c.ctx, data)
+}
+
 // Ping sends a ping message through the execution context's WebSocket connection.
 // It returns an error if the WebSocket connection fails to send the ping.
 func (c *executionContext) Ping() error {
@@ -104,6 +111,13 @@ func (c *executionContext) EditorMode(initBuffer string) (string, error) {
 // It returns a string representing the final buffer after editing and an error if command mode fails.
 func (c *executionContext) CommandMode(initBuffer string) (string, error) {
 	return c.cli.editor.CommandMode(c.ctx, initBuffer)
+}
+
+// BinaryMode initiates binary edit mode in the editor with the provided initial buffer.
+// It takes initBuffer of type string, which is the input buffer to initialize the binary edit mode.
+// It returns a string representing the final buffer after editing and an error if binary edit mode fails.
+func (c *executionContext) BinaryMode(initBuffer string) (string, error) {
+	return c.cli.editor.BinaryEdit(c.ctx, initBuffer)
 }
 
 // CreateCommand creates an Executer from a raw command string.

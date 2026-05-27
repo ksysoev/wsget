@@ -445,3 +445,95 @@ func TestExecutionContext_Ping(t *testing.T) {
 
 	assert.NoError(t, err, "Expected no error on Ping")
 }
+
+func TestExecutionContext_SendBinaryRequest(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		sendErr     error
+		expectedErr error
+		name        string
+		data        []byte
+	}{
+		{
+			name:        "Success",
+			data:        []byte("test"),
+			sendErr:     nil,
+			expectedErr: nil,
+		},
+		{
+			name:        "Error",
+			data:        []byte("test"),
+			sendErr:     assert.AnError,
+			expectedErr: assert.AnError,
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			mockWsConn := NewMockConnectionHandler(t)
+			mockWsConn.EXPECT().SendBinary(t.Context(), tt.data).Return(tt.sendErr)
+
+			excCtx := &executionContext{
+				ctx: t.Context(),
+				cli: &CLI{
+					wsConn: mockWsConn,
+				},
+			}
+
+			err := excCtx.SendBinaryRequest(tt.data)
+			assert.ErrorIs(t, err, tt.expectedErr)
+		})
+	}
+}
+
+func TestExecutionContext_BinaryMode(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		editorErr      error
+		expectedErr    error
+		name           string
+		editorResult   string
+		expectedResult string
+	}{
+		{
+			name:           "Success",
+			editorResult:   "dGVzdA==",
+			editorErr:      nil,
+			expectedResult: "dGVzdA==",
+			expectedErr:    nil,
+		},
+		{
+			name:           "Error",
+			editorResult:   "",
+			editorErr:      assert.AnError,
+			expectedResult: "",
+			expectedErr:    assert.AnError,
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			mockEditor := NewMockEditor(t)
+			mockEditor.EXPECT().BinaryEdit(t.Context(), "").Return(tt.editorResult, tt.editorErr)
+
+			excCtx := &executionContext{
+				ctx: t.Context(),
+				cli: &CLI{
+					editor: mockEditor,
+				},
+			}
+
+			result, err := excCtx.BinaryMode("")
+			assert.ErrorIs(t, err, tt.expectedErr)
+			assert.Equal(t, tt.expectedResult, result)
+		})
+	}
+}

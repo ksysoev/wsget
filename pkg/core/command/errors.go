@@ -1,5 +1,7 @@
 package command
 
+const errEmptyCommandMsg = "empty command"
+
 type ErrUnknownCommand struct {
 	Command string
 }
@@ -45,7 +47,7 @@ func (e ErrInvalidTimeout) Error() string {
 type ErrEmptyCommand struct{}
 
 func (e ErrEmptyCommand) Error() string {
-	return "empty command"
+	return errEmptyCommandMsg
 }
 
 type ErrEmptyMacro struct {

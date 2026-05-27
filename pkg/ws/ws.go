@@ -30,7 +30,7 @@ type Connection struct {
 	output    io.Writer
 	url       *url.URL
 	ws        *websocket.Conn
-	onMessage func(context.Context, []byte)
+	onMessage func(context.Context, []byte, bool)
 	opts      *websocket.DialOptions
 	ready     chan struct{}
 	msgSize   int64
@@ -100,9 +100,9 @@ func New(wsURL string, opts *Options) (*Connection, error) {
 }
 
 // SetOnMessage sets the callback function to handle incoming messages on the connection.
-// It takes onMessage, a function with parameters context.Context and a byte slice [], as input.
+// It takes onMessage, a function with parameters context.Context, a byte slice [] and bool flag as input.
 // The method does not return any value and is thread-safe, locking access to the callback function.
-func (c *Connection) SetOnMessage(onMessage func(context.Context, []byte)) {
+func (c *Connection) SetOnMessage(onMessage func(context.Context, []byte, bool)) {
 	c.l.Lock()
 	defer c.l.Unlock()
 
@@ -194,19 +194,17 @@ func (c *Connection) handleResponses(ctx context.Context, ws *websocket.Conn) er
 
 // handleMessage processes an incoming WebSocket message for the Connection.
 // It takes ctx of type context.Context, msgType of type websocket.MessageType, and msgReader of type reader.
-// It returns an error if the message type is binary or if reading from the reader fails.
-// The function reads all data from msgReader and invokes the onMessage callback with the read data.
+// It returns an error if reading from the reader fails.
+// The function reads all data from msgReader and invokes the onMessage callback with the read data and a binary flag.
 func (c *Connection) handleMessage(ctx context.Context, msgType websocket.MessageType, msgReader reader) error {
-	if msgType == websocket.MessageBinary {
-		return fmt.Errorf("unexpected binary message")
-	}
+	isBinary := msgType == websocket.MessageBinary
 
 	data, err := io.ReadAll(msgReader)
 	if err != nil {
 		return fmt.Errorf("fail to read message: %w", err)
 	}
 
-	c.onMessage(ctx, data)
+	c.onMessage(ctx, data, isBinary)
 
 	return nil
 }
@@ -256,6 +254,35 @@ func (c *Connection) Send(ctx context.Context, msg string) error {
 	}
 
 	err := ws.Write(ctx, websocket.MessageText, []byte(msg))
+	if err != nil {
+		err = handleError(err)
+		if err != nil {
+			return fmt.Errorf("failed to write to WebSocket: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// SendBinary transmits binary data over an established WebSocket connection within a given context.
+// It takes ctx of type context.Context and data of type []byte as parameters.
+// It returns an error if the context is canceled or if there is a failure writing to the WebSocket.
+func (c *Connection) SendBinary(ctx context.Context, data []byte) error {
+	select {
+	case <-c.ready:
+	case <-ctx.Done():
+		return fmt.Errorf("context canceled while waiting to send: %w", ctx.Err())
+	}
+
+	c.l.Lock()
+	ws := c.ws
+	c.l.Unlock()
+
+	if ws == nil {
+		return fmt.Errorf("connection not established")
+	}
+
+	err := ws.Write(ctx, websocket.MessageBinary, data)
 	if err != nil {
 		err = handleError(err)
 		if err != nil {

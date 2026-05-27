@@ -2,12 +2,14 @@ package core
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"os"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -118,9 +120,9 @@ func TestCLI_OnKeyEvent(t *testing.T) {
 func TestCLI_OnMessage(t *testing.T) {
 	wsConn := NewMockConnectionHandler(t)
 
-	var onMessageFunc func(context.Context, []byte)
+	var onMessageFunc func(context.Context, []byte, bool)
 
-	wsConn.EXPECT().SetOnMessage(mock.Anything).Run(func(f func(context.Context, []byte)) {
+	wsConn.EXPECT().SetOnMessage(mock.Anything).Run(func(f func(context.Context, []byte, bool)) {
 		onMessageFunc = f
 	})
 
@@ -135,9 +137,10 @@ func TestCLI_OnMessage(t *testing.T) {
 	// Test that onMessage is called and sends message to messages channel
 	ctx := context.Background()
 	testMsg := []byte("test message")
+	isBinary := false
 
 	// Send message in a goroutine
-	go onMessageFunc(ctx, testMsg)
+	go onMessageFunc(ctx, testMsg, isBinary)
 
 	// Receive the message from the messages channel with timeout
 	select {
@@ -157,9 +160,9 @@ func TestCLI_OnMessage(t *testing.T) {
 func TestCLI_OnMessage_ContextCancelled(t *testing.T) {
 	wsConn := NewMockConnectionHandler(t)
 
-	var onMessageFunc func(context.Context, []byte)
+	var onMessageFunc func(context.Context, []byte, bool)
 
-	wsConn.EXPECT().SetOnMessage(mock.Anything).Run(func(f func(context.Context, []byte)) {
+	wsConn.EXPECT().SetOnMessage(mock.Anything).Run(func(f func(context.Context, []byte, bool)) {
 		onMessageFunc = f
 	})
 
@@ -176,12 +179,13 @@ func TestCLI_OnMessage_ContextCancelled(t *testing.T) {
 	cancel() // Cancel immediately
 
 	testMsg := []byte("test message")
+	testIsBinary := false
 
 	// This should not block
 	done := make(chan bool)
 
 	go func() {
-		onMessageFunc(ctx, testMsg)
+		onMessageFunc(ctx, testMsg, testIsBinary)
 
 		done <- true
 	}()
@@ -214,6 +218,16 @@ func TestMessageType_String(t *testing.T) {
 			name:     "Undefined type",
 			msgType:  MessageType(99),
 			expected: "Not defined",
+		},
+		{
+			name:     "RequestBinary type",
+			msgType:  RequestBinary,
+			expected: "RequestBinary",
+		},
+		{
+			name:     "ResponseBinary type",
+			msgType:  ResponseBinary,
+			expected: "ResponseBinary",
 		},
 	}
 
@@ -269,6 +283,12 @@ func TestCLI_Run_KeyboardEvents(t *testing.T) {
 			keyEvent:     KeyEvent{Key: KeyCtrlL},
 			expectedCmd:  "",
 			shouldCreate: false,
+		},
+		{
+			name:         "Ctrl+B triggers editbin command",
+			keyEvent:     KeyEvent{Key: KeyCtrlB},
+			expectedCmd:  "editbin",
+			shouldCreate: true,
 		},
 	}
 
@@ -419,9 +439,9 @@ func TestCLI_OnKeyEvent_NonBlockingAfterRunExits(t *testing.T) {
 func TestCLI_Run_MessagesChannel(t *testing.T) {
 	wsConn := NewMockConnectionHandler(t)
 
-	var onMessageFunc func(context.Context, []byte)
+	var onMessageFunc func(context.Context, []byte, bool)
 
-	wsConn.EXPECT().SetOnMessage(mock.Anything).Run(func(f func(context.Context, []byte)) {
+	wsConn.EXPECT().SetOnMessage(mock.Anything).Run(func(f func(context.Context, []byte, bool)) {
 		onMessageFunc = f
 	})
 
@@ -453,7 +473,7 @@ func TestCLI_Run_MessagesChannel(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 
 	// Send a message through the WebSocket handler
-	go onMessageFunc(ctx, []byte("test message"))
+	go onMessageFunc(ctx, []byte("test message"), false)
 
 	// Wait for error or timeout
 	select {
@@ -464,5 +484,37 @@ func TestCLI_Run_MessagesChannel(t *testing.T) {
 	case <-time.After(100 * time.Millisecond):
 		t.Error("Test timed out waiting for message processing")
 		cancel()
+	}
+}
+
+func TestCLI_OnMessage_Binary(t *testing.T) {
+	wsConn := NewMockConnectionHandler(t)
+
+	var onMessageFunc func(context.Context, []byte, bool)
+
+	wsConn.EXPECT().SetOnMessage(mock.Anything).Run(func(f func(context.Context, []byte, bool)) {
+		onMessageFunc = f
+	})
+
+	factory := NewMockCommandFactory(t)
+
+	editor := NewMockEditor(t)
+	editor.EXPECT().SetInput(mock.Anything)
+
+	output := os.Stdout
+	cli := NewCLI(factory, wsConn, output, editor, NewMockFormater(t))
+
+	ctx := context.Background()
+	testMsg := []byte{0x01, 0x02, 0x03}
+	expectedData := base64.StdEncoding.EncodeToString(testMsg)
+
+	go onMessageFunc(ctx, testMsg, true)
+
+	select {
+	case receivedMsg := <-cli.messages:
+		assert.Equal(t, expectedData, receivedMsg.Data, "binary message data should be base64-encoded")
+		assert.Equal(t, ResponseBinary, receivedMsg.Type, "binary message type should be ResponseBinary")
+	case <-time.After(100 * time.Millisecond):
+		t.Error("Timeout waiting for binary message")
 	}
 }
