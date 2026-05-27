@@ -71,8 +71,9 @@ Use Enter to input request and send it, Ctrl+C to exit
 
 | Key/Combination | Action |
 | --- |---|
-| **Esc** / **Ctrl + C** / **Ctrl + D** | Discconnect from the server. |
+| **Esc** / **Ctrl + C** / **Ctrl + D** | Disconnect from the server. |
 | **Enter** | Enter request editing mode. |
+| **Ctrl + B** | Enter binary editor mode to compose and send a binary WebSocket message. |
 | **Ctrl + L** | Clear the terminal and redisplay the welcome message. |
 | **:** | Enter command mode to execute a specific command. |
 
@@ -123,6 +124,15 @@ Use Enter to input request and send it, Ctrl+C to exit
 |---| --- |
 | **Ctrl + S** | Complete editing. |
 | **Ctrl + C** or **Ctrl + D** or **Esc** | Interrupt the editing process; cancel and terminate editing. |
+
+## Binary Editor Mode Keyboard Shortcuts
+
+Binary editor mode is entered from connection mode with **Ctrl + B**. It allows composing and sending binary WebSocket messages. Input is expected as a standard base64-encoded string using the standard alphabet, including padding (`=`) when required, and without whitespace or newlines. The same navigation and editing shortcuts from the request editor apply. Mode-specific shortcuts are listed below.
+
+| Key/Combination | Action |
+| --- | --- |
+| **Ctrl + S** | Complete editing and send the binary message. |
+| **Ctrl + C** or **Ctrl + D** or **Esc** | Cancel and exit binary editor mode. |
 
 ## Macros
 
