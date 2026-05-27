@@ -173,6 +173,25 @@ func TestFormat_formatJSONMessage(t *testing.T) {
 	}
 }
 
+func TestFormat_formatJSONMessage_BinaryTypes(t *testing.T) {
+	formater := NewFormat()
+
+	data := map[string]interface{}{
+		"status": "200",
+		"body":   "Hello, world!",
+	}
+
+	expectedMsg := "{\n  \"body\": \"Hello, world!\",\n  \"status\": \"200\"\n}"
+
+	formattedRequestBinary, err := formater.formatJSONMessage("RequestBinary", data)
+	assert.NoError(t, err)
+	assert.Equal(t, expectedMsg, formattedRequestBinary)
+
+	formattedResponseBinary, err := formater.formatJSONMessage("ResponseBinary", data)
+	assert.NoError(t, err)
+	assert.Equal(t, expectedMsg, formattedResponseBinary)
+}
+
 func TestFormat_parseJSON(t *testing.T) {
 	formater := NewFormat()
 
