@@ -127,7 +127,7 @@ Use Enter to input request and send it, Ctrl+C to exit
 
 ## Binary Editor Mode Keyboard Shortcuts
 
-Binary editor mode is entered from connection mode with **Ctrl + B**. It allows composing and sending binary WebSocket messages. Input is expected as a base64-encoded string. The same navigation and editing shortcuts from the request editor apply. Mode-specific shortcuts are listed below.
+Binary editor mode is entered from connection mode with **Ctrl + B**. It allows composing and sending binary WebSocket messages. Input is expected as a standard base64-encoded string using the standard alphabet, including padding (`=`) when required, and without whitespace or newlines. The same navigation and editing shortcuts from the request editor apply. Mode-specific shortcuts are listed below.
 
 | Key/Combination | Action |
 | --- | --- |
