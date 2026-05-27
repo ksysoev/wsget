@@ -116,9 +116,9 @@ func (c *PrintMsg) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 	case core.Response:
 		err = exCtx.Print("<-\n", color.FgRed)
 	case core.ResponseBinary:
-		err = exCtx.Print("0101 ->\n", color.FgGreen)
-	case core.RequestBinary:
 		err = exCtx.Print("0101 <-\n", color.FgRed)
+	case core.RequestBinary:
+		err = exCtx.Print("0101 ->\n", color.FgGreen)
 	default:
 		return nil, fmt.Errorf("unsupported message type: %s", c.msg.Type.String())
 	}
@@ -221,15 +221,15 @@ func (c *CmdEdit) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 
 type BinEdit struct{}
 
-// NewCmdEdit initializes and returns a new instance of CmdEdit.
+// NewBinEdit initializes and returns a new instance of BinEdit.
 // It does not take any parameters.
-// It returns a pointer to CmdEdit, which can execute an edit command.
+// It returns a pointer to BinEdit, which can execute a binary edit command.
 func NewBinEdit() *BinEdit {
 	return &BinEdit{}
 }
 
-// Execute executes the CmdEdit and returns a core.Executer and an error.
-// It prompts the user to edit a command and returns the corresponding Command object.
+// Execute executes the BinEdit command and returns a core.Executer and an error.
+// It prompts the user to enter binary data in the binary editor and returns a SendBinary command.
 func (c *BinEdit) Execute(exCtx core.ExecutionContext) (core.Executer, error) {
 	req, err := exCtx.BinaryMode("")
 	if err != nil {

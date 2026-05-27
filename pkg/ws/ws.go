@@ -194,8 +194,8 @@ func (c *Connection) handleResponses(ctx context.Context, ws *websocket.Conn) er
 
 // handleMessage processes an incoming WebSocket message for the Connection.
 // It takes ctx of type context.Context, msgType of type websocket.MessageType, and msgReader of type reader.
-// It returns an error if the message type is binary or if reading from the reader fails.
-// The function reads all data from msgReader and invokes the onMessage callback with the read data.
+// It returns an error if reading from the reader fails.
+// The function reads all data from msgReader and invokes the onMessage callback with the read data and a binary flag.
 func (c *Connection) handleMessage(ctx context.Context, msgType websocket.MessageType, msgReader reader) error {
 	isBinary := msgType == websocket.MessageBinary
 

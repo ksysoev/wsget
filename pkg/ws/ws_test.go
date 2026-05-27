@@ -65,7 +65,7 @@ func TestConnection_HandleMessage(t *testing.T) {
 		isBinary   bool
 	}{
 		{
-			name:       "Unexpected binary message",
+			name:       "Successful binary message",
 			msgType:    websocket.MessageBinary,
 			msgContent: "",
 			isBinary:   true,
