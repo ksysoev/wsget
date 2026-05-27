@@ -71,7 +71,7 @@ Use Enter to input request and send it, Ctrl+C to exit
 
 | Key/Combination | Action |
 | --- |---|
-| **Esc** / **Ctrl + C** / **Ctrl + D** | Discconnect from the server. |
+| **Esc** / **Ctrl + C** / **Ctrl + D** | Disconnect from the server. |
 | **Enter** | Enter request editing mode. |
 | **Ctrl + B** | Enter binary editor mode to compose and send a binary WebSocket message. |
 | **Ctrl + L** | Clear the terminal and redisplay the welcome message. |
