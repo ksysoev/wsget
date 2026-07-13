@@ -386,9 +386,12 @@ func TestCLI_ChannelsClosedAfterRun(t *testing.T) {
 		t.Error("commands should be closed after Run exits")
 	}
 
-	_, ok = <-cli.messages
-	if ok {
-		t.Error("messages should be closed after Run exits")
+	select {
+	case _, ok = <-cli.messages:
+		if !ok {
+			t.Error("messages should remain open after Run exits")
+		}
+	default:
 	}
 }
 
@@ -433,6 +436,52 @@ func TestCLI_OnKeyEvent_NonBlockingAfterRunExits(t *testing.T) {
 		// success — OnKeyEvent returned without blocking
 	case <-time.After(100 * time.Millisecond):
 		t.Error("OnKeyEvent blocked after Run exited")
+	}
+}
+
+func TestCLI_OnMessage_NonBlockingAfterRunExits(t *testing.T) {
+	wsConn := NewMockConnectionHandler(t)
+
+	var onMessageFunc func(context.Context, []byte, bool)
+
+	wsConn.EXPECT().SetOnMessage(mock.Anything).Run(func(f func(context.Context, []byte, bool)) {
+		onMessageFunc = f
+	})
+
+	factory := NewMockCommandFactory(t)
+
+	editor := NewMockEditor(t)
+	editor.EXPECT().SetInput(mock.Anything)
+
+	cli := NewCLI(factory, wsConn, os.Stdout, editor, NewMockFormater(t))
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	errCh := make(chan error, 1)
+
+	go func() {
+		errCh <- cli.Run(ctx, RunOptions{})
+	}()
+
+	cancel()
+
+	select {
+	case <-errCh:
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("Run did not exit after context cancellation")
+	}
+
+	done := make(chan struct{})
+
+	go func() {
+		onMessageFunc(context.Background(), []byte("response"), false)
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(100 * time.Millisecond):
+		t.Error("onMessage blocked after Run exited")
 	}
 }
 

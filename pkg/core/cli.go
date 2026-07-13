@@ -129,6 +129,7 @@ func (c *CLI) onMessage(ctx context.Context, msg Message) {
 	select {
 	case c.messages <- msg:
 	case <-ctx.Done():
+	case <-c.done:
 	}
 }
 
@@ -138,7 +139,6 @@ func (c *CLI) Run(ctx context.Context, opts RunOptions) error {
 	defer func() {
 		close(c.done)
 		c.showCursor()
-		close(c.messages)
 		close(c.commands)
 	}()
 
