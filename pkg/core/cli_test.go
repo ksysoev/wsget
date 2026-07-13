@@ -463,7 +463,6 @@ func TestCLI_OnMessage_NonBlockingAfterRunExits(t *testing.T) {
 		errCh <- cli.Run(ctx, RunOptions{})
 	}()
 
-	time.Sleep(10 * time.Millisecond)
 	cancel()
 
 	select {
