@@ -48,6 +48,37 @@ By default, wsget will print the data received from the WebSocket server only to
 wsget wss://ws.postman-echo.com/raw  -o output.txt
 ```
 
+## CI / Headless Usage
+
+wsget automatically detects when it is running without a terminal (e.g. GitHub Actions, Docker, scripts) and disables interactive keyboard input. No extra flags are needed — the following patterns work out of the box in headless environments:
+
+**Send a request and wait for one response, then exit:**
+```
+wsget wss://example.com -r '{"hello":"world"}' -w 5
+```
+
+**Run a YAML script** (make sure the script ends with `exit`):
+```yaml
+# script.yaml
+- send {"my":"payload"}
+- wait 10
+- exit
+```
+```
+wsget wss://example.com -i script.yaml
+```
+
+**Force headless mode explicitly** (overrides the auto-detection):
+```
+wsget wss://example.com --no-input -i script.yaml
+```
+
+**Example GitHub Actions step:**
+```yaml
+- name: Test WebSocket server
+  run: wsget wss://example.com -r '{"ping":1}' -w 5
+```
+
 Example:
 
 ```

@@ -35,8 +35,9 @@ type CLI struct {
 }
 
 type RunOptions struct {
-	OutputFile io.Writer
-	Commands   []Executer
+	OutputFile  io.Writer
+	Commands    []Executer
+	Interactive bool
 }
 
 type Formater interface {
@@ -138,13 +139,16 @@ func (c *CLI) onMessage(ctx context.Context, msg Message) {
 func (c *CLI) Run(ctx context.Context, opts RunOptions) error {
 	defer func() {
 		close(c.done)
-		c.showCursor()
+		if opts.Interactive {
+			c.showCursor()
+		}
 		close(c.commands)
 	}()
 
-	c.hideCursor()
-
-	_, _ = fmt.Fprintln(c.output, WelcomMessage)
+	if opts.Interactive {
+		c.hideCursor()
+		_, _ = fmt.Fprintln(c.output, WelcomMessage)
+	}
 
 	for _, cmd := range opts.Commands {
 		c.commands <- cmd

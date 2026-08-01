@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/mattn/go-isatty"
 	"github.com/ksysoev/wsget/pkg/core"
 	command2 "github.com/ksysoev/wsget/pkg/core/command"
 	"github.com/ksysoev/wsget/pkg/core/edit"
@@ -126,23 +127,27 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 
 	client := core.NewCLI(cmdFactory, wsConn, os.Stdout, editor, formater.NewFormat())
 
+	isInteractive := !args.noInput && isatty.IsTerminal(os.Stdin.Fd())
+
 	keyboard := input.NewKeyboard(client)
 	defer keyboard.Close()
 
-	opts, err := initRunOptions(args)
+	opts, err := initRunOptions(args, isInteractive)
 	if err != nil {
 		return fmt.Errorf("failed to initialize run options: %w", err)
 	}
 
 	eg, ctx := errgroup.WithContext(ctx)
 
-	eg.Go(func() error {
-		if err := keyboard.Run(ctx); err != nil {
-			return fmt.Errorf("keyboard input failed: %w", err)
-		}
+	if isInteractive {
+		eg.Go(func() error {
+			if err := keyboard.Run(ctx); err != nil {
+				return fmt.Errorf("keyboard input failed: %w", err)
+			}
 
-		return nil
-	})
+			return nil
+		})
+	}
 
 	eg.Go(func() error {
 		if err := wsConn.Connect(ctx); err != nil {
@@ -198,8 +203,10 @@ func validateArgs(wsURL string, args *flags) error {
 // It takes a single parameter args of type *flags which contains the command-line arguments.
 // It returns a pointer to cli.RunOptions and an error.
 // It returns an error if it fails to open the specified output file.
-func initRunOptions(args *flags) (opts *core.RunOptions, err error) {
-	opts = &core.RunOptions{}
+func initRunOptions(args *flags, interactive bool) (opts *core.RunOptions, err error) {
+	opts = &core.RunOptions{
+		Interactive: interactive,
+	}
 
 	if args.outputFile != "" {
 		if opts.OutputFile, err = os.Create(args.outputFile); err != nil {
