@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/mattn/go-isatty"
+	"golang.org/x/sync/errgroup"
+
 	"github.com/ksysoev/wsget/pkg/core"
 	command2 "github.com/ksysoev/wsget/pkg/core/command"
 	"github.com/ksysoev/wsget/pkg/core/edit"
@@ -19,7 +21,6 @@ import (
 	"github.com/ksysoev/wsget/pkg/repo/macro"
 	"github.com/ksysoev/wsget/pkg/ws"
 	"github.com/spf13/cobra"
-	"golang.org/x/sync/errgroup"
 )
 
 const (

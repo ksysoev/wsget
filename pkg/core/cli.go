@@ -139,9 +139,11 @@ func (c *CLI) onMessage(ctx context.Context, msg Message) {
 func (c *CLI) Run(ctx context.Context, opts RunOptions) error {
 	defer func() {
 		close(c.done)
+
 		if opts.Interactive {
 			c.showCursor()
 		}
+
 		close(c.commands)
 	}()
 
