@@ -184,7 +184,7 @@ func TestInitRunOptions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			opts, err := initRunOptions(tt.args)
+			opts, err := initRunOptions(tt.args, false)
 			if tt.expectError {
 				assert.Error(t, err)
 			} else {
@@ -288,9 +288,21 @@ func TestRunConnectCmd_NoURL(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestRunConnectCmd_SuccessConnect(t *testing.T) {
+func TestInitRunOptions_Interactive(t *testing.T) {
+	opts, err := initRunOptions(&flags{}, true)
+	assert.NoError(t, err)
+	assert.True(t, opts.Interactive)
+
+	opts, err = initRunOptions(&flags{}, false)
+	assert.NoError(t, err)
+	assert.False(t, opts.Interactive)
+}
+
+func TestRunConnectCmd_NoInputFlag(t *testing.T) {
 	server := httptest.NewServer(createEchoWSHandler())
 	defer server.Close()
+
+	tmpConfigDir := t.TempDir()
 
 	url := "ws://" + server.Listener.Addr().String()
 
@@ -298,14 +310,29 @@ func TestRunConnectCmd_SuccessConnect(t *testing.T) {
 	args := &flags{
 		request:      "test request",
 		waitResponse: 1,
+		noInput:      true,
+		configDir:    tmpConfigDir,
 	}
 
-	// tty is not available in the test environment
-	// so the test will fail in some cases and be successful in others
 	err := runConnectCmd(ctx, args, []string{url})
-	if err != nil {
-		assert.ErrorContains(t, err, "open /dev/tty: ")
-	} else {
-		assert.NoError(t, err)
+	assert.NoError(t, err)
+}
+
+func TestRunConnectCmd_SuccessConnect(t *testing.T) {
+	server := httptest.NewServer(createEchoWSHandler())
+	defer server.Close()
+
+	tmpConfigDir := t.TempDir()
+
+	url := "ws://" + server.Listener.Addr().String()
+
+	ctx := context.Background()
+	args := &flags{
+		request:      "test request",
+		waitResponse: 1,
+		configDir:    tmpConfigDir,
 	}
+
+	err := runConnectCmd(ctx, args, []string{url})
+	assert.NoError(t, err)
 }

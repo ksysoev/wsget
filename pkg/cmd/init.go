@@ -42,6 +42,7 @@ type flags struct {
 	timeout      uint32
 	insecure     bool
 	verbose      bool
+	noInput      bool
 }
 
 // InitCommands initializes and returns a new cobra.Command for the wsget tool.
@@ -73,6 +74,7 @@ func InitCommands(version string) *cobra.Command {
 	cmd.Flags().BoolVarP(&args.verbose, "verbose", "v", false, "Verbose output")
 	cmd.Flags().Int64VarP(&args.maxMsgSize, "max-size", "s", ws.DefaultMaxMessageSize, "Maximum message size in bytes, non-positive value will be ignored and default value will be used")
 	cmd.Flags().Uint32VarP(&args.timeout, "timeout", "t", 30, "WebSocket handshake timeout in seconds, 0 means no timeout")
+	cmd.Flags().BoolVar(&args.noInput, "no-input", false, "Disable interactive keyboard input (for CI/headless environments)")
 
 	args.configDir = cmp.Or(args.configDir, os.Getenv("WSGET_CONFIG_DIR"))
 

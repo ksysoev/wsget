@@ -1,6 +1,7 @@
 package core
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"errors"
@@ -12,6 +13,22 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
+
+func newCLIWithBufferOutput(t *testing.T) (*CLI, *bytes.Buffer) {
+	t.Helper()
+
+	wsConn := NewMockConnectionHandler(t)
+	wsConn.EXPECT().SetOnMessage(mock.Anything)
+
+	factory := NewMockCommandFactory(t)
+
+	editor := NewMockEditor(t)
+	editor.EXPECT().SetInput(mock.Anything)
+
+	output := &bytes.Buffer{}
+
+	return NewCLI(factory, wsConn, output, editor, NewMockFormater(t)), output
+}
 
 func TestNewCLI(t *testing.T) {
 	wsConn := NewMockConnectionHandler(t)
@@ -566,4 +583,32 @@ func TestCLI_OnMessage_Binary(t *testing.T) {
 	case <-time.After(100 * time.Millisecond):
 		t.Error("Timeout waiting for binary message")
 	}
+}
+
+func TestCLI_Run_InteractiveOutputEnabled(t *testing.T) {
+	cli, output := newCLIWithBufferOutput(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	err := cli.Run(ctx, RunOptions{Interactive: true})
+	assert.NoError(t, err)
+
+	printed := output.String()
+	assert.Contains(t, printed, HideCursor)
+	assert.Contains(t, printed, ShowCursor)
+	assert.Contains(t, printed, WelcomMessage)
+}
+
+func TestCLI_Run_InteractiveOutputDisabled(t *testing.T) {
+	cli, output := newCLIWithBufferOutput(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	err := cli.Run(ctx, RunOptions{Interactive: false})
+	assert.NoError(t, err)
+
+	printed := output.String()
+	assert.NotContains(t, printed, HideCursor)
+	assert.NotContains(t, printed, ShowCursor)
+	assert.NotContains(t, printed, WelcomMessage)
 }
