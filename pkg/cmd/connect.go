@@ -128,19 +128,20 @@ func runConnectCmd(ctx context.Context, args *flags, unnamedArgs []string) error
 
 	client := core.NewCLI(cmdFactory, wsConn, os.Stdout, editor, formater.NewFormat())
 
-	isInteractive := !args.noInput && isatty.IsTerminal(os.Stdin.Fd())
+	inputEnabled := !args.noInput && isatty.IsTerminal(os.Stdin.Fd())
+	uiInteractive := inputEnabled && isatty.IsTerminal(os.Stdout.Fd())
 
-	keyboard := input.NewKeyboard(client)
-	defer keyboard.Close()
-
-	opts, err := initRunOptions(args, isInteractive)
+	opts, err := initRunOptions(args, uiInteractive)
 	if err != nil {
 		return fmt.Errorf("failed to initialize run options: %w", err)
 	}
 
 	eg, ctx := errgroup.WithContext(ctx)
 
-	if isInteractive {
+	if inputEnabled {
+		keyboard := input.NewKeyboard(client)
+		defer keyboard.Close()
+
 		eg.Go(func() error {
 			if err := keyboard.Run(ctx); err != nil {
 				return fmt.Errorf("keyboard input failed: %w", err)

@@ -302,6 +302,8 @@ func TestRunConnectCmd_NoInputFlag(t *testing.T) {
 	server := httptest.NewServer(createEchoWSHandler())
 	defer server.Close()
 
+	tmpConfigDir := t.TempDir()
+
 	url := "ws://" + server.Listener.Addr().String()
 
 	ctx := context.Background()
@@ -309,6 +311,7 @@ func TestRunConnectCmd_NoInputFlag(t *testing.T) {
 		request:      "test request",
 		waitResponse: 1,
 		noInput:      true,
+		configDir:    tmpConfigDir,
 	}
 
 	err := runConnectCmd(ctx, args, []string{url})
@@ -319,12 +322,15 @@ func TestRunConnectCmd_SuccessConnect(t *testing.T) {
 	server := httptest.NewServer(createEchoWSHandler())
 	defer server.Close()
 
+	tmpConfigDir := t.TempDir()
+
 	url := "ws://" + server.Listener.Addr().String()
 
 	ctx := context.Background()
 	args := &flags{
 		request:      "test request",
 		waitResponse: 1,
+		configDir:    tmpConfigDir,
 	}
 
 	err := runConnectCmd(ctx, args, []string{url})
